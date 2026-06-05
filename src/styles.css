@@ -125,7 +125,8 @@ button:disabled {
 .tier-row[data-slot="B"] .tier-label,
 .tier-row[data-slot="C"] .tier-label,
 .tier-row[data-slot="D"] .tier-label,
-.tier-row[data-slot="E"] .tier-label {
+.tier-row[data-slot="E"] .tier-label,
+.tier-row[data-slot="F"] .tier-label {
   color: #1e1f24; /* matches --bg; dark for contrast on light tiers */
 }
 
@@ -146,6 +147,9 @@ button:disabled {
 }
 .tier-row[data-slot="E"] .tier-label {
   background: #7fff7f; /* green */
+}
+.tier-row[data-slot="F"] .tier-label {
+  background: #7fffff; /* cyan */
 }
 
 .tier-list {

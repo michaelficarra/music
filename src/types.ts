@@ -1,7 +1,7 @@
 // Core domain types shared across the app.
 
-/** The six fixed ranked tiers, ordered best → worst. */
-export const TIERS = ["S", "A", "B", "C", "D", "E"] as const;
+/** The seven fixed ranked tiers, ordered best → worst. */
+export const TIERS = ["S", "A", "B", "C", "D", "E", "F"] as const;
 export type Tier = (typeof TIERS)[number];
 
 /** Sentinel for artists that have not been placed into a ranked tier. */

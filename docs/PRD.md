@@ -29,7 +29,7 @@ do not add, rename, or delete artists, and do not edit images, from within the a
 
 ## 3. Tiers
 
-There are six fixed ranked tiers, displayed as rows from highest to lowest:
+There are seven fixed ranked tiers, displayed as rows from highest to lowest:
 
 ```
 S   (highest)
@@ -37,7 +37,8 @@ A
 B
 C
 D
-E   (lowest)
+E
+F   (lowest)
 ```
 
 Below (or alongside) the tiers there is an **always-visible "unranked" area** holding artists
@@ -113,18 +114,19 @@ one for the **weighting intensity**:
   - `B+` → S, A, B
   - `C+` → S, A, B, C
   - `D+` → S, A, B, C, D
-  - `full` → S, A, B, C, D, E (all ranked tiers)
+  - `E+` → S, A, B, C, D, E
+  - `full` → S, A, B, C, D, E, F (all ranked tiers)
 - **Weighting intensity** — how probability is spread across the eligible artists:
   - `unweighted` — every eligible artist is equally likely.
   - `weighted` — favours higher tiers (an artist in a higher tier is more likely than one in a
     lower tier).
   - `heavily weighted` — strongly favours higher tiers.
 
-The two dropdowns **default to "C+" and "weighted"** and **remember your last selection** across
+The two dropdowns **default to "D+" and "weighted"** and **remember your last selection** across
 page reloads. The exact probability curve for each intensity is an implementation detail.
 
 A horizontal line is drawn on the board between the lowest eligible tier and the next tier down,
-reflecting the selected cutoff (e.g. `C+` draws it between the C and D rows). It updates when the
+reflecting the selected cutoff (e.g. `D+` draws it between the D and E rows). It updates when the
 cutoff changes, and is **omitted for `full`** (where every ranked tier is eligible).
 
 Edge behaviour: if the chosen scheme has **no eligible artists** (e.g. `A+` selected but S and A

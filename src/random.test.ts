@@ -15,19 +15,22 @@ describe("random", () => {
     expect(eligibleTiers("S")).toEqual(["S"]);
     expect(eligibleTiers("C")).toEqual(["S", "A", "B", "C"]);
     expect(eligibleTiers("E")).toEqual(["S", "A", "B", "C", "D", "E"]);
+    expect(eligibleTiers("F")).toEqual(["S", "A", "B", "C", "D", "E", "F"]);
   });
 
   it("tierWeight matches the intensity curves", () => {
     expect(tierWeight("S", "unweighted")).toBe(1);
     expect(tierWeight("E", "unweighted")).toBe(1);
-    // weighted = Fibonacci scale (E=1, D=2, C=3, B=5, A=8, S=13)
+    // weighted = Fibonacci scale (F=1, E=1, D=2, C=3, B=5, A=8, S=13)
     expect(tierWeight("S", "weighted")).toBe(13);
     expect(tierWeight("B", "weighted")).toBe(5);
     expect(tierWeight("E", "weighted")).toBe(1);
+    expect(tierWeight("F", "weighted")).toBe(1);
     // heavily = double Fibonacci
     expect(tierWeight("S", "heavily")).toBe(26);
     expect(tierWeight("B", "heavily")).toBe(10);
     expect(tierWeight("E", "heavily")).toBe(2);
+    expect(tierWeight("F", "heavily")).toBe(2);
   });
 
   it("never picks unranked and honours the cutoff", () => {
@@ -38,7 +41,7 @@ describe("random", () => {
     // D is excluded by a C+ cutoff → nothing eligible.
     expect(hasEligible(slots, { cutoff: "C", intensity: "unweighted" })).toBe(false);
     expect(pick(slots, { cutoff: "C", intensity: "unweighted" })).toBeNull();
-    // full cutoff includes D.
+    // an E+ cutoff includes D.
     expect(pick(slots, { cutoff: "E", intensity: "unweighted" })).toBe("y");
   });
 
@@ -65,6 +68,7 @@ describe("random", () => {
   it("labels the cutoffs ('S only', 'C+', 'full')", () => {
     expect(cutoffLabel("S")).toBe("S only");
     expect(cutoffLabel("C")).toBe("C+");
-    expect(cutoffLabel("E")).toBe("full");
+    expect(cutoffLabel("E")).toBe("E+");
+    expect(cutoffLabel("F")).toBe("full");
   });
 });

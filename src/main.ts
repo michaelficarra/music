@@ -17,7 +17,7 @@ import {
   type Scheme,
 } from "./random";
 
-const DEFAULT_SCHEME: Scheme = { cutoff: "C", intensity: "weighted" };
+const DEFAULT_SCHEME: Scheme = { cutoff: "D", intensity: "weighted" };
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("#app container not found");

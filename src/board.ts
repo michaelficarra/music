@@ -1,4 +1,4 @@
-// Renders the tier board (S…E + unranked) and wires drag-and-drop via SortableJS.
+// Renders the tier board (S…F + unranked) and wires drag-and-drop via SortableJS.
 
 import Sortable from "sortablejs";
 import { artists } from "./data";
@@ -15,7 +15,7 @@ export interface Board {
   present(name: string): void;
   /**
    * Draw a divider line just below `cutoff`'s row to mark the picker's eligible
-   * range (e.g. "C+" → between C and D). The lowest tier ("full") draws no line.
+   * range (e.g. "D+" → between D and E). The lowest tier ("full") draws no line.
    */
   setCutoff(cutoff: Tier): void;
 }
@@ -101,7 +101,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
     }
   }
 
-  // Build rows: the six ranked tiers, then the always-visible unranked pool.
+  // Build rows: the seven ranked tiers, then the always-visible unranked pool.
   container.innerHTML = "";
   for (const tier of TIERS) addRow(tier, tier);
   addRow(UNRANKED, "X", "Unranked — artists not sorted into a tier");
@@ -324,7 +324,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
     },
     setCutoff(cutoff: Tier): void {
       cutoffLine.remove();
-      // "full" (the lowest tier) means every tier is eligible → no divider.
+      // "full" (F, the lowest tier) means every tier is eligible → no divider.
       if (cutoff === TIERS[TIERS.length - 1]) return;
       rowsBySlot.get(cutoff)?.after(cutoffLine);
     },

@@ -50,7 +50,7 @@ Columns, in order:
 | Column        | Meaning |
 | ------------- | --- |
 | `Artist`      | Artist name. **Unique**; used as the identity key throughout the app. |
-| `Tier`        | One of `S`, `A`, `B`, `C`, `D`, `E`, or **blank** for unranked. |
+| `Tier`        | One of `S`, `A`, `B`, `C`, `D`, `E`, `F`, or **blank** for unranked. |
 | `ImageURL`    | URL of a representative image, or blank (→ placeholder). |
 | `ImageSource` | Which provider supplied the image (`apple-music`, `musicbrainz`, `youtube-music`, `wikipedia`), or blank. |
 
