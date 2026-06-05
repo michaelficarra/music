@@ -59,10 +59,10 @@ at build time.
 - **From the app:** rearrange artists, then click **Save** to copy the updated CSV to your
   clipboard and paste it over `data/artists.csv`.
 - **Fill in images:** run the enrichment script, which looks up a representative image per artist
-  (MusicBrainz → Wikipedia/Wikimedia → Discogs → streaming services):
+  (Apple Music → MusicBrainz → YouTube Music → Wikipedia/Wikimedia), preferring thumbnail sizes:
 
   ```sh
-  npm run enrich            # set DISCOGS_TOKEN in your environment if Discogs lookups are needed
+  npm run enrich
   ```
 
 Rebuild/redeploy to make any data changes the new shipped default.

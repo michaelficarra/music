@@ -3,24 +3,23 @@
 // For each artist with a blank ImageURL (or all artists with --force), it tries
 // providers in order, stopping at the first hit, and records which provider won:
 //
-//   1. MusicBrainz      (artist → image relationship, resolved to a direct URL)
-//   2. Wikipedia        (REST page summary thumbnail)
-//   3. Discogs          (artist search cover image; needs DISCOGS_TOKEN)
-//   4. Streaming        (Apple Music via iTunes Search; YouTube Music og:image)
+//   1. Apple Music   (iTunes Search → artist page og:image)
+//   2. MusicBrainz   (artist → image relationship, resolved to a direct URL)
+//   3. YouTube Music (search page og:image, best-effort)
+//   4. Wikipedia     (REST page summary thumbnail; last — most collision-prone)
 //
-// This is NOT part of the app bundle. Requires Node ≥18 (global fetch). Set
-// DISCOGS_TOKEN in the environment to enable the Discogs tier.
+// This is NOT part of the app bundle. Requires Node ≥18 (global fetch).
 //
 // Usage:
 //   npm run enrich                                  # fill blank rows (bulk)
 //   npm run enrich -- --force                       # re-fetch every artist
 //   npm run enrich -- --artist "Korn"               # (re)fetch one artist
-//   npm run enrich -- --artist "Korn" --disable musicbrainz,wikipedia
+//   npm run enrich -- --artist "Korn" --disable apple-music,musicbrainz
 //                                                   # one artist, skipping providers
 //
 // --artist <name>   process only that artist, always re-fetching it.
-// --disable <keys>  comma-separated provider keys to skip (musicbrainz,
-//                   wikipedia, discogs, apple-music, youtube-music).
+// --disable <keys>  comma-separated provider keys to skip (apple-music,
+//                   musicbrainz, youtube-music, wikipedia).
 // --force           in bulk mode, re-fetch artists that already have a URL.
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -67,7 +66,7 @@ function resolveCommons(resource: string): string {
   return resource;
 }
 
-// 1. MusicBrainz: search for the artist, then follow its "image" relationship.
+// MusicBrainz: search for the artist, then follow its "image" relationship.
 async function fromMusicBrainz(name: string): Promise<Found | null> {
   const query = encodeURIComponent(`artist:"${name}"`);
   const search = (await fetchJson(
@@ -85,7 +84,7 @@ async function fromMusicBrainz(name: string): Promise<Found | null> {
   return { url: resolveCommons(rel.url.resource), source: "musicbrainz" };
 }
 
-// 2. Wikipedia: page summary thumbnail.
+// Wikipedia: page summary thumbnail.
 async function fromWikipedia(name: string): Promise<Found | null> {
   const title = encodeURIComponent(name.replace(/ /g, "_"));
   const summary = (await fetchJson(
@@ -98,20 +97,7 @@ async function fromWikipedia(name: string): Promise<Found | null> {
   return url ? { url, source: "wikipedia" } : null;
 }
 
-// 3. Discogs: artist search cover image (requires a token).
-async function fromDiscogs(name: string): Promise<Found | null> {
-  const token = process.env.DISCOGS_TOKEN;
-  if (!token) return null;
-  const q = encodeURIComponent(name);
-  const data = (await fetchJson(
-    `https://api.discogs.com/database/search?q=${q}&type=artist&per_page=1&token=${token}`,
-  )) as { results?: { cover_image?: string; thumb?: string }[] };
-  const hit = data.results?.[0];
-  const url = hit?.cover_image ?? hit?.thumb;
-  return url ? { url, source: "discogs" } : null;
-}
-
-// 4a. Apple Music via the public iTunes Search API (album/track artwork).
+// Apple Music via the public iTunes Search API → artist page artwork.
 async function fromAppleMusic(name: string): Promise<Found | null> {
   const term = encodeURIComponent(name);
   const data = (await fetchJson(
@@ -123,7 +109,7 @@ async function fromAppleMusic(name: string): Promise<Found | null> {
   return scrapeOgImage(link, "apple-music");
 }
 
-// 4b. YouTube Music search page og:image (best-effort, brittle).
+// YouTube Music search page og:image (best-effort, brittle).
 async function fromYouTubeMusic(name: string): Promise<Found | null> {
   return scrapeOgImage(
     `https://music.youtube.com/search?q=${encodeURIComponent(name)}`,
@@ -148,12 +134,14 @@ interface Provider {
 }
 
 // Ordered fallback chain. Keys match the ImageSource value each provider writes.
+// Apple Music first: its artist images are subject-correct (matched in Apple's
+// music catalogue) and avoid the name-collision pitfalls of article-title lookups.
+// Wikipedia is last: title lookups are the most collision-prone (e.g. "Ra", "Stars").
 const PROVIDERS: Provider[] = [
-  { key: "musicbrainz", fn: fromMusicBrainz },
-  { key: "wikipedia", fn: fromWikipedia },
-  { key: "discogs", fn: fromDiscogs },
   { key: "apple-music", fn: fromAppleMusic },
+  { key: "musicbrainz", fn: fromMusicBrainz },
   { key: "youtube-music", fn: fromYouTubeMusic },
+  { key: "wikipedia", fn: fromWikipedia },
 ];
 
 async function enrich(name: string, disabled: ReadonlySet<string>): Promise<Found | null> {
@@ -200,6 +188,9 @@ async function main(): Promise<void> {
   if (disabled.size > 0) console.log(`Disabled providers: ${[...disabled].join(", ")}`);
 
   const rows = parseCsv(readFileSync(CSV_PATH, "utf8"));
+  // Persist after each fill so progress survives an interruption (rate limits,
+  // Ctrl-C) rather than being lost when only written at the very end.
+  const flush = (): void => writeFileSync(CSV_PATH, serializeCsv(rows), "utf8");
 
   let filled = 0;
   let matched = false;
@@ -224,6 +215,7 @@ async function main(): Promise<void> {
       row[COLUMN.imageURL] = found.url;
       row[COLUMN.imageSource] = found.source;
       filled++;
+      flush(); // write incrementally so partial progress is never lost
       console.log(`✓ ${name} → ${found.source}`);
     } else {
       console.log(`· ${name} → (no image found)`);
@@ -236,7 +228,6 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  writeFileSync(CSV_PATH, serializeCsv(rows), "utf8");
   console.log(`\nDone. Filled ${filled} image(s); wrote ${CSV_PATH}.`);
 }
 

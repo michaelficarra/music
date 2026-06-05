@@ -50,7 +50,7 @@ Columns, in order:
 | `Artist`      | Artist name. **Unique**; used as the identity key throughout the app. |
 | `Tier`        | One of `S`, `A`, `B`, `C`, `D`, `F`, or **blank** for unranked. |
 | `ImageURL`    | URL of a representative image, or blank (→ placeholder). |
-| `ImageSource` | Which provider supplied the image (`musicbrainz`, `wikipedia`, `discogs`, `youtube-music`, `apple-music`, …), or blank. |
+| `ImageSource` | Which provider supplied the image (`apple-music`, `musicbrainz`, `youtube-music`, `wikipedia`), or blank. |
 
 - Encoding: UTF-8, first row is the header.
 - **Quoting:** standard RFC-4180. Fields containing a comma, double-quote, or newline are wrapped
@@ -146,11 +146,12 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
 
 - Reads `data/artists.csv`, and for each artist with a blank `ImageURL` (or all artists with
   `--force`), tries providers in this **fallback order**, stopping at the first success:
-  1. **MusicBrainz** (look up the artist, follow image relationships / Wikidata).
-  2. **Wikipedia / Wikimedia** (REST summary thumbnail or Commons).
-  3. **Discogs** (artist search → images). **Requires a personal access token** if this tier is
-     reached (provided via an env var, e.g. `DISCOGS_TOKEN`).
-  4. **Streaming-service scrape** (YouTube Music, then Apple Music) as a last resort.
+  1. **Apple Music** (iTunes Search → the artist page's `og:image`; a subject-correct catalogue
+     match that avoids article-title name collisions, so it leads the chain).
+  2. **MusicBrainz** (look up the artist, follow image relationships / Wikidata).
+  3. **YouTube Music** (search page `og:image`, best-effort).
+  4. **Wikipedia / Wikimedia** (REST summary thumbnail or Commons) — last, since title lookups are
+     the most name-collision-prone (e.g. "Ra", "Stars", "Peaches").
 - Writes the resulting `ImageURL` and records the winning provider in `ImageSource`. Each URL is
   passed through `toThumbnail()` (`scripts/thumbnail.ts`) to prefer a **smaller/thumbnail** form
   where the host supports it (Wikimedia → `Special:FilePath?width=`; Apple/mzstatic → a small
