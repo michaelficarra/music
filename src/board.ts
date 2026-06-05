@@ -63,12 +63,16 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
   let presentAnim: Animation | null = null;
   let settleTimer: number | undefined;
 
+  // Click-to-edit tier popup state.
+  let editorCard: HTMLElement | null = null;
+  let justDragged = false; // suppresses the click that fires right after a drag
+
   // Divider marking the picker cutoff; reparented between rows by setCutoff().
   const cutoffLine = document.createElement("div");
   cutoffLine.className = "cutoff-line";
   cutoffLine.setAttribute("aria-hidden", "true");
 
-  function addRow(slot: Slot, label: string): void {
+  function addRow(slot: Slot, label: string, title?: string): void {
     const row = document.createElement("div");
     row.className = "tier-row";
     row.dataset.slot = slot;
@@ -77,6 +81,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
     const heading = document.createElement("div");
     heading.className = "tier-label";
     heading.textContent = label;
+    if (title !== undefined) heading.title = title;
 
     const list = document.createElement("div");
     list.className = "tier-list";
@@ -99,7 +104,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
   // Build rows: the six ranked tiers, then the always-visible unranked pool.
   container.innerHTML = "";
   for (const tier of TIERS) addRow(tier, tier);
-  addRow(UNRANKED, "Unranked");
+  addRow(UNRANKED, "X", "Unranked — artists not sorted into a tier");
 
   for (const artist of artists) cardsByName.set(artist.name, createCard(artist));
   placeCards();
@@ -108,7 +113,12 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
   const options: Sortable.Options = {
     group: "artists",
     animation: 150,
+    onStart: () => closeEditor(),
     onEnd: (evt) => {
+      justDragged = true;
+      window.setTimeout(() => {
+        justDragged = false;
+      }, 0);
       const name = evt.item.dataset.artist;
       const slot = (evt.to as HTMLElement).dataset.slot;
       if (name !== undefined && slot !== undefined) {
@@ -118,6 +128,108 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
     },
   };
   for (const list of lists.values()) new Sortable(list, options);
+
+  // --- Click-to-edit: a small tier-selection popup shown when a card is clicked.
+  // Appended to <body> (not a tier row) so the rows' overflow:hidden can't clip it.
+  const editorEl = document.createElement("div");
+  editorEl.className = "tier-editor";
+  editorEl.hidden = true;
+
+  const editorSelect = document.createElement("select");
+  editorSelect.className = "tier-editor-select";
+  editorSelect.setAttribute("aria-label", "Set tier");
+  for (const tier of TIERS) {
+    const option = document.createElement("option");
+    option.value = tier;
+    option.textContent = tier;
+    editorSelect.appendChild(option);
+  }
+  const unrankedOption = document.createElement("option");
+  unrankedOption.value = "X"; // X = unranked
+  unrankedOption.textContent = "X";
+  editorSelect.appendChild(unrankedOption);
+
+  const saveButton = document.createElement("button");
+  saveButton.type = "button";
+  saveButton.textContent = "Save";
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.textContent = "Cancel";
+
+  // Stack vertically: dropdown, then Save, then Cancel.
+  editorEl.append(editorSelect, saveButton, cancelButton);
+  document.body.appendChild(editorEl);
+
+  function openEditor(card: HTMLElement): void {
+    const name = card.dataset.artist;
+    if (name === undefined) return;
+    if (editorCard && editorCard !== card) editorCard.classList.remove("editing");
+    editorCard = card;
+    card.classList.add("editing"); // dim the card beneath the form
+    const slot = store.currentSlot(name);
+    editorSelect.value = slot === UNRANKED ? "X" : slot;
+
+    editorEl.hidden = false;
+    // Centre the form over the card (clamped to the viewport), then convert to
+    // document coordinates so the absolutely-positioned form scrolls with the card.
+    const rect = card.getBoundingClientRect();
+    const ew = editorEl.offsetWidth;
+    const eh = editorEl.offsetHeight;
+    const left = rect.left + rect.width / 2 - ew / 2;
+    const top = rect.top + rect.height / 2 - eh / 2;
+    const clampedLeft = Math.max(8, Math.min(left, window.innerWidth - ew - 8));
+    const clampedTop = Math.max(8, Math.min(top, window.innerHeight - eh - 8));
+    editorEl.style.left = `${clampedLeft + window.scrollX}px`;
+    editorEl.style.top = `${clampedTop + window.scrollY}px`;
+    editorSelect.focus();
+  }
+
+  function closeEditor(): void {
+    editorEl.hidden = true;
+    if (editorCard) {
+      editorCard.classList.remove("editing");
+      editorCard = null;
+    }
+  }
+
+  function saveEditor(): void {
+    if (!editorCard) return;
+    const name = editorCard.dataset.artist;
+    if (name !== undefined) {
+      const slot: Slot = editorSelect.value === "X" ? UNRANKED : (editorSelect.value as Slot);
+      store.setSlot(name, slot);
+      lists.get(slot)?.appendChild(editorCard);
+      onChange();
+    }
+    closeEditor();
+  }
+
+  editorSelect.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveEditor();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      closeEditor();
+    }
+  });
+  saveButton.addEventListener("click", saveEditor);
+  cancelButton.addEventListener("click", closeEditor);
+
+  // One document-level handler: clicking a card opens (or moves) the editor to
+  // it; clicks inside the editor are left to its own controls; any other click
+  // closes the editor.
+  document.addEventListener("click", (event) => {
+    if (justDragged) return;
+    const target = event.target as HTMLElement;
+    if (editorEl.contains(target)) return;
+    const card = target.closest<HTMLElement>(".card");
+    if (card && container.contains(card)) {
+      openEditor(card);
+    } else {
+      closeEditor();
+    }
+  });
 
   // Tear down any in-progress presentation, restoring the real card.
   function clearPresentation(): void {

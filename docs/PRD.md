@@ -62,6 +62,9 @@ appear in the unranked area.
   its name.
 - The user **drags a card** from one tier (or the unranked area) and drops it into another tier
   or the unranked area. This works with both mouse and touch input.
+- Alternatively, **clicking a card** opens a small **tier-selection dropdown** (S, A, B, C, D, F,
+  or **X** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
+  it; pressing **Enter** saves and **Escape** cancels. Saving moves the artist to the chosen tier.
 - **Only tier membership matters.** The left-to-right position of a card within a tier carries no
   meaning and is not remembered between sessions (it may be re-laid-out freely).
 
