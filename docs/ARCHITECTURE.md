@@ -159,15 +159,17 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
 ## 9. Build & deploy
 
 - **Dev:** `vite` (dev server with HMR).
-- **Build:** `vite build` → static assets in `dist/`. `vite.config.ts` sets `base` to the GitHub
-  Pages project path (`/<repo>/`, e.g. `/music/`) so asset URLs resolve under the project subpath.
+- **Build:** `npm run build` (`tsc --noEmit && vite build`) → static assets in `dist/`.
+  `vite.config.ts` sets **`base: './'`** (relative asset URLs), so the bundle works under any GitHub
+  Pages project subpath (`https://<user>.github.io/<repo>/`) without hard-coding the repo name.
 - **Deploy:** `.github/workflows/deploy.yml` runs on push to the default branch: install → build →
-  `upload-pages-artifact` → `deploy-pages` (via `actions/configure-pages`). **Build artefacts are
-  not committed**; the Action publishes `dist/` to Pages.
+  `configure-pages` → `upload-pages-artifact` (`dist`) → `deploy-pages`. **Build artefacts are not
+  committed**; the Action publishes `dist/` to Pages.
 
 ## 10. Testing & quality (intended)
 
-- Unit tests (e.g. Vitest) for the pure logic: CSV parse/serialise round-trip (incl. quoting), the
-  overlay/diff in `store.ts`, and the weighting/selection in `random.ts`.
-- Type-checking via `tsc --noEmit`; formatting via Prettier. Exact commands are listed in
-  [CLAUDE.md](../CLAUDE.md).
+- **Vitest** unit tests for the pure logic: CSV parse/serialise round-trip (incl. quoting) in
+  `src/csv.test.ts`, the overlay/diff/export in `src/store.test.ts` (run under the `jsdom`
+  environment for `localStorage`), and the weighting/selection in `src/random.test.ts`.
+- Type-checking via `tsc --noEmit`; formatting via Prettier. The enrichment script runs under
+  **tsx**. Exact commands are listed in [CLAUDE.md](../CLAUDE.md).

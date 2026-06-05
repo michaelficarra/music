@@ -34,7 +34,11 @@ function load(): void {
   if (raw === null) return;
   try {
     const parsed = JSON.parse(raw) as Partial<Persisted>;
-    if (parsed.version !== 1 || typeof parsed.assignments !== "object" || parsed.assignments === null) {
+    if (
+      parsed.version !== 1 ||
+      typeof parsed.assignments !== "object" ||
+      parsed.assignments === null
+    ) {
       return;
     }
     for (const [name, slot] of Object.entries(parsed.assignments)) {
@@ -55,7 +59,10 @@ function persist(): void {
   }
   const assignments: Record<string, Slot> = {};
   for (const [name, slot] of overrides) assignments[name] = slot;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, assignments } satisfies Persisted));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ version: 1, assignments } satisfies Persisted),
+  );
 }
 
 /** The artist's current slot: override if present, else baseline, else unranked. */

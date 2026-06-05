@@ -33,7 +33,9 @@ interface Found {
 }
 
 async function fetchJson(url: string): Promise<unknown> {
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" } });
+  const res = await fetch(url, {
+    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+  });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return res.json();
 }
@@ -74,7 +76,9 @@ async function fromMusicBrainz(name: string): Promise<Found | null> {
 // 2. Wikipedia: page summary thumbnail.
 async function fromWikipedia(name: string): Promise<Found | null> {
   const title = encodeURIComponent(name.replace(/ /g, "_"));
-  const summary = (await fetchJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${title}`)) as {
+  const summary = (await fetchJson(
+    `https://en.wikipedia.org/api/rest_v1/page/summary/${title}`,
+  )) as {
     originalimage?: { source: string };
     thumbnail?: { source: string };
   };
@@ -109,7 +113,10 @@ async function fromAppleMusic(name: string): Promise<Found | null> {
 
 // 4b. YouTube Music search page og:image (best-effort, brittle).
 async function fromYouTubeMusic(name: string): Promise<Found | null> {
-  return scrapeOgImage(`https://music.youtube.com/search?q=${encodeURIComponent(name)}`, "youtube-music");
+  return scrapeOgImage(
+    `https://music.youtube.com/search?q=${encodeURIComponent(name)}`,
+    "youtube-music",
+  );
 }
 
 async function scrapeOgImage(pageUrl: string, source: string): Promise<Found | null> {
