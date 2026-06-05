@@ -7,6 +7,7 @@
 
 import { baselineByName, originalRows, COLUMN } from "./data";
 import { serializeCsv } from "./csv";
+import { compareArtistNames } from "./sort";
 import { UNRANKED, isTier, type Slot } from "./types";
 
 const STORAGE_KEY = "artist-tier-list:v1";
@@ -93,22 +94,27 @@ export function reset(): void {
 }
 
 /**
- * Serialise the current arrangement to CSV, preserving the original row order
- * and every column, updating only the Tier column (blank for unranked).
+ * Serialise the current arrangement to CSV: every column preserved, only the
+ * Tier column updated (blank for unranked), with the data rows sorted by artist
+ * name so the file stays in its canonical order.
  */
 export function toCSV(): string {
-  const rows = originalRows.map((row) => [...row]);
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    if (row === undefined) continue;
-    const name = row[COLUMN.artist] ?? "";
-    if (name.length === 0) continue;
-    // Pad short rows so the Tier column always exists.
-    while (row.length <= COLUMN.imageSource) row.push("");
-    const slot = currentSlot(name);
-    row[COLUMN.tier] = slot === UNRANKED ? "" : slot;
-  }
-  return serializeCsv(rows);
+  const header = originalRows[0] ?? [];
+  const body = originalRows
+    .slice(1)
+    .map((row) => {
+      const r = [...row];
+      const name = r[COLUMN.artist] ?? "";
+      // Pad short rows so the Tier column always exists.
+      while (r.length <= COLUMN.imageSource) r.push("");
+      if (name.length > 0) {
+        const slot = currentSlot(name);
+        r[COLUMN.tier] = slot === UNRANKED ? "" : slot;
+      }
+      return r;
+    })
+    .sort((a, b) => compareArtistNames(a[COLUMN.artist] ?? "", b[COLUMN.artist] ?? ""));
+  return serializeCsv([header, ...body]);
 }
 
 /** Last-used random-picker scheme id, if any. */

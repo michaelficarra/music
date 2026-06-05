@@ -45,6 +45,7 @@ npm run dev            # Vite dev server with HMR
 npm run build          # production build → dist/
 npm run preview        # serve the production build locally
 npm run enrich         # run scripts/enrich-images.ts (Apple Music → MusicBrainz → YouTube → Wikipedia)
+npm run add-artist -- "<name>"   # append an unranked artist to the CSV and enrich just them
 npm test               # unit tests (CSV round-trip, store diff, weighting)
 npm run typecheck      # tsc --noEmit
 npm run format         # Prettier

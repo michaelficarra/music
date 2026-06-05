@@ -24,7 +24,9 @@ static bundle plus a build-time-embedded copy of the artist data.
 ├── data/
 │   └── artists.csv          # Source of truth for the artist roster, tiers, and images
 ├── scripts/
-│   └── enrich-images.ts     # Dev-time tool that fills in image URLs (see §8)
+│   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §8)
+│   ├── add-artist.ts        # Append an unranked artist to the CSV, then enrich them
+│   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §8)
 ├── src/                     # Application source
 │   ├── main.ts              # Entry point: load data, build UI, wire events
 │   ├── data.ts              # CSV parse/serialise + the static baseline import
@@ -93,9 +95,10 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
 - **Reset:** remove the local-storage key; re-render from the baseline.
 - **Save (clipboard):** serialise the **full** arrangement to CSV and write it to the clipboard via
   the async Clipboard API (`navigator.clipboard.writeText`). Serialisation rules:
-  - Preserve the **original CSV row order** and all columns; update only the `Tier` field of each
-    row to the artist's current tier (blank for unranked).
-  - `ImageURL`/`ImageSource` are passed through unchanged.
+  - Update only the `Tier` field of each row to the artist's current tier (blank for unranked); all
+    other columns are passed through unchanged.
+  - **Sort the data rows by artist name** via `compareArtistNames` (`src/sort.ts`, a case- and
+    accent-insensitive `localeCompare`) so the exported CSV stays in the list's canonical order.
   - Apply RFC-4180 quoting (§3).
 
 ## 6. UI structure & drag-and-drop
@@ -158,10 +161,14 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   square); unknown hosts are left unchanged.
 - Politeness: sets a descriptive `User-Agent` and rate-limits requests (especially MusicBrainz /
   Wikimedia, which require it). The script is **idempotent** — re-running only fills blanks unless
-  `--force` is passed. It rewrites the CSV using the same RFC-4180 serialiser as the app (§5).
+  `--force` is passed. It **writes after each fill** so partial progress survives an interruption,
+  using the same RFC-4180 serialiser as the app (§5).
 - **Flags:** `--force` (re-fetch already-filled rows in bulk mode); `--artist "<name>"` (process
   just one artist, always re-fetching it); `--disable <keys>` (comma-separated provider keys to
   skip — used to retry an artist whose previously chosen provider gave a broken image).
+- **`scripts/add-artist.ts`** (`npm run add-artist -- "<name>"`) adds a new artist as unranked
+  (blank Tier/ImageURL/ImageSource) in sorted position (`compareArtistNames`, keeping the CSV
+  sorted by name), then invokes the enrichment above for just that artist. Refuses a duplicate name.
 
 ## 9. Build & deploy
 

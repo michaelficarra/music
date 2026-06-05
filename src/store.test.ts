@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import * as store from "./store";
 import { parseCsv } from "./csv";
 import { artists } from "./data";
+import { compareArtistNames } from "./sort";
 
 // Use two real artists from the roster; all ship as unranked (blank Tier).
 const A = artists[0]!.name;
@@ -42,7 +43,7 @@ describe("store", () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it("toCSV updates only the Tier column, preserving order and other columns", () => {
+  it("toCSV updates only the Tier column, preserving other columns", () => {
     store.setSlot(A, "S");
     const rows = parseCsv(store.toCSV());
 
@@ -54,6 +55,14 @@ describe("store", () => {
 
     const rowB = rows.find((r) => r[0] === B)!;
     expect(rowB[1]).toBe(""); // untouched artist stays unranked (blank)
+  });
+
+  it("exports the data rows sorted by artist name", () => {
+    store.setSlot(A, "S");
+    const names = parseCsv(store.toCSV())
+      .slice(1)
+      .map((r) => r[0] ?? "");
+    expect(names).toEqual([...names].sort(compareArtistNames));
   });
 
   it("remembers the last-used scheme id", () => {

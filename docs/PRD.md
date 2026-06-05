@@ -83,8 +83,8 @@ from the **static arrangement** (the source data shipped with the app).
     the app reverts to the static arrangement.
   - **Save** — copies the updated data, as CSV, to the system **clipboard**. There is no server to
     save to; the maintainer pastes this CSV over the source data file (`data/artists.csv`) and
-    redeploys to make the arrangement the new static default. The exported CSV preserves the
-    original row order and changes only each artist's tier.
+    redeploys to make the arrangement the new static default. The exported CSV changes only each
+    artist's tier, and its rows are **sorted by artist name** (the list's canonical order).
 
 "Differ" is judged on **tier membership only** (consistent with §5): reordering cards within a
 tier does not, by itself, make the arrangement count as changed.

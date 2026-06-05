@@ -55,6 +55,8 @@ at build time.
 
 ## Updating the artist data
 
+- **Add an artist:** `npm run add-artist -- "Artist Name"` appends them as unranked and fills in
+  their image automatically.
 - **Edit by hand:** change `data/artists.csv` (columns: `Artist, Tier, ImageURL, ImageSource`).
 - **From the app:** rearrange artists, then click **Save** to copy the updated CSV to your
   clipboard and paste it over `data/artists.csv`.
