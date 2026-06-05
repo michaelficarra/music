@@ -118,6 +118,36 @@ button:disabled {
   background: #00000033;
 }
 
+/* Classic tier-list colours on the letter cell only (not the card area).
+   Dark text keeps the letters legible on these light backgrounds. */
+.tier-row[data-slot="S"] .tier-label,
+.tier-row[data-slot="A"] .tier-label,
+.tier-row[data-slot="B"] .tier-label,
+.tier-row[data-slot="C"] .tier-label,
+.tier-row[data-slot="D"] .tier-label,
+.tier-row[data-slot="F"] .tier-label {
+  color: #1e1f24; /* matches --bg; dark for contrast on light tiers */
+}
+
+.tier-row[data-slot="S"] .tier-label {
+  background: #ff7f7f; /* red */
+}
+.tier-row[data-slot="A"] .tier-label {
+  background: #ffbf7f; /* orange */
+}
+.tier-row[data-slot="B"] .tier-label {
+  background: #ffdf7f; /* gold */
+}
+.tier-row[data-slot="C"] .tier-label {
+  background: #ffff7f; /* yellow */
+}
+.tier-row[data-slot="D"] .tier-label {
+  background: #bfff7f; /* lime */
+}
+.tier-row[data-slot="F"] .tier-label {
+  background: #7fff7f; /* green */
+}
+
 .tier-list {
   flex: 1;
   display: flex;
