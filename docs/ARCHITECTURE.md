@@ -114,20 +114,20 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
 
 Implemented in `random.ts`.
 
-**Tiers and rank values** (higher = better):
+**Tier weights** (the Fibonacci/planning-poker scale, higher = better):
 
-| Tier | S | A | B | C | D | F |
-| ---- | - | - | - | - | - | - |
-| rank | 6 | 5 | 4 | 3 | 2 | 1 |
+| Tier             | S  | A  | B  | C | D | F |
+| ---------------- | -- | -- | -- | - | - | - |
+| Fibonacci weight | 13 |  8 |  5 | 3 | 2 | 1 |
 
 **A scheme = (tier cutoff, weighting intensity):**
 
 - **Tier cutoff** selects the eligible tiers: `S+`={S}, `A+`={S,A}, `B+`={S,A,B}, `C+`={S,A,B,C},
   `D+`={S,A,B,C,D}, `full`={S,A,B,C,D,F}. Unranked artists are never eligible.
-- **Weighting intensity** sets each eligible artist's weight from its tier's rank `r`:
+- **Weighting intensity** sets each eligible artist's weight from its tier:
   - `unweighted` → weight `1`.
-  - `weighted` (linear, favours higher) → weight `r` (S=6 … F=1).
-  - `heavily weighted` (exponential) → weight `2^(r-1)` (S=32, A=16, B=8, C=4, D=2, F=1).
+  - `weighted` (favours higher) → the **Fibonacci weight** (S=13, A=8, B=5, C=3, D=2, F=1).
+  - `heavily weighted` → **double the Fibonacci weight** (S=26, A=16, B=10, C=6, D=4, F=2).
 
 **Selection:** gather eligible artists, compute each weight, sum to `total`; draw a uniform random
 value in `[0, total)` and walk the cumulative weights to pick one. If there are no eligible artists,

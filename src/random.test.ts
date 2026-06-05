@@ -20,10 +20,14 @@ describe("random", () => {
   it("tierWeight matches the intensity curves", () => {
     expect(tierWeight("S", "unweighted")).toBe(1);
     expect(tierWeight("F", "unweighted")).toBe(1);
-    expect(tierWeight("S", "weighted")).toBe(6);
+    // weighted = Fibonacci scale (F=1, D=2, C=3, B=5, A=8, S=13)
+    expect(tierWeight("S", "weighted")).toBe(13);
+    expect(tierWeight("B", "weighted")).toBe(5);
     expect(tierWeight("F", "weighted")).toBe(1);
-    expect(tierWeight("S", "heavily")).toBe(32);
-    expect(tierWeight("F", "heavily")).toBe(1);
+    // heavily = double Fibonacci
+    expect(tierWeight("S", "heavily")).toBe(26);
+    expect(tierWeight("B", "heavily")).toBe(10);
+    expect(tierWeight("F", "heavily")).toBe(2);
   });
 
   it("never picks unranked and honours the cutoff", () => {
@@ -47,9 +51,9 @@ describe("random", () => {
       ["top", "S"],
       ["bottom", "F"],
     ]);
-    const scheme = { cutoff: "F", intensity: "weighted" } as const; // weights S=6, F=1, total 7
+    const scheme = { cutoff: "F", intensity: "weighted" } as const; // Fibonacci: S=13, F=1, total 14
     expect(pick(slots, scheme, () => 0)).toBe("top");
-    expect(pick(slots, scheme, () => 6.5 / 7)).toBe("bottom");
+    expect(pick(slots, scheme, () => 13.5 / 14)).toBe("bottom");
   });
 
   it("round-trips scheme ids and rejects invalid ones", () => {
