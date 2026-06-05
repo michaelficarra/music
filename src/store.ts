@@ -12,6 +12,7 @@ import { UNRANKED, isTier, type Slot } from "./types";
 
 const STORAGE_KEY = "artist-tier-list:v1";
 const SCHEME_KEY = "artist-tier-list:scheme";
+const PICKED_KEY = "artist-tier-list:picked";
 
 interface Persisted {
   version: 1;
@@ -124,6 +125,15 @@ export function loadSchemeId(): string | null {
 
 export function saveSchemeId(id: string): void {
   localStorage.setItem(SCHEME_KEY, id);
+}
+
+/** The artist most recently chosen by the 🎲 picker, persisted until the next pick. */
+export function loadPickedName(): string | null {
+  return localStorage.getItem(PICKED_KEY);
+}
+
+export function savePickedName(name: string): void {
+  localStorage.setItem(PICKED_KEY, name);
 }
 
 // Hydrate overrides from local storage on first import.

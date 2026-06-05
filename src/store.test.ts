@@ -69,4 +69,10 @@ describe("store", () => {
     store.saveSchemeId("C:weighted");
     expect(store.loadSchemeId()).toBe("C:weighted");
   });
+
+  it("remembers the last picked artist name", () => {
+    expect(store.loadPickedName()).toBeNull();
+    store.savePickedName("Radiohead");
+    expect(store.loadPickedName()).toBe("Radiohead");
+  });
 });

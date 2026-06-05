@@ -80,7 +80,9 @@ from the **static arrangement** (the source data shipped with the app).
   artist), neither button is shown.
 - When they **differ**, two controls appear:
   - **Reset** — discards local changes by clearing the saved arrangement from local storage, so
-    the app reverts to the static arrangement.
+    the app reverts to the static arrangement. Because this is destructive, it first asks for
+    confirmation in a modal dialog (Cancel / Reset); dismissing the dialog leaves the arrangement
+    untouched.
   - **Save** — copies the updated data, as CSV, to the system **clipboard**. There is no server to
     save to; the maintainer pastes this CSV over the source data file (`data/artists.csv`) and
     redeploys to make the arrangement the new static default. The exported CSV changes only each
@@ -92,13 +94,14 @@ tier does not, by itself, make the arrangement count as changed.
 ## 8. Random artist picker
 
 A prominent **🎲** button picks a single artist at random from the **ranked** tiers and highlights
-/ surfaces it to the user. **Unranked artists are never picked.**
+/ surfaces it to the user. **Unranked artists are never picked.** The chosen artist's **name is
+shown next to the picker** and **persists** (across page reloads) until the next press of 🎲.
 
 A **weighting-scheme dropdown** next to the button controls how the pick is made. A scheme has two
 independent dimensions:
 
 - **Tier cutoff** — which ranked tiers are eligible:
-  - `S+` → S only
+  - `S only` → S only
   - `A+` → S, A
   - `B+` → S, A, B
   - `C+` → S, A, B, C
@@ -113,6 +116,10 @@ independent dimensions:
 The dropdown offers the combinations of these dimensions (e.g. "C+ unweighted", "C+ weighted",
 "A+ weighted", "full unweighted", "full heavily weighted", …). The exact probability curve for
 each intensity is an implementation detail (see ARCHITECTURE.md).
+
+A horizontal line is drawn on the board between the lowest eligible tier and the next tier down,
+reflecting the selected cutoff (e.g. `C+` draws it between the C and D rows). It updates when the
+cutoff changes, and is **omitted for `full`** (where every ranked tier is eligible).
 
 Edge behaviour: if the chosen scheme has **no eligible artists** (e.g. `A+` selected but S and A
 are both empty), the 🎲 button performs no action and indicates that nothing can be picked (e.g. by

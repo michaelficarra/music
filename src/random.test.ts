@@ -62,7 +62,8 @@ describe("random", () => {
     expect(parseSchemeId("Z:nope")).toBeNull();
   });
 
-  it("labels the lowest cutoff as 'full'", () => {
+  it("labels the cutoffs ('S only', 'C+', 'full')", () => {
+    expect(cutoffLabel("S")).toBe("S only");
     expect(cutoffLabel("C")).toBe("C+");
     expect(cutoffLabel("F")).toBe("full");
   });

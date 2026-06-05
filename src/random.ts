@@ -53,8 +53,9 @@ export function parseSchemeId(id: string): Scheme | null {
   return { cutoff, intensity: intensity as Intensity };
 }
 
-/** Human label for a cutoff: "C+", or "full" for the lowest tier. */
+/** Human label for a cutoff: "S only" for the top tier, "full" for the lowest, else "C+". */
 export function cutoffLabel(cutoff: Tier): string {
+  if (cutoff === TIERS[0]) return "S only"; // nothing ranks above the top tier
   return cutoff === TIERS[TIERS.length - 1] ? "full" : `${cutoff}+`;
 }
 

@@ -3,13 +3,18 @@
 import Sortable from "sortablejs";
 import { artists } from "./data";
 import * as store from "./store";
-import { TIERS, UNRANKED, type Artist, type Slot } from "./types";
+import { TIERS, UNRANKED, type Artist, type Slot, type Tier } from "./types";
 
 export interface Board {
   /** Re-place every card according to the store (used after Reset). */
   rerender(): void;
   /** Briefly highlight an artist's card and scroll it into view. */
   highlight(name: string): void;
+  /**
+   * Draw a divider line just below `cutoff`'s row to mark the picker's eligible
+   * range (e.g. "C+" → between C and D). The lowest tier ("full") draws no line.
+   */
+  setCutoff(cutoff: Tier): void;
 }
 
 function createCard(artist: Artist): HTMLElement {
@@ -47,13 +52,20 @@ function createCard(artist: Artist): HTMLElement {
 export function createBoard(container: HTMLElement, onChange: () => void): Board {
   const cardsByName = new Map<string, HTMLElement>();
   const lists = new Map<Slot, HTMLElement>();
+  const rowsBySlot = new Map<Slot, HTMLElement>();
   let highlighted: HTMLElement | null = null;
   let highlightTimer: number | undefined;
+
+  // Divider marking the picker cutoff; reparented between rows by setCutoff().
+  const cutoffLine = document.createElement("div");
+  cutoffLine.className = "cutoff-line";
+  cutoffLine.setAttribute("aria-hidden", "true");
 
   function addRow(slot: Slot, label: string): void {
     const row = document.createElement("div");
     row.className = "tier-row";
     row.dataset.slot = slot;
+    rowsBySlot.set(slot, row);
 
     const heading = document.createElement("div");
     heading.className = "tier-label";
@@ -116,6 +128,12 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
         card.classList.remove("picked");
         if (highlighted === card) highlighted = null;
       }, 2500);
+    },
+    setCutoff(cutoff: Tier): void {
+      cutoffLine.remove();
+      // "full" (the lowest tier) means every tier is eligible → no divider.
+      if (cutoff === TIERS[TIERS.length - 1]) return;
+      rowsBySlot.get(cutoff)?.after(cutoffLine);
     },
   };
 }

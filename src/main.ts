@@ -18,36 +18,47 @@ import {
   type Scheme,
 } from "./random";
 
-const DEFAULT_SCHEME: Scheme = { cutoff: "F", intensity: "weighted" };
+const DEFAULT_SCHEME: Scheme = { cutoff: "C", intensity: "weighted" };
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("#app container not found");
 
 app.innerHTML = `
   <header class="toolbar">
-    <h1>Artist Tier List</h1>
-    <div class="controls">
-      <label class="picker">
-        <button id="roll" type="button" title="Pick a random artist">🎲</button>
-        <select id="scheme" aria-label="Weighting scheme"></select>
-      </label>
-      <div class="dirty-actions" hidden>
-        <button id="reset" type="button">Reset</button>
-        <button id="save" type="button">Save</button>
-      </div>
+    <h1>Michael's Artist Tier List</h1>
+    <div class="picker">
+      <select id="scheme" aria-label="Weighting scheme"></select>
+      <button id="roll" type="button" title="Pick a random artist">🎲</button>
+      <span id="picked-name" class="picked-name" aria-live="polite"></span>
+    </div>
+    <div class="dirty-actions" hidden>
+      <button id="reset" type="button">Reset</button>
+      <button id="save" type="button">Save</button>
     </div>
   </header>
   <main id="board" class="board"></main>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="reset-dialog" class="modal">
+    <form method="dialog">
+      <h2>Reset tier list?</h2>
+      <p>This discards your local changes and reverts to the saved tier list. This can't be undone.</p>
+      <div class="modal-actions">
+        <button value="cancel" type="submit" autofocus>Cancel</button>
+        <button value="confirm" type="submit" class="danger">Reset</button>
+      </div>
+    </form>
+  </dialog>
 `;
 
 const boardEl = app.querySelector<HTMLElement>("#board")!;
 const schemeSelect = app.querySelector<HTMLSelectElement>("#scheme")!;
 const rollButton = app.querySelector<HTMLButtonElement>("#roll")!;
+const pickedName = app.querySelector<HTMLElement>("#picked-name")!;
 const dirtyActions = app.querySelector<HTMLElement>(".dirty-actions")!;
 const resetButton = app.querySelector<HTMLButtonElement>("#reset")!;
 const saveButton = app.querySelector<HTMLButtonElement>("#save")!;
 const toast = app.querySelector<HTMLElement>("#toast")!;
+const resetDialog = app.querySelector<HTMLDialogElement>("#reset-dialog")!;
 
 // Populate the scheme dropdown, grouped by tier cutoff.
 for (const cutoff of TIERS) {
@@ -99,15 +110,27 @@ function refreshControls(): void {
 
 schemeSelect.addEventListener("change", () => {
   store.saveSchemeId(schemeSelect.value);
+  board.setCutoff(currentScheme().cutoff);
   refreshControls();
 });
 
 rollButton.addEventListener("click", () => {
   const name = pick(currentSlots(), currentScheme());
-  if (name !== null) board.highlight(name);
+  if (name !== null) {
+    pickedName.textContent = name;
+    store.savePickedName(name); // persists beside the picker until the next roll
+    board.highlight(name);
+  }
 });
 
+// Reset is destructive, so confirm via a modal first; the actual reset happens
+// only when the dialog closes with the "confirm" value (Esc/Cancel do nothing).
 resetButton.addEventListener("click", () => {
+  resetDialog.showModal();
+});
+
+resetDialog.addEventListener("close", () => {
+  if (resetDialog.returnValue !== "confirm") return;
   store.reset();
   board.rerender();
   refreshControls();
@@ -120,4 +143,8 @@ saveButton.addEventListener("click", () => {
   );
 });
 
+// Restore the last picked artist's name next to the picker (persists across reloads).
+pickedName.textContent = store.loadPickedName() ?? "";
+
+board.setCutoff(currentScheme().cutoff);
 refreshControls();

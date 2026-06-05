@@ -92,7 +92,8 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   order, per PRD §5). Writes happen immediately on every drop.
 - **Diff for Reset/Save:** compare each artist's current tier with its baseline tier. If any differ,
   the arrangement is "changed" → show Reset and Save. Within-tier order is irrelevant to the diff.
-- **Reset:** remove the local-storage key; re-render from the baseline.
+- **Reset:** confirmed via a native `<dialog>` (`showModal()`, a `<form method="dialog">`); only a
+  `confirm` return value removes the local-storage key and re-renders from the baseline.
 - **Save (clipboard):** serialise the **full** arrangement to CSV and write it to the clipboard via
   the async Clipboard API (`navigator.clipboard.writeText`). Serialisation rules:
   - Update only the `Tier` field of each row to the artist's current tier (blank for unranked); all
@@ -112,6 +113,9 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
 - On drop (`onAdd`/`onEnd`), the handler reads the destination list's tier, updates the in-memory
   map and local storage (§5), and refreshes the Reset/Save affordance. Within-tier reordering is
   allowed by SortableJS but not persisted.
+- `board.setCutoff(tier)` reparents a single `.cutoff-line` divider element between the cutoff row
+  and the next (a standalone node, so the rows' `overflow: hidden` doesn't clip it); `main.ts` calls
+  it on load and on dropdown change. The lowest tier ("full") draws no line.
 
 ## 7. Random picker & weighting
 
@@ -125,7 +129,7 @@ Implemented in `random.ts`.
 
 **A scheme = (tier cutoff, weighting intensity):**
 
-- **Tier cutoff** selects the eligible tiers: `S+`={S}, `A+`={S,A}, `B+`={S,A,B}, `C+`={S,A,B,C},
+- **Tier cutoff** selects the eligible tiers: `S only`={S}, `A+`={S,A}, `B+`={S,A,B}, `C+`={S,A,B,C},
   `D+`={S,A,B,C,D}, `full`={S,A,B,C,D,F}. Unranked artists are never eligible.
 - **Weighting intensity** sets each eligible artist's weight from its tier:
   - `unweighted` → weight `1`.
@@ -137,8 +141,10 @@ value in `[0, total)` and walk the cumulative weights to pick one. If there are 
 the pick is a no-op and the 🎲 button is disabled (PRD §8).
 
 **Dropdown:** the cross-product of cutoffs × intensities, presented grouped by cutoff. The
-last-used scheme may be persisted to local storage for convenience (separate key from the
-arrangement).
+last-used scheme is persisted to local storage (key `artist-tier-list:scheme`), and the most
+recently picked artist's name to `artist-tier-list:picked` — both separate from the arrangement.
+`main.ts` shows the picked name next to the (centred) picker and restores it on load, so it
+persists until the next roll.
 
 > Note for randomness: `Math.random()` is used at click time in the browser. (The build/CI
 > environment forbids `Math.random()` in some tooling contexts, but the app runtime does not.)
