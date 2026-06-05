@@ -151,10 +151,16 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   3. **Discogs** (artist search → images). **Requires a personal access token** if this tier is
      reached (provided via an env var, e.g. `DISCOGS_TOKEN`).
   4. **Streaming-service scrape** (YouTube Music, then Apple Music) as a last resort.
-- Writes the resulting `ImageURL` and records the winning provider in `ImageSource`.
+- Writes the resulting `ImageURL` and records the winning provider in `ImageSource`. Each URL is
+  passed through `toThumbnail()` (`scripts/thumbnail.ts`) to prefer a **smaller/thumbnail** form
+  where the host supports it (Wikimedia → `Special:FilePath?width=`; Apple/mzstatic → a small
+  square); unknown hosts are left unchanged.
 - Politeness: sets a descriptive `User-Agent` and rate-limits requests (especially MusicBrainz /
   Wikimedia, which require it). The script is **idempotent** — re-running only fills blanks unless
   `--force` is passed. It rewrites the CSV using the same RFC-4180 serialiser as the app (§5).
+- **Flags:** `--force` (re-fetch already-filled rows in bulk mode); `--artist "<name>"` (process
+  just one artist, always re-fetching it); `--disable <keys>` (comma-separated provider keys to
+  skip — used to retry an artist whose previously chosen provider gave a broken image).
 
 ## 9. Build & deploy
 
