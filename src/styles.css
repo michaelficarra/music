@@ -65,6 +65,11 @@ body {
   gap: var(--gap);
 }
 
+/* Override the display:flex above so the hidden attribute still hides it. */
+.dirty-actions[hidden] {
+  display: none;
+}
+
 button,
 select {
   font: inherit;
