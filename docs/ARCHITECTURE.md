@@ -50,7 +50,7 @@ Columns, in order:
 | Column        | Meaning |
 | ------------- | --- |
 | `Artist`      | Artist name. **Unique**; used as the identity key throughout the app. |
-| `Tier`        | One of `S`, `A`, `B`, `C`, `D`, `F`, or **blank** for unranked. |
+| `Tier`        | One of `S`, `A`, `B`, `C`, `D`, `E`, or **blank** for unranked. |
 | `ImageURL`    | URL of a representative image, or blank (→ placeholder). |
 | `ImageSource` | Which provider supplied the image (`apple-music`, `musicbrainz`, `youtube-music`, `wikipedia`), or blank. |
 
@@ -86,7 +86,7 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   immutable baseline (roster, images, baseline tiers).
 - **Local storage** (`store.ts`): a single key (e.g. `artist-tier-list:v1`) holding JSON:
   ```json
-  { "version": 1, "assignments": { "Radiohead": "S", "Nickelback": "F", ... } }
+  { "version": 1, "assignments": { "Radiohead": "S", "Nickelback": "E", ... } }
   ```
   `assignments` is a sparse map of **name → tier** overrides. Only tier is stored (no within-tier
   order, per PRD §5). Writes happen immediately on every drop.

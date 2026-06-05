@@ -37,7 +37,7 @@ A
 B
 C
 D
-F   (lowest)
+E   (lowest)
 ```
 
 Below (or alongside) the tiers there is an **always-visible "unranked" area** holding artists
@@ -62,7 +62,7 @@ appear in the unranked area.
   its name.
 - The user **drags a card** from one tier (or the unranked area) and drops it into another tier
   or the unranked area. This works with both mouse and touch input.
-- Alternatively, **clicking a card** opens a small **tier-selection dropdown** (S, A, B, C, D, F,
+- Alternatively, **clicking a card** opens a small **tier-selection dropdown** (S, A, B, C, D, E,
   or **X** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
   it; pressing **Enter** saves and **Escape** cancels. Saving moves the artist to the chosen tier.
 - **Only tier membership matters.** The left-to-right position of a card within a tier carries no
@@ -113,7 +113,7 @@ one for the **weighting intensity**:
   - `B+` → S, A, B
   - `C+` → S, A, B, C
   - `D+` → S, A, B, C, D
-  - `full` → S, A, B, C, D, F (all ranked tiers)
+  - `full` → S, A, B, C, D, E (all ranked tiers)
 - **Weighting intensity** — how probability is spread across the eligible artists:
   - `unweighted` — every eligible artist is equally likely.
   - `weighted` — favours higher tiers (an artist in a higher tier is more likely than one in a

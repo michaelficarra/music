@@ -1,4 +1,4 @@
-// Renders the tier board (S…F + unranked) and wires drag-and-drop via SortableJS.
+// Renders the tier board (S…E + unranked) and wires drag-and-drop via SortableJS.
 
 import Sortable from "sortablejs";
 import { artists } from "./data";

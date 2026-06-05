@@ -6,8 +6,8 @@
 
 import { TIERS, UNRANKED, isTier, type Slot, type Tier } from "./types";
 
-/** Fibonacci weight per tier (planning-poker scale): F=1 … S=13. */
-export const FIB_WEIGHT: Record<Tier, number> = { S: 13, A: 8, B: 5, C: 3, D: 2, F: 1 };
+/** Fibonacci weight per tier (planning-poker scale): E=1 … S=13. */
+export const FIB_WEIGHT: Record<Tier, number> = { S: 13, A: 8, B: 5, C: 3, D: 2, E: 1 };
 
 export type Intensity = "unweighted" | "weighted" | "heavily";
 
@@ -35,9 +35,9 @@ export function tierWeight(tier: Tier, intensity: Intensity): number {
     case "unweighted":
       return 1;
     case "weighted":
-      return FIB_WEIGHT[tier]; // Fibonacci scale (F=1 … S=13)
+      return FIB_WEIGHT[tier]; // Fibonacci scale (E=1 … S=13)
     case "heavily":
-      return 2 * FIB_WEIGHT[tier]; // double Fibonacci (F=2 … S=26)
+      return 2 * FIB_WEIGHT[tier]; // double Fibonacci (E=2 … S=26)
   }
 }
 
