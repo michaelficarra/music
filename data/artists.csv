@@ -3,7 +3,7 @@ Artist,Tier,ImageURL,ImageSource
 311,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/43/5c/2d/435c2d3c-5314-c229-1b5e-0cb89b4dfd93/ami-identity-becbfd127707552b3151afa35528ab10-2025-08-27T19-39-18.328Z_cropped.png/400x400bb.jpg,apple-music
 3OH!3,D,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/89/74/a6/8974a680-5036-8adc-edcc-96595c6840be/ami-identity-be57c9ab8c36d3b9bf12d538a9b15b4e-2025-07-16T21-06-37.097Z_cropped.png/400x400bb.jpg,apple-music
 ABBA,B,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/77/b2/e3/77b2e3f8-3af4-1928-f411-901705218d2d/mza_402627401905230864.png/400x400bb.jpg,apple-music
-All Time Low,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/9b/f4/2c/9bf42c57-7f45-9a38-04c6-323b9b628b8b/ami-identity-ffed305f33dd9c5b536a0348a008f280-2025-06-13T03-41-01.040Z_cropped.png/400x400bb.jpg,apple-music
+All Time Low,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/9b/f4/2c/9bf42c57-7f45-9a38-04c6-323b9b628b8b/ami-identity-ffed305f33dd9c5b536a0348a008f280-2025-06-13T03-41-01.040Z_cropped.png/400x400bb.jpg,apple-music
 Amanda Palmer,A,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/25/24/98/25249826-e632-ba72-c45e-c07cf2973516/pr_source.png/400x400bb.jpg,apple-music
 American Hi-Fi,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/8c/84/bd/8c84bd17-855f-2a4a-98b0-cab6a4e5f3c9/f1380593-4f4d-41c9-8a6e-9a964454c515_ami-identity-132997aed251dd0360163b04e3a2f9ed-2024-04-15T23-08-52.362Z_cropped.png/400x400bb.jpg,apple-music
 Amy Lee,D,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/bd/67/08/bd6708c5-a719-abea-15c0-3dfe64579135/ami-identity-af4a0b2aae715febb5d11514d8ea02a5-2026-04-17T19-29-04.778Z_cropped.png/400x400bb.jpg,apple-music
@@ -11,7 +11,7 @@ Analog Rebellion,B,https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/e9/35/70
 Angels & Airwaves,A,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/f0/95/91/f09591c2-8e98-1cd6-42c1-a453a19f3df1/pr_source.png/400x400bb.jpg,apple-music
 Angine De Poitrine,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/a5/43/81/a5438154-b1eb-59c5-0993-9a972d14ec59/ami-identity-98a36afcbfe546930be76822cc59f879-2026-03-09T19-43-42.604Z_cropped.png/400x400bb.jpg,apple-music
 Anita Velveeta,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/dd/65/6d/dd656d5f-1cfc-f0e4-2f01-5eb451422f31/file_cropped.png/400x400bb.jpg,apple-music
-Anya Marina,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/07/70/40/077040ae-59d1-45c1-8925-2ac03d3d94c1/ami-identity-fc08d01a37de82256d0cc66061fefb29-2025-09-02T18-58-30.690Z_cropped.png/400x400bb.jpg,apple-music
+Anya Marina,D,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/07/70/40/077040ae-59d1-45c1-8925-2ac03d3d94c1/ami-identity-fc08d01a37de82256d0cc66061fefb29-2025-09-02T18-58-30.690Z_cropped.png/400x400bb.jpg,apple-music
 Apashe,C,https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f0/7e/44/f07e448d-0245-6c19-5d82-325bdc0db0a1/pr_source.png/400x400bb.jpg,apple-music
 Art Brut,F,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/56/56/95/56569560-ac64-907e-b9da-d39ca62c59c5/mzl.syssuzpb.jpg/400x400bb.jpg,apple-music
 ATARASHII GAKKO!,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/90/87/8d/90878d8e-4109-3550-a3d1-d91144321f3e/ami-identity-8a2e01a1613ea3137097d55427b3d334-2025-03-15T02-06-17.717Z_cropped.png/400x400bb.jpg,apple-music
@@ -61,7 +61,7 @@ Eminem,C,https://is1-ssl.mzstatic.com/image/thumb/Features211/v4/53/6b/bf/536bbf
 Enya,C,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/7c/0f/a1/7c0fa1e6-0565-e94b-bc8a-8c324a0c2335/mzl.ostiyhxd.jpg/400x400bb.jpg,apple-music
 EURINGER,C,https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/9b/f9/cc/9bf9cc2f-4950-845c-f26b-2136aeba1d67/782388111669_Cover.jpg/400x400bb.jpg,apple-music
 Evanescence,D,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/b9/f8/05/b9f805c9-8a18-36c9-c07f-bece3de2db39/file_cropped.png/400x400bb.jpg,apple-music
-Eve 6,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/8a/d2/db/8ad2dbf7-17d6-77cc-20ae-475716be1fe6/715bab7a-9a07-47e1-a49d-5233acb91ef7_ami-identity-b99c700b2eb3d35534194f0c526e7c99-2024-09-30T18-16-22.798Z_cropped.png/400x400bb.jpg,apple-music
+Eve 6,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/8a/d2/db/8ad2dbf7-17d6-77cc-20ae-475716be1fe6/715bab7a-9a07-47e1-a49d-5233acb91ef7_ami-identity-b99c700b2eb3d35534194f0c526e7c99-2024-09-30T18-16-22.798Z_cropped.png/400x400bb.jpg,apple-music
 Evelyn Evelyn,F,https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/3f/ea/d2/3fead2c4-0210-e7b6-8600-107f256b2849/mzi.hvtfomqf.jpg/400x400bb.jpg,apple-music
 Fall Out Boy,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages123/v4/53/ea/13/53ea1398-3c7f-addb-9373-3fc63048b318/1fa85529-2c36-4928-933b-17a2d15afeb7_ami-identity-21187399153a680bbb3449e7ce920172-2023-01-18T15-10-56.952Z_cropped.png/400x400bb.jpg,apple-music
 Family Force 5,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/7f/75/1b/7f751b57-408a-fcb8-12f1-6a154df34ec7/ami-identity-9e7b321682650cd47ddb8c570ff063cc-2026-02-19T23-17-33.146Z_cropped.png/400x400bb.jpg,apple-music
@@ -69,7 +69,7 @@ First Aid Kit,A,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/3
 FKA twigs,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/83/2a/e0/832ae0a6-c805-c77f-f323-fe7f4f83f154/ami-identity-263f44f93d85f2ecfe4fd41e2976277c-2026-02-03T23-11-00.565Z_cropped.png/400x400bb.jpg,apple-music
 Fleetwood Mac,D,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/1d/51/17/1d5117c7-86de-3075-487c-bbfd06ed4b52/mza_8192933590323373427.png/400x400bb.jpg,apple-music
 Florence and The Machine,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/e3/34/00/e3340015-2eea-8e3b-de17-22b175f15f6a/ami-identity-5e67cf4707105e30d7f452b1de6f19e5-2025-08-19T10-57-53.200Z_cropped.png/400x400bb.jpg,apple-music
-Forever the Sickest Kids,,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/7f/49/56/7f495627-b52a-e18f-ba2d-d8db09fae7c6/mzl.sgfqmtkp.jpg/400x400bb.jpg,apple-music
+Forever the Sickest Kids,D,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/7f/49/56/7f495627-b52a-e18f-ba2d-d8db09fae7c6/mzl.sgfqmtkp.jpg/400x400bb.jpg,apple-music
 Fountains of Wayne,D,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/fc/10/7b/fc107b09-dad0-0ebe-26ae-e2b1974c03e5/mza_12713899127245470222.jpg/400x400bb.jpg,apple-music
 Frank Sinatra,D,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/8b/78/6c/8b786c35-57e8-baa8-b3a2-ced18ac9d602/mza_1777275275048889965.png/400x400bb.jpg,apple-music
 FRATELLIS,C,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/7c/88/37/7c883750-c11b-b657-9964-3903ccc6db36/pr_source.png/400x400bb.jpg,apple-music
@@ -81,7 +81,7 @@ Girl Talk,B,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/6d/9f/a0/6d9
 Gogol Bordello,D,https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/21/e7/f9/21e7f984-8e72-c23f-0202-751c9f385824/pr_source.png/400x400bb.jpg,apple-music
 Goldfinger,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/2f/8c/51/2f8c51b6-0e91-19bd-d495-733be395b4c9/ami-identity-66848f90095ba5bba807574bd6f67956-2026-02-16T16-48-42.230Z_cropped.png/400x400bb.jpg,apple-music
 Gracie Abrams,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/c2/89/47/c289478c-09c9-2268-ab7f-86516a51aa4b/ami-identity-d38fed2c45e9286f6f86194eca60e265-2026-05-11T17-12-15.544Z_cropped.png/400x400bb.jpg,apple-music
-Graffiti6,,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/27/00/5d/27005d4f-df57-da83-dcd1-775748b64398/mzl.yhiturkh.jpg/400x400bb.jpg,apple-music
+Graffiti6,F,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/27/00/5d/27005d4f-df57-da83-dcd1-775748b64398/mzl.yhiturkh.jpg/400x400bb.jpg,apple-music
 Green Day,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages116/v4/25/35/39/253539f6-efcb-11c1-f11d-0329af780e6a/63b3a478-9e5e-4d7b-a9cf-ca9f5b2449c3_ami-identity-890469d04c5b60a2a29907f0e4ab0130-2023-10-24T12-52-33.834Z_cropped.png/400x400bb.jpg,apple-music
 Grouplove,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages126/v4/19/76/08/19760879-cda8-53e5-40eb-c2d3329fd186/da06b213-f42e-4379-b53a-49cbaa9a77c6_ami-identity-e990d887ba469dd64f660abd20fa873b-2023-03-21T20-40-04.887Z_cropped.png/400x400bb.jpg,apple-music
 H.I.M.,C,https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/7d/ae/88/7dae8881-e1a4-091b-6ad5-f43784ee3484/888915590515_cover.jpg/400x400bb.jpg,apple-music
@@ -95,7 +95,7 @@ hellogoodbye,B,https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/d9/4c/ce/d94
 Hixxy,C,https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/e9/5a/b8/e95ab8c6-3cb6-7ee3-c3a6-b3aa492ba990/bdeb915d-9a09-40f1-9bf3-b4680e1fbc00.jpg/400x400bb.jpg,apple-music
 Hollywood Undead,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/47/2c/be/472cbe50-73e5-52c9-3f0b-e63797689765/ami-identity-3f7355af245642647eb1d93892ea0f46-2026-03-11T15-40-42.569Z_cropped.png/400x400bb.jpg,apple-music
 Hot Hot Heat,C,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/d2/d7/c3/d2d7c3f2-d37e-05dd-99ed-838972bcedf8/pr_source.png/400x400bb.jpg,apple-music
-Ida Maria,,https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/33/27/7e/33277ed4-3e91-89cd-281b-fb5193ceb346/00602527033976.rgb.jpg/400x400bb.jpg,apple-music
+Ida Maria,C,https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/33/27/7e/33277ed4-3e91-89cd-281b-fb5193ceb346/00602527033976.rgb.jpg/400x400bb.jpg,apple-music
 Imogen Heap,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/19/26/98/192698a1-3daf-4436-744b-815c5556364d/ami-identity-497bf3a2487f295465ed4c0d84da3f57-2024-11-01T09-41-37.944Z_cropped.png/400x400bb.jpg,apple-music
 Ingrid Michaelson,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/fa/db/62/fadb62e5-5544-47f7-8c08-81a5f722cf35/11df8d68-3ab0-4b8b-9e9d-02a114ab245e_ami-identity-87de1418933e4e875d56502d84d11cbd-2024-05-23T03-53-10.532Z_cropped.png/400x400bb.jpg,apple-music
 Iron & Wine,F,https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/aa/f7/33/aaf733ac-b26e-11e6-be55-7f22b96a5e09/pr_source.png/400x400bb.jpg,apple-music
@@ -125,7 +125,7 @@ Marina,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/06/1e/2c
 Maroon 5,D,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages116/v4/c3/3f/9a/c33f9a77-7395-bdfe-8068-a4b66d26531e/3ea423ea-6cf0-498a-a692-cc58da556f11_ami-identity-06acd526b8e5ef0283735a165e8eed70-2023-05-19T16-33-45.049Z_cropped.png/400x400bb.jpg,apple-music
 Matt and Kim,B,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/50/41/b3/5041b36c-11d0-fbb7-b3e8-167d7b8ee1d7/pr_source.png/400x400bb.jpg,apple-music
 Matt Nathanson,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/4a/4e/f4/4a4ef4b2-6fa9-daef-05ff-e1665dc98340/ami-identity-ce7ec6e5944cd49c992a8f0abe33bb2e-2025-11-10T00-58-41.427Z_cropped.png/400x400bb.jpg,apple-music
-Melanie C,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/6e/8f/be/6e8fbee8-7db6-8910-14c0-cf6b188b4c91/ami-identity-2dd9675b9ce74852c9d6cbe830d5079a-2026-04-28T19-16-59.283Z_cropped.png/400x400bb.jpg,apple-music
+Melanie C,F,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/6e/8f/be/6e8fbee8-7db6-8910-14c0-cf6b188b4c91/ami-identity-2dd9675b9ce74852c9d6cbe830d5079a-2026-04-28T19-16-59.283Z_cropped.png/400x400bb.jpg,apple-music
 Mest,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages126/v4/e7/84/47/e78447a8-3e37-c1aa-ede9-46aad7c9fd1c/f0e032f2-e0dc-43ea-832f-fce1963d3e4d_file_cropped.png/400x400bb.jpg,apple-music
 Metric,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/dc/f9/b1/dcf9b1a0-cde3-c83d-49d3-5e5d1670edb4/ami-identity-055077814a604445118564bbd2ceb7ca-2026-02-03T03-11-29.528Z_cropped.png/400x400bb.jpg,apple-music
 Metro Station,,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/24/69/07/24690764-3a95-4748-b8a2-25101be9250b/pr_source.png/400x400bb.jpg,apple-music
@@ -169,6 +169,7 @@ Red Hot Chili Peppers,C,https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/da/
 Reel Big Fish,C,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/bc/7d/04/bc7d04b2-2e1b-8a4a-ff01-b3477b2c617e/mzl.uanrktuv.jpg/400x400bb.jpg,apple-music
 Refused,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages122/v4/3c/2a/b0/3c2ab05b-2b76-5e9b-77c9-a5a568352583/efc17f93-a5d2-4963-bf6e-85005745bf4e_ami-identity-f37f7c2155d861c2d233e81ad06e1930-2024-03-21T15-49-48.792Z_cropped.png/400x400bb.jpg,apple-music
 Regina Spektor,A,https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/e0/ff/0b/e0ff0b58-e086-1984-65b1-bccd28dc3de2/pr_source.png/400x400bb.jpg,apple-music
+Rise Against,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/91/d7/68/91d7680e-daf2-8f01-7602-8f5d27884e88/ami-identity-7eabd00ad77a25e193338e5b407ea0c9-2025-08-16T19-43-23.855Z_cropped.png/400x400bb.jpg,apple-music
 Robyn,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/cf/94/3e/cf943e10-53cb-07a6-e407-e4883097d172/ami-identity-c56e238641f9e8c1a0fdf01b5648c21e-2026-01-07T12-07-07.177Z_cropped.png/400x400bb.jpg,apple-music
 Rush,F,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/d7/c2/a1/d7c2a12b-0f8e-2bab-6ad3-2a8674296742/mza_3437452608058597354.png/400x400bb.jpg,apple-music
 Sabaton,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/6c/20/c5/6c20c5c5-248c-b236-0473-c1bca94fc0da/ami-identity-edfc53b9bcb40ce20df6c2a581f3156a-2025-01-30T08-04-46.092Z_cropped.png/400x400bb.jpg,apple-music
@@ -205,7 +206,7 @@ Talking Heads,,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/aa/75/c6/
 Tears for Fears,F,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/ff/3a/27/ff3a270d-18c3-3b5c-688d-f2f2df663e35/7ef26d09-65f1-4484-a983-c0bbc2ecf513_ami-identity-d77cd5e2527f2851ed94fcbd7c19d894-2024-09-17T20-48-21.306Z_cropped.png/400x400bb.jpg,apple-music
 Tenacious D,D,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages116/v4/06/75/32/0675320c-eb1f-e840-aa18-8a1796d33424/db428f60-b625-4fe2-bab0-df78ead59787_ami-identity-0887d289f8a49cfa2e7ce7b60e36626e-2023-05-16T23-04-31.843Z_cropped.png/400x400bb.jpg,apple-music
 The 2 Live Crew,D,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/d5/f1/f0/d5f1f09f-ae1e-5dc6-71e3-61db5217b769/pr_source.png/400x400bb.jpg,apple-music
-The Academy Is...,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/dd/58/44/dd5844b7-f07c-d979-1f7b-4185d2d24aaf/ami-identity-a785adb0936b97a0f8f8731468522478-2026-01-16T01-26-29.202Z_cropped.png/400x400bb.jpg,apple-music
+The Academy Is...,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/dd/58/44/dd5844b7-f07c-d979-1f7b-4185d2d24aaf/ami-identity-a785adb0936b97a0f8f8731468522478-2026-01-16T01-26-29.202Z_cropped.png/400x400bb.jpg,apple-music
 The All-American Rejects,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/39/f4/6b/39f46b2d-5463-e36d-c2f2-bf3e30b55de1/file_cropped.png/400x400bb.jpg,apple-music
 The Apples in Stereo,,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/b4/9d/bb/b49dbb54-f775-f714-e4fc-a744d7963b5f/pr_source.png/400x400bb.jpg,apple-music
 The Asteroids Galaxy Tour,D,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/a8/5d/a4/a85da472-6088-5ff1-68ea-da150758c23b/ami-identity-43634144eaae9d39ed3325b9faca6ace-2025-12-01T14-05-45.116Z_cropped.png/400x400bb.jpg,apple-music
@@ -228,12 +229,12 @@ The Pink Spiders,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages116/v
 The Pogues,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/fd/ac/53/fdac5351-0afd-d863-d102-23500af5417b/ami-identity-422ffa552dff2dcb93ab13a61e80c651-2026-06-04T11-31-18.431Z_cropped.png/400x400bb.jpg,apple-music
 The Police,F,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/67/7e/85/677e852f-cea4-c783-6a7d-22a6d8f78140/mza_2759154113444906909.png/400x400bb.jpg,apple-music
 The Postal Service,A,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/3a/99/25/3a992567-b6ad-ac3c-864a-7f020c9dc7ab/pr_source.png/400x400bb.jpg,apple-music
-The Red Jumpsuit Apparatus,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/b0/29/44/b02944e4-1493-3bb2-71fe-11a91b4871e5/ami-identity-e1443ade11c52f83609c7d7c32c8563b-2025-08-26T14-26-38.618Z_cropped.png/400x400bb.jpg,apple-music
+The Red Jumpsuit Apparatus,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/b0/29/44/b02944e4-1493-3bb2-71fe-11a91b4871e5/ami-identity-e1443ade11c52f83609c7d7c32c8563b-2025-08-26T14-26-38.618Z_cropped.png/400x400bb.jpg,apple-music
 The Rocket Summer,,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/3b/0c/78/3b0c787f-326b-0d97-d770-9f6e57194001/pr_source.png/400x400bb.jpg,apple-music
 The Shins,,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/5d/9b/23/5d9b2349-a9ab-9f00-0493-fea39ab490e7/pr_source.png/400x400bb.jpg,apple-music
 The Smashing Pumpkins,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/67/b0/d0/67b0d009-cfe5-f68d-5296-891eb86209cb/ami-identity-8e1c3d516591a3f1ae95545b0ce45c27-2026-05-15T00-17-03.775Z_cropped.png/400x400bb.jpg,apple-music
 The Smiths,,https://is1-ssl.mzstatic.com/image/thumb/Features221/v4/54/9a/2e/549a2e36-bc4d-0247-d03c-dda516b25eeb/mza_3821065946139989548.png/400x400bb.jpg,apple-music
-The Starting Line,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/54/c6/41/54c64102-ce4c-398a-f3d5-fe8ebbad0529/ami-identity-5a1e877c68104a3ac3681ba4c5510175-2025-06-06T20-08-04.908Z_cropped.png/400x400bb.jpg,apple-music
+The Starting Line,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/54/c6/41/54c64102-ce4c-398a-f3d5-fe8ebbad0529/ami-identity-5a1e877c68104a3ac3681ba4c5510175-2025-06-06T20-08-04.908Z_cropped.png/400x400bb.jpg,apple-music
 The Used,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/4a/a2/3c/4aa23c8d-e6e2-f689-1477-9033c981edfc/96a8f906-482f-46d1-95e3-fae7d9dbba2d_ami-identity-c676f9b41636690fc9def73bb2e03eef-2024-05-17T19-08-32.853Z_cropped.png/400x400bb.jpg,apple-music
 The xx,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/98/b2/d3/98b2d334-2d85-621a-162b-c2cfaf41e468/ami-identity-63a2c435108b440a659c5a5a1bca642c-2025-03-12T14-04-08.920Z_cropped.png/400x400bb.jpg,apple-music
 Third Eye Blind,,https://is1-ssl.mzstatic.com/image/thumb/Features125/v4/73/91/be/7391be7d-2278-44d5-ee68-c45e98e2f79c/mzl.ctepsgnr.jpg/400x400bb.jpg,apple-music
@@ -244,7 +245,7 @@ Tove Lo,A,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages221/v4/d6/6e/d
 Trans-Siberian Orchestra,,https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/2f/2a/d0/2f2ad0f8-fd14-2aed-a2d1-61d9327d5fad/mzl.zvfdhoto.jpg/400x400bb.jpg,apple-music
 Treaty of Paris,B,https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/45/f7/72/45f772f8-acd8-a945-9d69-f6a020cb1c41/artwork.jpg/400x400bb.jpg,apple-music
 twenty one pilots,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/ca/cd/50/cacd509c-b0d0-9767-afed-2568bb48bb80/ami-identity-c9ba08a71090ad5f6094375f4aa48f32-2025-05-21T14-28-34.785Z_cropped.png/400x400bb.jpg,apple-music
-Two Door Cinema Club,,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages116/v4/13/53/06/1353064f-11d9-eb4b-b669-83326852960b/9abf18a4-61ac-4ea9-a9ba-92f6b14a0dad_ami-identity-db694f55a17e7f27d982639b4878bc74-2023-09-26T16-31-34.002Z_cropped.png/400x400bb.jpg,apple-music
+Two Door Cinema Club,D,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages116/v4/13/53/06/1353064f-11d9-eb4b-b669-83326852960b/9abf18a4-61ac-4ea9-a9ba-92f6b14a0dad_ami-identity-db694f55a17e7f27d982639b4878bc74-2023-09-26T16-31-34.002Z_cropped.png/400x400bb.jpg,apple-music
 Vampire Weekend,B,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages126/v4/8a/e9/32/8ae932c1-1a13-27cc-a0dc-02289089e495/4163491f-3bda-448e-ac69-5b1ae6723d12_ami-identity-76d7a8ef014d81f2e211c7bcf199c794-2024-02-07T22-04-38.733Z_cropped.png/400x400bb.jpg,apple-music
 Vanessa Carlton,C,https://is1-ssl.mzstatic.com/image/thumb/AMCArtistImages211/v4/08/78/ec/0878ec8e-11bc-5721-21ab-2e9d66519de1/ami-identity-3176eaa7d17a565449cf50d6ce954e4a-2025-11-11T15-47-48.823Z_cropped.png/400x400bb.jpg,apple-music
 Vermillion Lies,C,https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/af/73/56/af735605-ad9f-8d25-45d3-d9c08a9d35b6/mzi.mwfffner.tif/400x400bb.jpg,apple-music
