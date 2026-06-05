@@ -7,7 +7,6 @@ import * as store from "./store";
 import { createBoard } from "./board";
 import { TIERS, type Slot } from "./types";
 import {
-  SCHEMES,
   INTENSITY_LABEL,
   INTENSITIES,
   cutoffLabel,
@@ -27,7 +26,8 @@ app.innerHTML = `
   <header class="toolbar">
     <h1>Michael's Artist Tier List</h1>
     <div class="picker">
-      <select id="scheme" aria-label="Weighting scheme"></select>
+      <select id="cutoff" aria-label="Tier cutoff"></select>
+      <select id="intensity" aria-label="Weighting intensity"></select>
       <button id="roll" type="button" title="Pick a random artist">🎲</button>
       <span id="picked-name" class="picked-name" aria-live="polite"></span>
     </div>
@@ -51,7 +51,8 @@ app.innerHTML = `
 `;
 
 const boardEl = app.querySelector<HTMLElement>("#board")!;
-const schemeSelect = app.querySelector<HTMLSelectElement>("#scheme")!;
+const cutoffSelect = app.querySelector<HTMLSelectElement>("#cutoff")!;
+const intensitySelect = app.querySelector<HTMLSelectElement>("#intensity")!;
 const rollButton = app.querySelector<HTMLButtonElement>("#roll")!;
 const pickedName = app.querySelector<HTMLElement>("#picked-name")!;
 const dirtyActions = app.querySelector<HTMLElement>(".dirty-actions")!;
@@ -60,28 +61,30 @@ const saveButton = app.querySelector<HTMLButtonElement>("#save")!;
 const toast = app.querySelector<HTMLElement>("#toast")!;
 const resetDialog = app.querySelector<HTMLDialogElement>("#reset-dialog")!;
 
-// Populate the scheme dropdown, grouped by tier cutoff.
+// Populate the two scheme dropdowns: tier cutoff and weighting intensity.
 for (const cutoff of TIERS) {
-  const group = document.createElement("optgroup");
-  group.label = cutoffLabel(cutoff);
-  for (const intensity of INTENSITIES) {
-    const option = document.createElement("option");
-    option.value = schemeId({ cutoff, intensity });
-    option.textContent = `${cutoffLabel(cutoff)} — ${INTENSITY_LABEL[intensity]}`;
-    group.appendChild(option);
-  }
-  schemeSelect.appendChild(group);
+  const option = document.createElement("option");
+  option.value = cutoff;
+  option.textContent = cutoffLabel(cutoff);
+  cutoffSelect.appendChild(option);
+}
+for (const intensity of INTENSITIES) {
+  const option = document.createElement("option");
+  option.value = intensity;
+  option.textContent = INTENSITY_LABEL[intensity];
+  intensitySelect.appendChild(option);
 }
 
 // Restore the last-used scheme, falling back to the default.
-const savedScheme = store.loadSchemeId();
-schemeSelect.value =
-  savedScheme !== null && SCHEMES.some((s) => schemeId(s) === savedScheme)
-    ? savedScheme
-    : schemeId(DEFAULT_SCHEME);
+const initialScheme = (() => {
+  const saved = store.loadSchemeId();
+  return (saved !== null ? parseSchemeId(saved) : null) ?? DEFAULT_SCHEME;
+})();
+cutoffSelect.value = initialScheme.cutoff;
+intensitySelect.value = initialScheme.intensity;
 
 function currentScheme(): Scheme {
-  return parseSchemeId(schemeSelect.value) ?? DEFAULT_SCHEME;
+  return parseSchemeId(`${cutoffSelect.value}:${intensitySelect.value}`) ?? DEFAULT_SCHEME;
 }
 
 /** Snapshot of every artist's current slot, for the picker. */
@@ -108,18 +111,21 @@ function refreshControls(): void {
   rollButton.disabled = !hasEligible(currentSlots(), currentScheme());
 }
 
-schemeSelect.addEventListener("change", () => {
-  store.saveSchemeId(schemeSelect.value);
-  board.setCutoff(currentScheme().cutoff);
+function onSchemeChange(): void {
+  const scheme = currentScheme();
+  store.saveSchemeId(schemeId(scheme));
+  board.setCutoff(scheme.cutoff);
   refreshControls();
-});
+}
+cutoffSelect.addEventListener("change", onSchemeChange);
+intensitySelect.addEventListener("change", onSchemeChange);
 
 rollButton.addEventListener("click", () => {
   const name = pick(currentSlots(), currentScheme());
   if (name !== null) {
     pickedName.textContent = name;
     store.savePickedName(name); // persists beside the picker until the next roll
-    board.highlight(name);
+    board.present(name);
   }
 });
 

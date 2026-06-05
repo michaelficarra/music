@@ -148,6 +148,12 @@ button:disabled {
   border-radius: 6px;
   overflow: hidden;
   background: #3a3d46;
+  /* Transparent ring by default so the picked ring can fade in/out (two layers
+     to match .card.picked so box-shadow interpolates smoothly). */
+  box-shadow:
+    0 0 0 0 #4c8dff00,
+    0 0 0 0 #4c8dff00;
+  transition: box-shadow 0.5s ease;
 }
 
 .thumb img {
@@ -173,8 +179,44 @@ button:disabled {
 }
 
 .card.picked .thumb {
-  outline: 3px solid var(--accent);
-  box-shadow: 0 0 0 4px #4c8dff55;
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 0 14px 3px #4c8dff66;
+}
+
+/* The flying clone shown when an artist is rolled: above everything, centred
+   large, then animated back into the card's grid slot (see board.ts present()). */
+.pick-presenter {
+  z-index: 1000;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.pick-presenter .thumb {
+  box-shadow: 0 12px 48px #000000aa;
+}
+
+/* Spotlight a rolled artist: while a card is highlighted (.picked), dim the rest
+   of the page so the pick stands out. Driven by :has(.card.picked), so the dim
+   lasts exactly as long as the highlight. Uses opacity only — nothing is an
+   overlay and every control stays interactive. */
+.toolbar,
+.tier-row,
+.tier-label,
+.card,
+.cutoff-line {
+  transition: opacity 0.5s ease;
+}
+
+#app:has(.card.picked) .toolbar,
+#app:has(.card.picked) .tier-row:not(:has(.card.picked)),
+#app:has(.card.picked) .tier-row:has(.card.picked) .tier-label,
+#app:has(.card.picked) .tier-row:has(.card.picked) .card:not(.picked) {
+  opacity: 0.3;
+}
+
+#app:has(.card.picked) .cutoff-line {
+  opacity: 0.12;
 }
 
 /* Divider marking the random-picker cutoff (drawn between two tier rows). */

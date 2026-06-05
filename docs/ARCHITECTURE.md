@@ -24,9 +24,9 @@ static bundle plus a build-time-embedded copy of the artist data.
 ├── data/
 │   └── artists.csv          # Source of truth for the artist roster, tiers, and images
 ├── scripts/
-│   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §8)
+│   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §6)
 │   ├── add-artist.ts        # Append an unranked artist to the CSV, then enrich them
-│   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §8)
+│   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §6)
 ├── src/                     # Application source
 │   ├── main.ts              # Entry point: load data, build UI, wire events
 │   ├── data.ts              # CSV parse/serialise + the static baseline import
@@ -58,7 +58,7 @@ Columns, in order:
 - **Quoting:** standard RFC-4180. Fields containing a comma, double-quote, or newline are wrapped
   in double quotes, with embedded double-quotes doubled. This matters for names such as
   `Dan le Sac vs. Scroobius Pip` (safe) and any future name containing a comma.
-- The current file holds 252 artists. It may be edited by hand or by the enrichment script (§8).
+- The current file holds 252 artists. It may be edited by hand or by the enrichment script (§6).
 
 ## 4. Data flow & the "static baseline"
 
@@ -102,54 +102,7 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
     accent-insensitive `localeCompare`) so the exported CSV stays in the list's canonical order.
   - Apply RFC-4180 quoting (§3).
 
-## 6. UI structure & drag-and-drop
-
-- The board is plain DOM built in `board.ts`: a container with one **row per tier** (S…F) and one
-  **unranked area**, each row containing **artist cards**.
-- A **card** renders the artist's image (or placeholder) and name, and carries its artist name as a
-  data attribute for identification.
-- Each list (six tier rows + the unranked area) gets its **own SortableJS instance**, all sharing a
-  single `group` so cards can be dragged between any of them.
-- On drop (`onAdd`/`onEnd`), the handler reads the destination list's tier, updates the in-memory
-  map and local storage (§5), and refreshes the Reset/Save affordance. Within-tier reordering is
-  allowed by SortableJS but not persisted.
-- `board.setCutoff(tier)` reparents a single `.cutoff-line` divider element between the cutoff row
-  and the next (a standalone node, so the rows' `overflow: hidden` doesn't clip it); `main.ts` calls
-  it on load and on dropdown change. The lowest tier ("full") draws no line.
-
-## 7. Random picker & weighting
-
-Implemented in `random.ts`.
-
-**Tier weights** (the Fibonacci/planning-poker scale, higher = better):
-
-| Tier             | S  | A  | B  | C | D | F |
-| ---------------- | -- | -- | -- | - | - | - |
-| Fibonacci weight | 13 |  8 |  5 | 3 | 2 | 1 |
-
-**A scheme = (tier cutoff, weighting intensity):**
-
-- **Tier cutoff** selects the eligible tiers: `S only`={S}, `A+`={S,A}, `B+`={S,A,B}, `C+`={S,A,B,C},
-  `D+`={S,A,B,C,D}, `full`={S,A,B,C,D,F}. Unranked artists are never eligible.
-- **Weighting intensity** sets each eligible artist's weight from its tier:
-  - `unweighted` → weight `1`.
-  - `weighted` (favours higher) → the **Fibonacci weight** (S=13, A=8, B=5, C=3, D=2, F=1).
-  - `heavily weighted` → **double the Fibonacci weight** (S=26, A=16, B=10, C=6, D=4, F=2).
-
-**Selection:** gather eligible artists, compute each weight, sum to `total`; draw a uniform random
-value in `[0, total)` and walk the cumulative weights to pick one. If there are no eligible artists,
-the pick is a no-op and the 🎲 button is disabled (PRD §8).
-
-**Dropdown:** the cross-product of cutoffs × intensities, presented grouped by cutoff. The
-last-used scheme is persisted to local storage (key `artist-tier-list:scheme`), and the most
-recently picked artist's name to `artist-tier-list:picked` — both separate from the arrangement.
-`main.ts` shows the picked name next to the (centred) picker and restores it on load, so it
-persists until the next roll.
-
-> Note for randomness: `Math.random()` is used at click time in the browser. (The build/CI
-> environment forbids `Math.random()` in some tooling contexts, but the app runtime does not.)
-
-## 8. Image-enrichment tooling (`scripts/enrich-images.ts`)
+## 6. Image-enrichment tooling (`scripts/enrich-images.ts`)
 
 A **dev-time** Node/TS script, run manually by the maintainer — **not** part of the app bundle.
 
@@ -176,7 +129,7 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   (blank Tier/ImageURL/ImageSource) in sorted position (`compareArtistNames`, keeping the CSV
   sorted by name), then invokes the enrichment above for just that artist. Refuses a duplicate name.
 
-## 9. Build & deploy
+## 7. Build & deploy
 
 - **Dev:** `vite` (dev server with HMR).
 - **Build:** `npm run build` (`tsc --noEmit && vite build`) → static assets in `dist/`.
@@ -186,7 +139,7 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   `configure-pages` → `upload-pages-artifact` (`dist`) → `deploy-pages`. **Build artefacts are not
   committed**; the Action publishes `dist/` to Pages.
 
-## 10. Testing & quality (intended)
+## 8. Testing & quality (intended)
 
 - **Vitest** unit tests for the pure logic: CSV parse/serialise round-trip (incl. quoting) in
   `src/csv.test.ts`, the overlay/diff/export in `src/store.test.ts` (run under the `jsdom`

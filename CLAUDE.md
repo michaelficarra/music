@@ -32,7 +32,7 @@ the PRD; if it's about how the code achieves it, it's ARCHITECTURE.
   affect the shipped default.
 - The in-app **Save** button exports the current arrangement as CSV to the clipboard; updating the
   static default means pasting that over `data/artists.csv` and committing.
-- Image URLs are populated by `scripts/enrich-images.ts` (ARCHITECTURE §8), which tries
+- Image URLs are populated by `scripts/enrich-images.ts` (ARCHITECTURE §6), which tries
   Apple Music → MusicBrainz → YouTube Music → Wikipedia (preferring thumbnails) and records the
   provider in `ImageSource`. It is idempotent (fills blanks only, unless `--force`).
 - **Never commit** editor swap files (e.g. `data/.artists.csv.swp`); add them to `.gitignore`.

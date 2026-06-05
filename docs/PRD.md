@@ -93,12 +93,16 @@ tier does not, by itself, make the arrangement count as changed.
 
 ## 8. Random artist picker
 
-A prominent **🎲** button picks a single artist at random from the **ranked** tiers and highlights
-/ surfaces it to the user. **Unranked artists are never picked.** The chosen artist's **name is
-shown next to the picker** and **persists** (across page reloads) until the next press of 🎲.
+A prominent **🎲** button picks a single artist at random from the **ranked** tiers.
+**Unranked artists are never picked.** When pressed, the chosen artist's **card and name are shown
+large and centred**, then **animate back into that card's place** in the grid. The chosen artist's
+**name is also shown next to the picker** and **persists** (across page reloads) until the next
+press of 🎲. While the pick is being revealed, the **rest of the page dims** to spotlight it — the
+page is *not* blocked: every control stays interactive throughout. (Where the viewer prefers reduced
+motion, the fly-in is skipped and the card is simply highlighted in place.)
 
-A **weighting-scheme dropdown** next to the button controls how the pick is made. A scheme has two
-independent dimensions:
+**Two dropdowns** next to the button control how the pick is made — one for the **tier cutoff** and
+one for the **weighting intensity**:
 
 - **Tier cutoff** — which ranked tiers are eligible:
   - `S only` → S only
@@ -113,9 +117,8 @@ independent dimensions:
     lower tier).
   - `heavily weighted` — strongly favours higher tiers.
 
-The dropdown offers the combinations of these dimensions (e.g. "C+ unweighted", "C+ weighted",
-"A+ weighted", "full unweighted", "full heavily weighted", …). The exact probability curve for
-each intensity is an implementation detail (see ARCHITECTURE.md).
+The two dropdowns **default to "C+" and "weighted"** and **remember your last selection** across
+page reloads. The exact probability curve for each intensity is an implementation detail.
 
 A horizontal line is drawn on the board between the lowest eligible tier and the next tier down,
 reflecting the selected cutoff (e.g. `C+` draws it between the C and D rows). It updates when the
