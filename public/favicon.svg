@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Tiers with music note">
+  <rect x="0" y="3" width="64" height="58.1" rx="3" fill="#15161b"/>
+  <rect x="3" y="6"    width="58" height="11" rx="3" fill="#f87171"/>
+  <rect x="3" y="19.7" width="58" height="11" rx="3" fill="#facc15"/>
+  <rect x="3" y="33.4" width="58" height="11" rx="3" fill="#4ade80"/>
+  <rect x="3" y="47.1" width="58" height="11" rx="3" fill="#38bdf8"/>
+  <circle cx="32" cy="32" r="24" fill="#15161b" opacity="0.8"/>
+  <g fill="#ffffff" transform="translate(4.6 5.8) scale(0.92)">
+    <rect x="30" y="13" width="3.4" height="25" rx="1.7"/>
+    <path d="M31.7 13 c7.5 2 9 8.5 5 13.5 c1.8 -5.5 -1 -8.5 -5 -9 z"/>
+    <ellipse cx="25" cy="38" rx="7.5" ry="5.6" transform="rotate(-18 25 38)"/>
+  </g>
+</svg>
