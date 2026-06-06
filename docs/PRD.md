@@ -103,8 +103,9 @@ A prominent **🎲** button picks a single artist at random from the **ranked** 
 **Unranked artists are never picked.** When pressed, the chosen artist's **card and name are shown
 large and centred**, then **animate back into that card's place** in the grid. The chosen artist's
 **name is also shown next to the picker** and **persists** (across page reloads) until the next
-press of 🎲. While the pick is being revealed, the **rest of the page dims** to spotlight it — the
-page is *not* blocked: every control stays interactive throughout. (Where the viewer prefers reduced
+press of 🎲. While the pick is being revealed, the **rest of the board dims** to spotlight it (the
+**toolbar stays fully visible**) — the page is *not* blocked: every control stays interactive
+throughout. (Where the viewer prefers reduced
 motion, the fly-in is skipped and the card is simply highlighted in place.)
 
 **Two dropdowns** next to the button control how the pick is made — one for the **tier cutoff** and

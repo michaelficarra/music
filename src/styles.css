@@ -70,6 +70,46 @@ body {
   display: none;
 }
 
+/* On narrow screens the three toolbar groups (title, picker, actions) no longer
+   fit side by side, so collapse the grid to a single column and stack them
+   vertically, left-aligned. */
+@media (max-width: 640px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  /* Cancel the start/centre/end alignment from the wide layout so each group
+     fills the column, then centre its content so every row reads as a centred
+     vertical list. */
+  .toolbar h1,
+  .picker,
+  .dirty-actions {
+    justify-self: stretch;
+  }
+
+  .toolbar h1 {
+    text-align: center;
+  }
+
+  /* Let the picker's controls wrap onto further lines rather than overflow the
+     narrow column; justify-content centres each wrapped line. */
+  .picker {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Always break the selected artist's name onto its own line, below the
+     dropdowns/button, even when it would otherwise fit alongside them. */
+  .picker .picked-name {
+    flex-basis: 100%;
+    text-align: center;
+  }
+
+  .dirty-actions {
+    justify-content: center;
+  }
+}
+
 button,
 select {
   font: inherit;
@@ -232,10 +272,10 @@ button:disabled {
 }
 
 /* Spotlight a rolled artist: while a card is highlighted (.picked), dim the rest
-   of the page so the pick stands out. Driven by :has(.card.picked), so the dim
-   lasts exactly as long as the highlight. Uses opacity only — nothing is an
-   overlay and every control stays interactive. */
-.toolbar,
+   of the board so the pick stands out. The toolbar is deliberately left at full
+   opacity so its controls stay clearly usable. Driven by :has(.card.picked), so
+   the dim lasts exactly as long as the highlight. Uses opacity only — nothing is
+   an overlay and every control stays interactive. */
 .tier-row,
 .tier-label,
 .card,
@@ -243,7 +283,6 @@ button:disabled {
   transition: opacity 0.5s ease;
 }
 
-#app:has(.card.picked) .toolbar,
 #app:has(.card.picked) .tier-row:not(:has(.card.picked)),
 #app:has(.card.picked) .tier-row:has(.card.picked) .tier-label,
 #app:has(.card.picked) .tier-row:has(.card.picked) .card:not(.picked) {
