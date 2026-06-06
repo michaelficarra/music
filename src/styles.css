@@ -156,6 +156,10 @@ button:disabled {
   font-weight: 700;
   font-size: 2.4rem;
   background: #00000033;
+  /* Purely decorative letters: don't let them be selected or imply they're
+     interactive. */
+  user-select: none;
+  cursor: default;
 }
 
 /* Classic tier-list colours on the letter cell only (not the card area).
