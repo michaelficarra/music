@@ -79,6 +79,15 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
     who have a saved arrangement.
   - An override for an artist no longer in the CSV is simply ignored.
 - **Current tier** of an artist = its local-storage override if present, else its baseline tier.
+- **Save** writes the serialised CSV (§3) to the clipboard, and — only when the page is served from
+  the deployed site (`location.origin + pathname === "https://michaelficarra.github.io/music/"`) —
+  opens the file's GitHub edit page in a new tab. The guard keeps local dev and forks from spawning
+  a tab to a repo the viewer can't push to; the clipboard copy happens regardless. Both the edit URL
+  (`https://github.com/michaelficarra/music/edit/main/data/artists.csv`) and the site URL are
+  **hard-coded** in `main.ts` — the one place the repo name is baked in (cf. the relative `base` in
+  `vite.config.ts`, §1) — so both must be updated if the repo is renamed or moved. GitHub cannot
+  pre-fill the editor from a URL, hence the clipboard copy: the maintainer pastes, then commits to
+  redeploy.
 
 ## 5. State model & persistence
 

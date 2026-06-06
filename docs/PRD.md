@@ -87,10 +87,12 @@ from the **static arrangement** (the source data shipped with the app).
     the app reverts to the static arrangement. Because this is destructive, it first asks for
     confirmation in a modal dialog (Cancel / Reset); dismissing the dialog leaves the arrangement
     untouched.
-  - **Save** — copies the updated data, as CSV, to the system **clipboard**. There is no server to
-    save to; the maintainer pastes this CSV over the source data file (`data/artists.csv`) and
-    redeploys to make the arrangement the new static default. The exported CSV changes only each
-    artist's tier, and its rows are **sorted by artist name** (the list's canonical order).
+  - **Save** — copies the updated data, as CSV, to the system **clipboard**, and (only when viewed
+    on the deployed site) opens the GitHub edit page for the source data file (`data/artists.csv`)
+    in a **new tab**. There is no server to save to; the maintainer pastes this CSV over the file
+    and commits, redeploying to make the arrangement the new static default. The exported CSV
+    changes only each artist's tier, and its rows are **sorted by artist name** (the list's
+    canonical order).
 
 "Differ" is judged on **tier membership only** (consistent with §5): reordering cards within a
 tier does not, by itself, make the arrangement count as changed.

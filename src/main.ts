@@ -19,6 +19,15 @@ import {
 
 const DEFAULT_SCHEME: Scheme = { cutoff: "D", intensity: "weighted" };
 
+// GitHub's edit page can't be pre-filled from a URL, so Save copies the CSV to the
+// clipboard and opens this edit page for the maintainer to paste over and commit.
+// Hard-coded to this repo; update it if the repo is renamed or moved.
+const EDIT_URL = "https://github.com/michaelficarra/music/edit/main/data/artists.csv";
+
+// Only the deployed site opens the editor; elsewhere (local dev, forks) Save just
+// copies, so it stays testable without spawning a tab to a repo you can't push to.
+const SITE_URL = "https://michaelficarra.github.io/music/";
+
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("#app container not found");
 
@@ -143,8 +152,19 @@ resetDialog.addEventListener("close", () => {
 });
 
 saveButton.addEventListener("click", () => {
-  navigator.clipboard.writeText(store.toCSV()).then(
-    () => showToast("Copied updated CSV to clipboard"),
+  // Start the clipboard write and open GitHub's editor in the same user gesture so
+  // neither the clipboard permission nor the popup blocker rejects them. (window.open
+  // after an awaited promise is treated as a non-user-initiated popup and is blocked.)
+  const copied = navigator.clipboard.writeText(store.toCSV());
+  const onDeployedSite = location.origin + location.pathname === SITE_URL;
+  if (onDeployedSite) window.open(EDIT_URL, "_blank", "noopener");
+  copied.then(
+    () =>
+      showToast(
+        onDeployedSite
+          ? "Copied CSV — paste it into the GitHub editor and commit"
+          : "Copied updated CSV to clipboard",
+      ),
     () => showToast("Could not access the clipboard"),
   );
 });
