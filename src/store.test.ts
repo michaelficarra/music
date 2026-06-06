@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as store from "./store";
 import { parseCsv } from "./csv";
 import { artists } from "./data";
@@ -73,6 +73,53 @@ describe("store", () => {
       .slice(1)
       .map((r) => r[0] ?? "");
     expect(names).toEqual([...names].sort(compareArtistNames));
+  });
+
+  it("prunes saved assignments matching the current value on load", async () => {
+    // Seed storage with one redundant assignment (== baseline) alongside a
+    // genuine override, then re-import so the module's load() runs against it.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        assignments: { [A]: ABASE, [B]: otherSlot(BBASE) },
+      }),
+    );
+    vi.resetModules();
+    await import("./store");
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!) as {
+      assignments: Record<string, Slot>;
+    };
+    expect(stored.assignments).not.toHaveProperty(A); // redundant entry pruned
+    expect(stored.assignments[B]).toBe(otherSlot(BBASE)); // genuine override kept
+  });
+
+  it("clears storage on load when every saved assignment matches the current value", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 1, assignments: { [A]: ABASE, [B]: BBASE } }),
+    );
+    vi.resetModules();
+    await import("./store");
+
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("leaves storage untouched on load when nothing is redundant", async () => {
+    const payload = JSON.stringify({
+      version: 1,
+      assignments: { [A]: otherSlot(ABASE) },
+    });
+    localStorage.setItem(STORAGE_KEY, payload);
+    vi.resetModules();
+    await import("./store");
+
+    // No stale entries → no rewrite. The single genuine override survives.
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!) as {
+      assignments: Record<string, Slot>;
+    };
+    expect(stored.assignments[A]).toBe(otherSlot(ABASE));
   });
 
   it("remembers the last-used scheme id", () => {

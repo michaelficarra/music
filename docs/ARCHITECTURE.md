@@ -99,6 +99,10 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   ```
   `assignments` is a sparse map of **name → tier** overrides. Only tier is stored (no within-tier
   order, per PRD §5). Writes happen immediately on every drop.
+- **Prune on load:** when overrides are hydrated, any stored assignment that now equals the current
+  baseline value (e.g. because a rebuild shipped that tier) is redundant and dropped, as are entries
+  for unknown artists or invalid slots. If anything was dropped, storage is rewritten with the
+  cleaned set (or the key removed when nothing genuine remains) so stale data doesn't linger.
 - **Diff for Reset/Save:** compare each artist's current tier with its baseline tier. If any differ,
   the arrangement is "changed" → show Reset and Save. Within-tier order is irrelevant to the diff.
 - **Reset:** confirmed via a native `<dialog>` (`showModal()`, a `<form method="dialog">`); only a

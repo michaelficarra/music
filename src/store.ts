@@ -43,12 +43,25 @@ function load(): void {
     ) {
       return;
     }
+    // Track whether the stored set carried any entries we won't keep, so we can
+    // prune them from storage below rather than leave stale data lying around.
+    let stale = false;
     for (const [name, slot] of Object.entries(parsed.assignments)) {
       // Ignore overrides for unknown artists, invalid slots, or no-op (== baseline).
-      if (!baselineByName.has(name) || !isSlot(slot)) continue;
-      if (slot === baselineByName.get(name)) continue;
+      if (!baselineByName.has(name) || !isSlot(slot)) {
+        stale = true;
+        continue;
+      }
+      // A saved assignment equal to the current baseline value is redundant; drop it.
+      if (slot === baselineByName.get(name)) {
+        stale = true;
+        continue;
+      }
       overrides.set(name, slot);
     }
+    // Rewrite (or clear) storage so redundant assignments matching the current
+    // value don't linger across reloads.
+    if (stale) persist();
   } catch {
     // Corrupt storage: ignore and fall back to the baseline.
   }
