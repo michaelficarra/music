@@ -216,13 +216,22 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
-  gap: var(--gap);
+  /* Tighter than --gap so cards sit closer together. */
+  gap: 0.3rem;
   min-height: calc(var(--card) + 1.4rem);
   padding: var(--gap);
 }
 
 .card {
-  width: var(--card);
+  /* Grow by the padding so the fixed-width thumb still fits the content box
+     (box-sizing is border-box). The padding is transparent until a card is
+     moved, so toggling the highlight causes no layout shift. */
+  width: calc(var(--card) + 0.5rem);
+  padding: 0.25rem;
+  border-radius: 8px;
+  /* Slight dark fill so cards read as cards against the panel; moved cards
+     override this with the pastel-purple highlight. */
+  background: #0000004d;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -270,6 +279,18 @@ button:disabled {
   line-height: 1.1;
   text-align: center;
   word-break: break-word;
+}
+
+/* Cards moved off their shipped (server) tier get a pastel-purple background
+   filling the whole card (thumb + name) so unsaved changes stand out. Distinct
+   hue from the blue "picked" ring, which sits on the thumb and shows on top. */
+.card.moved {
+  background: #c9a8f0;
+}
+
+/* Dark name text for legibility on the light pastel-purple background. */
+.card.moved .name {
+  color: #1e1f24;
 }
 
 .card.picked .thumb {

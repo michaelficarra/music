@@ -108,9 +108,18 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const slot = store.currentSlot(artist.name);
       const list = lists.get(slot) ?? lists.get(UNRANKED);
       const card = cardsByName.get(artist.name);
-      if (list && card) list.appendChild(card);
+      if (list && card) {
+        list.appendChild(card);
+        markMoved(artist.name);
+      }
     }
     updateCounts();
+  }
+
+  // Flag a card whose current tier differs from its shipped baseline, so unsaved
+  // moves are visually distinct.
+  function markMoved(name: string): void {
+    cardsByName.get(name)?.classList.toggle("moved", store.isMoved(name));
   }
 
   // Refresh each tier's counter from the number of cards currently in its list.
@@ -142,6 +151,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const slot = (evt.to as HTMLElement).dataset.slot;
       if (name !== undefined && slot !== undefined) {
         store.setSlot(name, slot as Slot);
+        markMoved(name);
         updateCounts();
         onChange();
       }
@@ -219,6 +229,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const slot: Slot = editorSelect.value === "X" ? UNRANKED : (editorSelect.value as Slot);
       store.setSlot(name, slot);
       lists.get(slot)?.appendChild(editorCard);
+      markMoved(name);
       updateCounts();
       onChange();
     }

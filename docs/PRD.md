@@ -97,6 +97,10 @@ from the **static arrangement** (the source data shipped with the app).
     changes only each artist's tier, and its rows are **sorted by artist name** (the list's
     canonical order).
 
+Individual cards whose current tier **differs from the static arrangement** carry a slight
+highlight, so the specific artists contributing to the difference stand out at a glance. A card
+returned to its shipped tier loses the highlight.
+
 "Differ" is judged on **tier membership only** (consistent with §5): reordering cards within a
 tier does not, by itself, make the arrangement count as changed.
 

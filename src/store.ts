@@ -101,6 +101,11 @@ export function isChanged(): boolean {
   return overrides.size > 0;
 }
 
+/** Has this artist been moved off its baseline (shipped) tier? */
+export function isMoved(name: string): boolean {
+  return overrides.has(name);
+}
+
 /** Discard local changes, reverting to the baseline. */
 export function reset(): void {
   overrides.clear();
