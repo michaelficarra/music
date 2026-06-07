@@ -56,6 +56,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
   const cardsByName = new Map<string, HTMLElement>();
   const lists = new Map<Slot, HTMLElement>();
   const rowsBySlot = new Map<Slot, HTMLElement>();
+  const countsBySlot = new Map<Slot, HTMLElement>();
 
   // In-flight pick presentation (the real card, its flying clone, and timers).
   let activeCard: HTMLElement | null = null;
@@ -80,8 +81,18 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
 
     const heading = document.createElement("div");
     heading.className = "tier-label";
-    heading.textContent = label;
     if (title !== undefined) heading.title = title;
+
+    const letter = document.createElement("span");
+    letter.className = "tier-letter";
+    letter.textContent = label;
+
+    // Live count of cards in this tier, kept small so three digits still fit.
+    const count = document.createElement("span");
+    count.className = "tier-count";
+    countsBySlot.set(slot, count);
+
+    heading.append(letter, count);
 
     const list = document.createElement("div");
     list.className = "tier-list";
@@ -98,6 +109,14 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const list = lists.get(slot) ?? lists.get(UNRANKED);
       const card = cardsByName.get(artist.name);
       if (list && card) list.appendChild(card);
+    }
+    updateCounts();
+  }
+
+  // Refresh each tier's counter from the number of cards currently in its list.
+  function updateCounts(): void {
+    for (const [slot, count] of countsBySlot) {
+      count.textContent = String(lists.get(slot)?.childElementCount ?? 0);
     }
   }
 
@@ -123,6 +142,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const slot = (evt.to as HTMLElement).dataset.slot;
       if (name !== undefined && slot !== undefined) {
         store.setSlot(name, slot as Slot);
+        updateCounts();
         onChange();
       }
     },
@@ -199,6 +219,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const slot: Slot = editorSelect.value === "X" ? UNRANKED : (editorSelect.value as Slot);
       store.setSlot(name, slot);
       lists.get(slot)?.appendChild(editorCard);
+      updateCounts();
       onChange();
     }
     closeEditor();

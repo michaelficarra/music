@@ -45,6 +45,9 @@ Below (or alongside) the tiers there is an **always-visible "unranked" area** ho
 that have not been placed into a ranked tier. The unranked area remains visible even when empty,
 so an artist can always be dragged back out of a tier into it.
 
+Each tier (and the unranked area) shows a **count of the cards it currently contains**, displayed
+beneath the tier label and kept up to date as artists are moved between tiers.
+
 The set of tiers is fixed: users cannot add, rename, reorder, or remove tiers.
 
 ## 4. Initial load
