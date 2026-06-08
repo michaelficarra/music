@@ -38,7 +38,6 @@ app.innerHTML = `
       <select id="cutoff" aria-label="Tier cutoff"></select>
       <select id="intensity" aria-label="Weighting intensity"></select>
       <button id="roll" type="button" title="Pick a random artist">🎲</button>
-      <span id="picked-name" class="picked-name" aria-live="polite"></span>
     </div>
     <div class="dirty-actions" hidden>
       <button id="reset" type="button">Reset</button>
@@ -63,7 +62,6 @@ const boardEl = app.querySelector<HTMLElement>("#board")!;
 const cutoffSelect = app.querySelector<HTMLSelectElement>("#cutoff")!;
 const intensitySelect = app.querySelector<HTMLSelectElement>("#intensity")!;
 const rollButton = app.querySelector<HTMLButtonElement>("#roll")!;
-const pickedName = app.querySelector<HTMLElement>("#picked-name")!;
 const dirtyActions = app.querySelector<HTMLElement>(".dirty-actions")!;
 const resetButton = app.querySelector<HTMLButtonElement>("#reset")!;
 const saveButton = app.querySelector<HTMLButtonElement>("#save")!;
@@ -141,8 +139,7 @@ intensitySelect.addEventListener("change", onSchemeChange);
 rollButton.addEventListener("click", () => {
   const name = pick(currentSlots(), currentScheme());
   if (name !== null) {
-    pickedName.textContent = name;
-    store.savePickedName(name); // persists beside the picker until the next roll
+    store.savePickedName(name); // persists the glowing card until the next roll
     board.present(name);
   }
 });
@@ -177,9 +174,6 @@ saveButton.addEventListener("click", () => {
     () => showToast("Could not access the clipboard"),
   );
 });
-
-// Restore the last picked artist's name next to the picker (persists across reloads).
-pickedName.textContent = store.loadPickedName() ?? "";
 
 board.setCutoff(currentScheme().cutoff);
 refreshControls();

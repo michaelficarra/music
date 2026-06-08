@@ -51,14 +51,6 @@ body {
   gap: 0.4rem;
 }
 
-.picked-name {
-  font-weight: 600;
-  white-space: nowrap;
-  max-width: 16rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .dirty-actions {
   justify-self: end;
   display: flex;
@@ -96,13 +88,6 @@ body {
   .picker {
     flex-wrap: wrap;
     justify-content: center;
-  }
-
-  /* Always break the selected artist's name onto its own line, below the
-     dropdowns/button, even when it would otherwise fit alongside them. */
-  .picker .picked-name {
-    flex-basis: 100%;
-    text-align: center;
   }
 
   .dirty-actions {
@@ -239,6 +224,12 @@ button:disabled {
   cursor: grab;
   user-select: none;
   touch-action: none;
+  /* Transparent ring by default so the picked glow can fade in/out (two layers
+     to match .card.last-picked so box-shadow interpolates smoothly). */
+  box-shadow:
+    0 0 0 0 #4c8dff00,
+    0 0 0 0 #4c8dff00;
+  transition: box-shadow 0.5s ease;
 }
 
 .card:active {
@@ -251,12 +242,6 @@ button:disabled {
   border-radius: 6px;
   overflow: hidden;
   background: #3a3d46;
-  /* Transparent ring by default so the picked ring can fade in/out (two layers
-     to match .card.picked so box-shadow interpolates smoothly). */
-  box-shadow:
-    0 0 0 0 #4c8dff00,
-    0 0 0 0 #4c8dff00;
-  transition: box-shadow 0.5s ease;
 }
 
 .thumb img {
@@ -283,7 +268,7 @@ button:disabled {
 
 /* Cards moved off their shipped (server) tier get a pastel-purple background
    filling the whole card (thumb + name) so unsaved changes stand out. Distinct
-   hue from the blue "picked" ring, which sits on the thumb and shows on top. */
+   hue from the blue "picked" glow, which rings the whole card and shows on top. */
 .card.moved {
   background: #c9a8f0;
 }
@@ -293,7 +278,9 @@ button:disabled {
   color: #1e1f24;
 }
 
-.card.picked .thumb {
+/* The most recently rolled artist keeps a blue glow around the whole card until
+   the next pick — distinct from the transient .picked fly + dim spotlight. */
+.card.last-picked {
   box-shadow:
     0 0 0 3px var(--accent),
     0 0 14px 3px #4c8dff66;

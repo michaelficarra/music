@@ -66,6 +66,9 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
   let presentAnim: Animation | null = null;
   let settleTimer: number | undefined;
 
+  // The card wearing the persistent "last picked" glow, kept until the next pick.
+  let lastPickedCard: HTMLElement | null = null;
+
   // Click-to-edit tier popup state.
   let editorCard: HTMLElement | null = null;
   let justDragged = false; // suppresses the click that fires right after a drag
@@ -124,6 +127,15 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
     cardsByName.get(name)?.classList.toggle("moved", store.isMoved(name));
   }
 
+  // Move the persistent blue glow to `name`'s card, removing it from the previous
+  // pick. Unlike the transient `.picked` highlight (which drives the fly + dim
+  // spotlight and clears after a moment), this stays until the next roll.
+  function setLastPicked(name: string): void {
+    lastPickedCard?.classList.remove("last-picked");
+    lastPickedCard = cardsByName.get(name) ?? null;
+    lastPickedCard?.classList.add("last-picked");
+  }
+
   // Refresh each tier's counter from the number of cards currently in its list.
   function updateCounts(): void {
     for (const [slot, count] of countsBySlot) {
@@ -138,6 +150,10 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
 
   for (const artist of artists) cardsByName.set(artist.name, createCard(artist));
   placeCards();
+
+  // Re-apply the persisted glow so the last pick stays marked across reloads.
+  const persistedPick = store.loadPickedName();
+  if (persistedPick !== null) setLastPicked(persistedPick);
 
   // One Sortable per list, all sharing a group so cards drag between any list.
   const options: Sortable.Options = {
@@ -292,6 +308,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const card = cardsByName.get(name);
       if (!card) return;
       clearPresentation();
+      setLastPicked(name); // persistent glow, revealed when the card settles
 
       // Bring the card into view so its final (landing) position is on-screen.
       card.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
@@ -310,6 +327,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const clone = card.cloneNode(true) as HTMLElement;
       clone.classList.add("pick-presenter");
       clone.classList.remove("picked");
+      clone.classList.remove("last-picked"); // glow shows on the settled card, not the flying clone
       Object.assign(clone.style, {
         position: "fixed",
         margin: "0",
