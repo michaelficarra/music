@@ -286,6 +286,20 @@ button:disabled {
     0 0 14px 3px #4c8dff66;
 }
 
+/* While a picked card is zoomed/flying (see board.ts present()), the real card
+   stays in its slot as a neutral placeholder: its artwork rides on the flying
+   clone, so here we hide the image and name, leaving the empty thumb box.
+   visibility:hidden keeps the boxes, so the grid doesn't shift. */
+.card.presenting .thumb img,
+.card.presenting .name {
+  visibility: hidden;
+}
+
+/* Image-less artists render their initial as the thumb's text; hide it too. */
+.card.presenting .thumb {
+  color: transparent;
+}
+
 /* The flying clone shown when an artist is rolled: above everything, centred
    large, then animated back into the card's grid slot (see board.ts present()). */
 .pick-presenter {

@@ -108,7 +108,9 @@ tier does not, by itself, make the arrangement count as changed.
 
 A prominent **🎲** button picks a single artist at random. By default it draws from the **ranked**
 tiers; the `X only` tier cutoff (below) instead draws **only from the unranked pool**. When pressed, the chosen artist's **card and name are shown
-large and centred**, then **animate back into that card's place** in the grid. The chosen artist's
+large and centred**, then **animate back into that card's place** in the grid. While it is enlarged
+and flying, **its grid slot shows a placeholder** so the board keeps its shape and the spot the card
+returns to stays visible. The chosen artist's
 **card then keeps a highlight** that **persists** (across page reloads) until the next
 press of 🎲. While the pick is being revealed, the **rest of the board dims** to spotlight it (the
 **toolbar stays fully visible**) — the page is *not* blocked: every control stays interactive

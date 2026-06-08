@@ -294,7 +294,7 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       presenter = null;
     }
     if (activeCard) {
-      activeCard.style.visibility = "";
+      activeCard.classList.remove("presenting");
       activeCard.classList.remove("picked");
       activeCard = null;
     }
@@ -308,15 +308,16 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const card = cardsByName.get(name);
       if (!card) return;
       clearPresentation();
-      setLastPicked(name); // persistent glow, revealed when the card settles
 
       // Bring the card into view so its final (landing) position is on-screen.
       card.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
       activeCard = card;
       card.classList.add("picked"); // engages the outline + the dim spotlight
 
-      // Reduced motion: skip the fly; just hold the highlight, then release.
+      // Reduced motion: skip the fly; just hold the highlight, then release. The
+      // card never leaves its slot, so the glow can settle on it right away.
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setLastPicked(name);
         settleTimer = window.setTimeout(clearPresentation, 2500);
         return;
       }
@@ -338,7 +339,10 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       });
       document.body.appendChild(clone);
       presenter = clone;
-      card.style.visibility = "hidden"; // hide the real card while the clone flies
+      // Leave the real card in its slot but show it as a neutral placeholder (its
+      // artwork rides along on the flying clone), so the grid keeps its shape and
+      // the slot the card will return to stays visible.
+      card.classList.add("presenting");
 
       // FLIP "Invert": the transform that maps the final slot to a large, centred state.
       const scale = Math.min(6, Math.max(2.5, (0.5 * window.innerHeight) / rect.height));
@@ -359,10 +363,14 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
 
       presentAnim.finished
         .then(() => {
-          // Reveal the real (highlighted) card where the clone landed, hold the
+          // Reveal the real card where the clone landed (swapping the placeholder
+          // back to its artwork) and settle the persistent glow onto it, hold the
           // dimmed + outlined state briefly, then clearPresentation removes
           // `.picked` and CSS transitions fade everything back to default.
-          if (activeCard) activeCard.style.visibility = "";
+          if (activeCard) {
+            setLastPicked(name);
+            activeCard.classList.remove("presenting");
+          }
           if (presenter) {
             presenter.remove();
             presenter = null;
