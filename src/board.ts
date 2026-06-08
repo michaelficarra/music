@@ -3,6 +3,7 @@
 import Sortable from "sortablejs";
 import { artists } from "./data";
 import * as store from "./store";
+import { compareArtistNames } from "./sort";
 import { TIERS, UNRANKED, type Artist, type Slot, type Tier } from "./types";
 
 /** A single tier change, reported to `onChange` so the page can offer an undo. */
@@ -42,6 +43,22 @@ export interface Board {
 function showPlaceholder(thumb: HTMLElement, name: string): void {
   thumb.classList.add("placeholder");
   thumb.textContent = name.slice(0, 1).toUpperCase();
+}
+
+// Insert `card` into `list` so the list stays in canonical artist-name order.
+// Within-tier position carries no meaning (PRD §5), so every list is kept
+// alphabetical for a predictable layout that survives drags, edits, and reloads.
+function insertCardSorted(list: HTMLElement, card: HTMLElement): void {
+  const name = card.dataset.artist ?? "";
+  // Snapshot the children: we may move `card` (which is itself a child after a drag).
+  for (const sibling of Array.from(list.children) as HTMLElement[]) {
+    if (sibling === card) continue;
+    if (compareArtistNames(name, sibling.dataset.artist ?? "") < 0) {
+      list.insertBefore(card, sibling);
+      return;
+    }
+  }
+  list.appendChild(card);
 }
 
 function createCard(artist: Artist): HTMLElement {
@@ -155,7 +172,7 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
       const list = lists.get(slot) ?? lists.get(UNRANKED);
       const card = cardsByName.get(artist.name);
       if (list && card) {
-        list.appendChild(card);
+        insertCardSorted(list, card);
         markMoved(artist.name);
       }
     }
@@ -211,6 +228,9 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
       const to = (evt.to as HTMLElement).dataset.slot;
       if (name !== undefined && to !== undefined) {
         store.setSlot(name, to as Slot);
+        // SortableJS dropped the card wherever the pointer released; re-seat it
+        // into the list's canonical name order (drop position is meaningless).
+        insertCardSorted(evt.to as HTMLElement, evt.item);
         markMoved(name);
         updateCounts();
         // Only a cross-slot drop is a real change worth offering to undo; a
@@ -291,7 +311,8 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
       const from = store.currentSlot(name);
       const slot: Slot = editorSelect.value === "X" ? UNRANKED : (editorSelect.value as Slot);
       store.setSlot(name, slot);
-      lists.get(slot)?.appendChild(editorCard);
+      const list = lists.get(slot);
+      if (list) insertCardSorted(list, editorCard);
       markMoved(name);
       updateCounts();
       onChange(from !== slot ? { name, from, to: slot } : undefined);
@@ -355,7 +376,8 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
       const card = cardsByName.get(name);
       if (!card) return;
       store.setSlot(name, slot);
-      lists.get(slot)?.appendChild(card);
+      const list = lists.get(slot);
+      if (list) insertCardSorted(list, card);
       markMoved(name);
       updateCounts();
       onChange(); // no MoveRecord: undoing a move shouldn't offer to undo the undo

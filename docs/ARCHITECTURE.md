@@ -135,6 +135,11 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   `board.move(name, from)` to restore the previous tier. `Board.move` applies the same store/DOM
   update as a drag but deliberately reports **no** `MoveRecord`, so an undo can't itself be undone.
   No extra persisted state backs this — an undo is just another `store.setSlot`.
+- **Render order:** the board keeps every list (each tier and the unranked pool) in canonical name
+  order via `insertCardSorted` (`board.ts`), which reuses `compareArtistNames` (`src/sort.ts`). It is
+  applied on initial placement, after every drag (re-seating the dropped card, since SortableJS drops
+  at the pointer), and on edit/undo/`Board.move`. Within-tier order is non-semantic (PRD §5), so this
+  is purely presentational and nothing about ordering is persisted.
 
 ## 6. Random picker & weighting (`src/random.ts`)
 

@@ -81,8 +81,10 @@ for an artist no longer shipped is simply ignored.
   offers to **undo** it, returning the artist to its previous tier. Undo is **single-level** — it
   reverses the most recent move only — and the notification dismisses itself after a few seconds. A
   within-tier rearrangement (no change of tier) is not an undoable move.
-- **Only tier membership matters.** The left-to-right position of a card within a tier carries no
-  meaning and is not remembered between sessions (it may be re-laid-out freely).
+- **Only tier membership matters.** The position of a card within a tier carries no semantic
+  meaning. Cards are displayed in **canonical name order** (alphabetical, case- and
+  accent-insensitive) within every tier *and* the unranked area; this order is maintained
+  automatically as cards are moved, so the layout is predictable rather than reflecting drop order.
 
 ## 6. Persistence
 
