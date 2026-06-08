@@ -1,5 +1,5 @@
-// App entry point: build the board and the toolbar, and wire up Reset, Save,
-// and the weighted 🎲 random picker.
+// App entry point: populate the picker dropdowns, build the board, and wire up the
+// toolbar's Reset, Save, and weighted 🎲 random picker. (The static shell is in index.html.)
 
 import "./styles.css";
 import { artists } from "./data";
@@ -28,35 +28,12 @@ const EDIT_URL = "https://github.com/michaelficarra/music/edit/main/data/artists
 // copies, so it stays testable without spawning a tab to a repo you can't push to.
 const SITE_URL = "https://michaelficarra.github.io/music/";
 
+// The static UI shell (toolbar, board container, toast, reset dialog) is markup in
+// index.html, so it paints during module load rather than after this script runs. Here
+// we just grab those elements and wire up behaviour; main.ts populates the dynamic bits
+// (the two <select>s and the board) below.
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("#app container not found");
-
-app.innerHTML = `
-  <header class="toolbar">
-    <h1>Michael's Artist Tier List</h1>
-    <div class="picker">
-      <select id="cutoff" aria-label="Tier cutoff"></select>
-      <select id="intensity" aria-label="Weighting intensity"></select>
-      <button id="roll" type="button" title="Pick a random artist">🎲</button>
-    </div>
-    <div class="dirty-actions" hidden>
-      <button id="reset" type="button">Reset</button>
-      <button id="save" type="button">Save</button>
-    </div>
-  </header>
-  <main id="board" class="board"></main>
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-  <dialog id="reset-dialog" class="modal">
-    <form method="dialog">
-      <h2>Reset tier list?</h2>
-      <p>This discards your local changes and reverts to the saved tier list. This can't be undone.</p>
-      <div class="modal-actions">
-        <button value="cancel" type="submit" autofocus>Cancel</button>
-        <button value="confirm" type="submit" class="danger">Reset</button>
-      </div>
-    </form>
-  </dialog>
-`;
 
 const boardEl = app.querySelector<HTMLElement>("#board")!;
 const cutoffSelect = app.querySelector<HTMLSelectElement>("#cutoff")!;

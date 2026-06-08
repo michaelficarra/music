@@ -28,7 +28,7 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   ├── add-artist.ts        # Append an unranked artist to the CSV, then enrich them
 │   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §7)
 ├── src/                     # Application source
-│   ├── main.ts              # Entry point: load data, build UI, wire events
+│   ├── main.ts              # Entry point: populate dropdowns, build board, wire events
 │   ├── types.ts             # Core domain types (Tier, Slot, Artist)
 │   ├── csv.ts               # RFC-4180 CSV parse/serialise (see §3)
 │   ├── data.ts              # Embeds data/artists.csv at build time → the static baseline
@@ -43,7 +43,7 @@ static bundle plus a build-time-embedded copy of the artist data.
 ├── .github/workflows/
 │   ├── ci.yml               # Typecheck + test + format check on push / PR (see §8)
 │   └── deploy.yml           # Build + deploy to GitHub Pages (see §8)
-├── index.html
+├── index.html               # Static UI shell (toolbar, board container, reset dialog); main.ts fills the dynamic parts
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts

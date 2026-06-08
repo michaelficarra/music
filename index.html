@@ -7,7 +7,38 @@
     <title>Michael's Artist Tier List</title>
   </head>
   <body>
-    <div id="app"></div>
+    <!-- The static UI shell lives here so the browser can paint the toolbar and headings
+         during module load, rather than only after main.ts runs. The empty <select>s and
+         #board are populated by main.ts; everything else is fixed chrome. -->
+    <div id="app">
+      <header class="toolbar">
+        <h1>Michael's Artist Tier List</h1>
+        <div class="picker">
+          <select id="cutoff" aria-label="Tier cutoff"></select>
+          <select id="intensity" aria-label="Weighting intensity"></select>
+          <button id="roll" type="button" title="Pick a random artist">🎲</button>
+        </div>
+        <div class="dirty-actions" hidden>
+          <button id="reset" type="button">Reset</button>
+          <button id="save" type="button">Save</button>
+        </div>
+      </header>
+      <main id="board" class="board"></main>
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+      <dialog id="reset-dialog" class="modal">
+        <form method="dialog">
+          <h2>Reset tier list?</h2>
+          <p>
+            This discards your local changes and reverts to the saved tier list. This can't be
+            undone.
+          </p>
+          <div class="modal-actions">
+            <button value="cancel" type="submit" autofocus>Cancel</button>
+            <button value="confirm" type="submit" class="danger">Reset</button>
+          </div>
+        </form>
+      </dialog>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
