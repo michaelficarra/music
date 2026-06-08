@@ -160,6 +160,10 @@ single `cutoff:intensity` id (§5):
   These multipliers are the concrete realisation of the "probability curve" PRD §8 leaves
   unspecified; treat the exact numbers as tunable, not contractual.
 
+For accessibility, each successful pick also writes `Picked <name>` into a visually-hidden
+`aria-live` region (`#pick-announcer` in `index.html`, set in `main.ts`'s roll handler), so screen
+readers announce the choice that the on-screen reveal conveys only visually.
+
 Selection is **cumulative-weight roulette**: sum the candidates' weights, draw `rng() × total`
 (`rng` defaults to `Math.random` but is injectable for deterministic tests), and walk the list
 subtracting until the threshold goes negative; a final fall-through returns the last candidate to

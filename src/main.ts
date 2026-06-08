@@ -43,6 +43,7 @@ const dirtyActions = app.querySelector<HTMLElement>(".dirty-actions")!;
 const resetButton = app.querySelector<HTMLButtonElement>("#reset")!;
 const saveButton = app.querySelector<HTMLButtonElement>("#save")!;
 const toast = app.querySelector<HTMLElement>("#toast")!;
+const pickAnnouncer = app.querySelector<HTMLElement>("#pick-announcer")!;
 const resetDialog = app.querySelector<HTMLDialogElement>("#reset-dialog")!;
 
 // Populate the two scheme dropdowns: tier cutoff and weighting intensity.
@@ -167,6 +168,8 @@ rollButton.addEventListener("click", () => {
   if (name !== null) {
     store.savePickedName(name); // persists the glowing card until the next roll
     board.present(name);
+    // The reveal is purely visual; announce the choice for screen-reader users.
+    pickAnnouncer.textContent = `Picked ${name}`;
   }
 });
 

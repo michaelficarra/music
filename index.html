@@ -25,6 +25,10 @@
       </header>
       <main id="board" class="board"></main>
       <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+      <!-- Visually-hidden live region: announces the 🎲 pick to assistive tech, since
+           the reveal is otherwise purely visual. Separate from #toast so the pick is
+           never shown on screen as well. -->
+      <div id="pick-announcer" class="visually-hidden" role="status" aria-live="polite"></div>
       <dialog id="reset-dialog" class="modal">
         <form method="dialog">
           <h2>Reset tier list?</h2>

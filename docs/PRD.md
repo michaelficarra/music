@@ -130,7 +130,9 @@ returns to stays visible. The chosen artist's
 press of 🎲. While the pick is being revealed, the **rest of the board dims** to spotlight it (the
 **toolbar stays fully visible**) — the page is *not* blocked: every control stays interactive
 throughout. (Where the viewer prefers reduced
-motion, the fly-in is skipped and the card is simply highlighted in place.)
+motion, the fly-in is skipped and the card is simply highlighted in place.) Because the reveal is
+otherwise purely visual, the chosen artist's name is also **announced to assistive technology** (a
+screen reader reads out the pick) on each press.
 
 **Two dropdowns** next to the button control how the pick is made — one for the **tier cutoff** and
 one for the **weighting intensity**:
