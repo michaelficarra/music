@@ -127,7 +127,10 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   `#save-dialog`; `showModal()` + `<form method="dialog">`). Before opening, `main.ts` fills the
   dialog's `<ul class="diff-list">` from `getChanges()` — Reset shows each change as **current →
   baseline** (what reverting restores), Save as **baseline → current** (what will be written out).
-  Neither action runs unless the dialog closes with a `confirm` return value.
+  Neither action runs unless the dialog closes with a `confirm` return value. The dialogs are
+  light-dismissable (click the backdrop / Esc) via the declarative `closedby="any"` attribute,
+  with a click-outside fallback in `main.ts` for browsers that lack it (e.g. Safari); since
+  `showModal()` resets `returnValue` to `""`, any such dismissal reads as a cancel.
 - **Reset:** on `confirm`, removes the local-storage key and re-renders from the baseline.
 - **Save (clipboard):** on `confirm`, serialise the **full** arrangement to CSV and write it to the
   clipboard via the async Clipboard API (`navigator.clipboard.writeText`). The clipboard write and

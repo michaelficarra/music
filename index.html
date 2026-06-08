@@ -29,9 +29,11 @@
            the reveal is otherwise purely visual. Separate from #toast so the pick is
            never shown on screen as well. -->
       <div id="pick-announcer" class="visually-hidden" role="status" aria-live="polite"></div>
-      <dialog id="reset-dialog" class="modal">
+      <!-- closedby="any" gives native light-dismiss (click outside / Esc) where supported;
+           main.ts adds a click-outside fallback for browsers that lack it (e.g. Safari). -->
+      <dialog id="reset-dialog" class="modal" closedby="any" aria-labelledby="reset-dialog-title">
         <form method="dialog">
-          <h2>Reset tier list?</h2>
+          <h2 id="reset-dialog-title">Reset tier list?</h2>
           <p>
             This discards your local changes and reverts to the saved tier list. This can't be
             undone.
@@ -45,9 +47,9 @@
           </div>
         </form>
       </dialog>
-      <dialog id="save-dialog" class="modal">
+      <dialog id="save-dialog" class="modal" closedby="any" aria-labelledby="save-dialog-title">
         <form method="dialog">
-          <h2>Save tier list?</h2>
+          <h2 id="save-dialog-title">Save tier list?</h2>
           <p>
             This copies the updated CSV to your clipboard for you to paste over the source data and
             commit. Review the changes below.

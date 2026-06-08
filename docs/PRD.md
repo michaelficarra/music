@@ -104,8 +104,9 @@ from the **static arrangement** (the source data shipped with the app).
 - When they **differ**, two controls appear. **Both first open a confirmation modal that lists the
   diff from the static arrangement** — one line per changed artist showing a move between its two
   ranks (an arrow between the static tier and the local tier; `unranked` for the X pool). Nothing
-  happens until the user confirms; dismissing the dialog (Cancel / Esc) leaves everything
-  untouched. The two buttons differ in the arrow's direction and in what confirming does:
+  happens until the user confirms; dismissing the dialog (Cancel, Esc, or a click outside it)
+  leaves everything untouched. The two buttons differ in the arrow's direction and in what
+  confirming does:
   - **Reset** — discards local changes by clearing the saved arrangement from local storage, so
     the app reverts to the static arrangement. Its modal lists each changed artist as **local tier
     → static tier** (what reverting will restore). Because this is destructive, confirming is the

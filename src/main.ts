@@ -232,5 +232,26 @@ saveDialog.addEventListener("close", () => {
   );
 });
 
+// Light-dismiss (click the backdrop to close) for browsers without the declarative
+// `closedby="any"` attribute, e.g. Safari. A modal dialog's backdrop clicks register on
+// the dialog element itself, so a click whose target is the dialog and whose coordinates
+// fall outside its content box is a backdrop click. Closing this way leaves returnValue
+// as "" (showModal resets it), so the close handlers above treat it as a cancel.
+function enableLightDismissFallback(dialog: HTMLDialogElement): void {
+  if ("closedBy" in HTMLDialogElement.prototype) return; // native support; nothing to do
+  dialog.addEventListener("click", (event) => {
+    if (event.target !== dialog) return; // a click on the dialog's contents, not the backdrop
+    const rect = dialog.getBoundingClientRect();
+    const insideContent =
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right &&
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom;
+    if (!insideContent) dialog.close();
+  });
+}
+enableLightDismissFallback(resetDialog);
+enableLightDismissFallback(saveDialog);
+
 board.setCutoff(currentScheme().cutoff);
 refreshControls();
