@@ -106,8 +106,8 @@ tier does not, by itself, make the arrangement count as changed.
 
 ## 8. Random artist picker
 
-A prominent **🎲** button picks a single artist at random from the **ranked** tiers.
-**Unranked artists are never picked.** When pressed, the chosen artist's **card and name are shown
+A prominent **🎲** button picks a single artist at random. By default it draws from the **ranked**
+tiers; the `X only` tier cutoff (below) instead draws **only from the unranked pool**. When pressed, the chosen artist's **card and name are shown
 large and centred**, then **animate back into that card's place** in the grid. The chosen artist's
 **name is also shown next to the picker** and **persists** (across page reloads) until the next
 press of 🎲. While the pick is being revealed, the **rest of the board dims** to spotlight it (the
@@ -118,30 +118,36 @@ motion, the fly-in is skipped and the card is simply highlighted in place.)
 **Two dropdowns** next to the button control how the pick is made — one for the **tier cutoff** and
 one for the **weighting intensity**:
 
-- **Tier cutoff** — which ranked tiers are eligible:
+- **Tier cutoff** — which artists are eligible:
   - `S only` → S only
   - `A+` → S, A
   - `B+` → S, A, B
   - `C+` → S, A, B, C
   - `D+` → S, A, B, C, D
   - `E+` → S, A, B, C, D, E
-  - `full` → S, A, B, C, D, E, F (all ranked tiers)
+  - `F+` → S, A, B, C, D, E, F (all ranked tiers)
+  - `X only` → the unranked pool only (no ranked tiers)
 - **Weighting intensity** — how probability is spread across the eligible artists:
   - `unweighted` — every eligible artist is equally likely.
   - `weighted` — favours higher tiers (an artist in a higher tier is more likely than one in a
     lower tier).
   - `heavily weighted` — strongly favours higher tiers.
 
+  The `X only` cutoff has no tiers to weight, so the intensity dropdown is **hidden** while it is
+  selected (its artists are picked uniformly).
+
 The two dropdowns **default to "D+" and "weighted"** and **remember your last selection** across
 page reloads. The exact probability curve for each intensity is an implementation detail.
 
-A horizontal line is drawn on the board between the lowest eligible tier and the next tier down,
+A horizontal line is drawn on the board between the lowest eligible tier and the next row down,
 reflecting the selected cutoff (e.g. `D+` draws it between the D and E rows). It updates when the
-cutoff changes, and is **omitted for `full`** (where every ranked tier is eligible).
+cutoff changes. Both `F+` and `X only` draw the line between the F row and the unranked area: for
+`F+` every ranked tier sits above the line as eligible; for `X only` the unranked pool sits below it
+as the sole eligible region.
 
 Edge behaviour: if the chosen scheme has **no eligible artists** (e.g. `A+` selected but S and A
-are both empty), the 🎲 button performs no action and indicates that nothing can be picked (e.g. by
-being disabled).
+are both empty, or `X only` with an empty unranked pool), the 🎲 button performs no action and
+indicates that nothing can be picked (e.g. by being disabled).
 
 ## 9. Empty / edge states
 

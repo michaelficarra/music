@@ -65,10 +65,38 @@ describe("random", () => {
     expect(parseSchemeId("Z:nope")).toBeNull();
   });
 
-  it("labels the cutoffs ('S only', 'C+', 'full')", () => {
+  it("labels the cutoffs ('S only', 'C+', 'F+', 'X only')", () => {
     expect(cutoffLabel("S")).toBe("S only");
     expect(cutoffLabel("C")).toBe("C+");
     expect(cutoffLabel("E")).toBe("E+");
-    expect(cutoffLabel("F")).toBe("full");
+    expect(cutoffLabel("F")).toBe("F+");
+    expect(cutoffLabel("unranked")).toBe("X only");
+  });
+
+  it("the 'unranked' cutoff picks only from the unranked pool, ignoring intensity", () => {
+    const slots = new Map<string, Slot>([
+      ["ranked", "S"],
+      ["loose-1", "unranked"],
+      ["loose-2", "unranked"],
+    ]);
+    // Heavily-weighted intensity is irrelevant here: both unranked artists weigh 1.
+    const scheme = { cutoff: "unranked", intensity: "heavily" } as const;
+    expect(hasEligible(slots, scheme)).toBe(true);
+    expect(pick(slots, scheme, () => 0)).toBe("loose-1");
+    expect(pick(slots, scheme, () => 0.75)).toBe("loose-2");
+    // The ranked artist is never chosen by an "unranked" cutoff.
+    expect(pick(slots, scheme, () => 0.99)).toBe("loose-2");
+  });
+
+  it("the 'unranked' cutoff has nothing to pick when the pool is empty", () => {
+    const slots = new Map<string, Slot>([["ranked", "A"]]);
+    const scheme = { cutoff: "unranked", intensity: "unweighted" } as const;
+    expect(hasEligible(slots, scheme)).toBe(false);
+    expect(pick(slots, scheme)).toBeNull();
+  });
+
+  it("round-trips an 'unranked' scheme id", () => {
+    const scheme = { cutoff: "unranked", intensity: "weighted" } as const;
+    expect(parseSchemeId(schemeId(scheme))).toEqual(scheme);
   });
 });

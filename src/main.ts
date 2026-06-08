@@ -5,7 +5,7 @@ import "./styles.css";
 import { artists } from "./data";
 import * as store from "./store";
 import { createBoard } from "./board";
-import { TIERS, type Slot } from "./types";
+import { TIERS, UNRANKED, type Slot } from "./types";
 import {
   INTENSITY_LABEL,
   INTENSITIES,
@@ -77,6 +77,11 @@ for (const cutoff of TIERS) {
   option.textContent = cutoffLabel(cutoff);
   cutoffSelect.appendChild(option);
 }
+// "X only" sits at the bottom: it draws from the unranked pool rather than any ranked tier.
+const unrankedCutoffOption = document.createElement("option");
+unrankedCutoffOption.value = UNRANKED;
+unrankedCutoffOption.textContent = cutoffLabel(UNRANKED);
+cutoffSelect.appendChild(unrankedCutoffOption);
 for (const intensity of INTENSITIES) {
   const option = document.createElement("option");
   option.value = intensity;
@@ -116,8 +121,12 @@ const board = createBoard(boardEl, refreshControls);
 function refreshControls(): void {
   // Reset/Save appear only when the arrangement differs from the shipped CSV.
   dirtyActions.hidden = !store.isChanged();
-  // 🎲 is disabled when the current scheme has no eligible (ranked) artists.
-  rollButton.disabled = !hasEligible(currentSlots(), currentScheme());
+  const scheme = currentScheme();
+  // The "X only" cutoff has no tiers to weight, so hide its intensity dropdown.
+  intensitySelect.hidden = scheme.cutoff === UNRANKED;
+  // 🎲 is disabled when the current scheme has no eligible artists — no ranked
+  // artists above the cutoff, or (for "X only") an empty unranked pool.
+  rollButton.disabled = !hasEligible(currentSlots(), scheme);
 }
 
 function onSchemeChange(): void {

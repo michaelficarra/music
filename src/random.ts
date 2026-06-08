@@ -20,7 +20,8 @@ export const INTENSITY_LABEL: Record<Intensity, string> = {
 };
 
 export interface Scheme {
-  cutoff: Tier;
+  // A ranked-tier cutoff, or UNRANKED to draw exclusively from the unranked pool.
+  cutoff: Slot;
   intensity: Intensity;
 }
 
@@ -49,14 +50,17 @@ export function schemeId(scheme: Scheme): string {
 export function parseSchemeId(id: string): Scheme | null {
   const [cutoff, intensity] = id.split(":");
   if (cutoff === undefined || intensity === undefined) return null;
-  if (!isTier(cutoff) || !INTENSITIES.includes(intensity as Intensity)) return null;
-  return { cutoff, intensity: intensity as Intensity };
+  if ((cutoff !== UNRANKED && !isTier(cutoff)) || !INTENSITIES.includes(intensity as Intensity)) {
+    return null;
+  }
+  return { cutoff: cutoff as Slot, intensity: intensity as Intensity };
 }
 
-/** Human label for a cutoff: "S only" for the top tier, "full" for the lowest, else "C+". */
-export function cutoffLabel(cutoff: Tier): string {
+/** Human label for a cutoff: "S only" for the top tier, "X only" for unranked, else "C+". */
+export function cutoffLabel(cutoff: Slot): string {
+  if (cutoff === UNRANKED) return "X only"; // the unranked pool (the board's "X" row)
   if (cutoff === TIERS[0]) return "S only"; // nothing ranks above the top tier
-  return cutoff === TIERS[TIERS.length - 1] ? "full" : `${cutoff}+`;
+  return `${cutoff}+`; // "A+" … "F+" ("F+" being every ranked tier)
 }
 
 /** Every (cutoff × intensity) scheme, for building the dropdown. */
@@ -70,8 +74,16 @@ interface Candidate {
 }
 
 function candidates(slotByName: ReadonlyMap<string, Slot>, scheme: Scheme): Candidate[] {
-  const eligible = new Set<Tier>(eligibleTiers(scheme.cutoff));
   const result: Candidate[] = [];
+  if (scheme.cutoff === UNRANKED) {
+    // The "unranked" cutoff draws only from the unranked pool, uniformly: there
+    // are no tiers to favour, so weighting intensity does not apply.
+    for (const [name, slot] of slotByName) {
+      if (slot === UNRANKED) result.push({ name, weight: 1 });
+    }
+    return result;
+  }
+  const eligible = new Set<Tier>(eligibleTiers(scheme.cutoff));
   for (const [name, slot] of slotByName) {
     if (slot === UNRANKED || !eligible.has(slot)) continue;
     result.push({ name, weight: tierWeight(slot, scheme.intensity) });

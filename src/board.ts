@@ -15,9 +15,11 @@ export interface Board {
   present(name: string): void;
   /**
    * Draw a divider line just below `cutoff`'s row to mark the picker's eligible
-   * range (e.g. "D+" → between D and E). The lowest tier ("full") draws no line.
+   * range (e.g. "D+" → between D and E). "F+" and UNRANKED ("X only") both draw
+   * the line at the F/unranked boundary — for "F+" the eligible ranked tiers sit
+   * above it, for "X only" the eligible unranked pool sits below it.
    */
-  setCutoff(cutoff: Tier): void;
+  setCutoff(cutoff: Slot): void;
 }
 
 function createCard(artist: Artist): HTMLElement {
@@ -354,11 +356,14 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
           /* cancelled by a newer pick — that call already cleaned up */
         });
     },
-    setCutoff(cutoff: Tier): void {
+    setCutoff(cutoff: Slot): void {
       cutoffLine.remove();
-      // "full" (F, the lowest tier) means every tier is eligible → no divider.
-      if (cutoff === TIERS[TIERS.length - 1]) return;
-      rowsBySlot.get(cutoff)?.after(cutoffLine);
+      // The line always sits just below its anchor row. For a ranked cutoff that
+      // is the cutoff tier itself (e.g. "D+" → between D and E). "F+" and "X only"
+      // both anchor on F, drawing the line at the F/unranked boundary — for "F+"
+      // every ranked tier above is eligible; for "X only" the unranked pool below is.
+      const anchor: Tier = cutoff === UNRANKED ? TIERS[TIERS.length - 1]! : cutoff;
+      rowsBySlot.get(anchor)?.after(cutoffLine);
     },
   };
 }
