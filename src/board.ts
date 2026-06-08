@@ -65,6 +65,9 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
   let presenter: HTMLElement | null = null;
   let presentAnim: Animation | null = null;
   let settleTimer: number | undefined;
+  // Fires partway through the fly-back to release the dim spotlight as the card
+  // starts heading home, rather than waiting for the landing (see present()).
+  let dimTimer: number | undefined;
 
   // The card wearing the persistent "last picked" glow, kept until the next pick.
   let lastPickedCard: HTMLElement | null = null;
@@ -296,6 +299,8 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
   function clearPresentation(): void {
     if (settleTimer !== undefined) window.clearTimeout(settleTimer);
     settleTimer = undefined;
+    if (dimTimer !== undefined) window.clearTimeout(dimTimer);
+    dimTimer = undefined;
     if (presentAnim) {
       presentAnim.cancel();
       presentAnim = null;
@@ -319,6 +324,12 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const card = cardsByName.get(name);
       if (!card) return;
       clearPresentation();
+
+      // Drop the previous pick's glow the instant the roll begins, rather than
+      // letting it linger through the fly animation until the new glow settles
+      // on the chosen card at the end.
+      lastPickedCard?.classList.remove("last-picked");
+      lastPickedCard = null;
 
       // Bring the card into view so its final (landing) position is on-screen.
       card.scrollIntoView({ behavior: "auto", block: "center", inline: "center" });
@@ -362,22 +373,33 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
       const big = `translate(${dx}px, ${dy}px) scale(${scale})`;
       const enter = `translate(${dx}px, ${dy}px) scale(${scale * 0.85})`;
 
+      const duration = 2400;
+      const holdEnd = 0.65; // offset at which the clone stops holding and flies home
+
       presentAnim = clone.animate(
         [
           { transform: enter, opacity: 0, offset: 0, easing: "ease-out" },
           { transform: big, opacity: 1, offset: 0.08 }, // pop in, large + centred
-          { transform: big, opacity: 1, offset: 0.65, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }, // hold longer
+          { transform: big, opacity: 1, offset: holdEnd, easing: "cubic-bezier(0.4, 0, 0.2, 1)" }, // hold longer
           { transform: "none", opacity: 1, offset: 1 }, // fly back into place
         ],
-        { duration: 2400, fill: "both" },
+        { duration, fill: "both" },
       );
+
+      // Release the dim spotlight the moment the clone leaves centre and starts
+      // flying home, so the board brightens back as the card travels rather than
+      // snapping back only once it has landed and the glow is applied.
+      dimTimer = window.setTimeout(() => {
+        activeCard?.classList.remove("picked");
+        dimTimer = undefined;
+      }, duration * holdEnd);
 
       presentAnim.finished
         .then(() => {
           // Reveal the real card where the clone landed (swapping the placeholder
-          // back to its artwork) and settle the persistent glow onto it, hold the
-          // dimmed + outlined state briefly, then clearPresentation removes
-          // `.picked` and CSS transitions fade everything back to default.
+          // back to its artwork) and settle the persistent glow onto it; the dim
+          // is already lifting from when the card began its flight home, and
+          // clearPresentation tidies up the leftover state shortly after.
           if (activeCard) {
             setLastPicked(name);
             activeCard.classList.remove("presenting");
