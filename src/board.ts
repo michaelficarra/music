@@ -35,6 +35,15 @@ export interface Board {
   setCutoff(cutoff: Slot): void;
 }
 
+// Render the no-image fallback into a thumb: the artist's first character.
+// Used both for artists shipped without an image and when a curated image URL
+// fails to load (see createCard), so a dead link degrades to the same placeholder
+// rather than a broken-image glyph.
+function showPlaceholder(thumb: HTMLElement, name: string): void {
+  thumb.classList.add("placeholder");
+  thumb.textContent = name.slice(0, 1).toUpperCase();
+}
+
 function createCard(artist: Artist): HTMLElement {
   const card = document.createElement("div");
   card.className = "card";
@@ -48,11 +57,14 @@ function createCard(artist: Artist): HTMLElement {
     img.src = artist.imageURL;
     img.alt = artist.name;
     img.loading = "lazy";
+    // A rotted/unreachable URL falls back to the initial placeholder.
+    img.addEventListener("error", () => {
+      img.remove();
+      showPlaceholder(thumb, artist.name);
+    });
     thumb.appendChild(img);
   } else {
-    // No image yet: show the artist's first character as a placeholder.
-    thumb.classList.add("placeholder");
-    thumb.textContent = artist.name.slice(0, 1).toUpperCase();
+    showPlaceholder(thumb, artist.name);
   }
 
   const label = document.createElement("span");

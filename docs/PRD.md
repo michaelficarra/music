@@ -22,7 +22,8 @@ Each **artist** has:
 
 - a **name** (unique; this is how the artist is identified),
 - a **tier** — one of the ranked tiers, or *unranked*,
-- a **representative image** — shown on the artist's card; an artist may have none.
+- a **representative image** — shown on the artist's card; an artist may have none (and an image
+  that fails to load is treated the same as none — see §9).
 
 The set of artists is fixed at load time (curated in the source data). Users sort artists; they
 do not add, rename, or delete artists, and do not edit images, from within the app.
@@ -172,7 +173,8 @@ indicates that nothing can be picked (e.g. by being disabled).
 ## 9. Empty / edge states
 
 - **Artist with no image:** the card shows a placeholder in place of the image; the name is still
-  shown.
+  shown. An artist whose image **fails to load** (e.g. a broken or removed URL) falls back to the
+  same placeholder, so a dead link never shows a broken-image glyph.
 - **Empty tier:** the tier row is still displayed (empty), as a valid drop target.
 - **Empty unranked area:** still displayed, as described in §3.
 - **No eligible artists for a pick:** handled as in §8.
