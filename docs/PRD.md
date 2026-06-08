@@ -76,6 +76,10 @@ for an artist no longer shipped is simply ignored.
   F, or **X** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
   it; pressing **Enter** saves and **Escape** cancels. Saving moves the artist to the chosen tier.
   Clicking elsewhere, or starting to drag a card, dismisses the dropdown without changing the tier.
+- After a move that changes an artist's tier (by drag or via the dropdown), a brief notification
+  offers to **undo** it, returning the artist to its previous tier. Undo is **single-level** — it
+  reverses the most recent move only — and the notification dismisses itself after a few seconds. A
+  within-tier rearrangement (no change of tier) is not an undoable move.
 - **Only tier membership matters.** The left-to-right position of a card within a tier carries no
   meaning and is not remembered between sessions (it may be re-laid-out freely).
 

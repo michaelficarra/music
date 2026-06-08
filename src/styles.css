@@ -374,11 +374,33 @@ button:disabled {
   bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);
+  /* Lay message + optional action button out in a row. */
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   background: var(--accent);
   color: #fff;
   padding: 0.6rem 1rem;
   border-radius: 8px;
   box-shadow: 0 4px 16px #00000060;
+}
+
+/* Override the display:flex above so the hidden attribute still hides it. */
+.toast[hidden] {
+  display: none;
+}
+
+/* The toast's action (e.g. Undo): a quiet outlined button on the accent fill. */
+.toast-action {
+  font-weight: 600;
+  color: #fff;
+  background: #ffffff26;
+  border: 1px solid #ffffff80;
+  padding: 0.2rem 0.6rem;
+}
+
+.toast-action:hover {
+  background: #ffffff40;
 }
 
 .modal {

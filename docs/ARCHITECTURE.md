@@ -129,6 +129,12 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   - **Sort the data rows by artist name** via `compareArtistNames` (`src/sort.ts`, a case- and
     accent-insensitive `localeCompare`) so the exported CSV stays in the list's canonical order.
   - Apply RFC-4180 quoting (§3).
+- **Undo (single-level):** `createBoard`'s `onChange` callback takes an optional `MoveRecord`
+  (`{ name, from, to }`), emitted whenever a drag or click-to-edit actually changed an artist's tier
+  (a within-tier reorder emits none). `main.ts` renders a toast whose **Undo** button calls
+  `board.move(name, from)` to restore the previous tier. `Board.move` applies the same store/DOM
+  update as a drag but deliberately reports **no** `MoveRecord`, so an undo can't itself be undone.
+  No extra persisted state backs this — an undo is just another `store.setSlot`.
 
 ## 6. Random picker & weighting (`src/random.ts`)
 

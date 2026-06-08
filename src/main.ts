@@ -4,7 +4,7 @@
 import "./styles.css";
 import { artists } from "./data";
 import * as store from "./store";
-import { createBoard } from "./board";
+import { createBoard, type MoveRecord } from "./board";
 import { TIERS, UNRANKED, type Slot } from "./types";
 import {
   INTENSITY_LABEL,
@@ -81,17 +81,65 @@ function currentSlots(): Map<string, Slot> {
   return new Map<string, Slot>(artists.map((a) => [a.name, store.currentSlot(a.name)]));
 }
 
-let toastTimer: number | undefined;
-function showToast(message: string): void {
-  toast.textContent = message;
-  toast.hidden = false;
-  if (toastTimer !== undefined) window.clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => {
-    toast.hidden = true;
-  }, 2000);
+/** An optional actionable button rendered alongside a toast message (e.g. Undo). */
+interface ToastAction {
+  label: string;
+  onClick: () => void;
 }
 
-const board = createBoard(boardEl, refreshControls);
+let toastTimer: number | undefined;
+function hideToast(): void {
+  if (toastTimer !== undefined) {
+    window.clearTimeout(toastTimer);
+    toastTimer = undefined;
+  }
+  toast.hidden = true;
+}
+
+function showToast(message: string, action?: ToastAction, duration = 2000): void {
+  // Rebuild the toast's contents: a message span, plus an action button when given.
+  toast.replaceChildren();
+  const text = document.createElement("span");
+  text.textContent = message;
+  toast.appendChild(text);
+  if (action) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "toast-action";
+    button.textContent = action.label;
+    button.addEventListener("click", () => {
+      action.onClick();
+      hideToast();
+    });
+    toast.appendChild(button);
+  }
+  toast.hidden = false;
+  if (toastTimer !== undefined) window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(hideToast, duration);
+}
+
+/** A slot's human-readable name for messages ("unranked" for the X pool). */
+function slotLabel(slot: Slot): string {
+  return slot === UNRANKED ? "unranked" : slot;
+}
+
+// Offer to undo a just-completed tier move. Held longer than a plain toast so the
+// Undo button stays clickable; pressing it moves the artist back to its old slot.
+function showUndoToast(move: MoveRecord): void {
+  showToast(
+    `Moved ${move.name} to ${slotLabel(move.to)}`,
+    { label: "Undo", onClick: () => board.move(move.name, move.from) },
+    6000,
+  );
+}
+
+const board = createBoard(boardEl, onBoardChange);
+
+// After any board change, refresh the toolbar; if it relocated an artist, offer undo.
+function onBoardChange(move?: MoveRecord): void {
+  refreshControls();
+  if (move) showUndoToast(move);
+}
 
 function refreshControls(): void {
   // Reset/Save appear only when the arrangement differs from the shipped CSV.

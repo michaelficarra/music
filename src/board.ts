@@ -5,9 +5,22 @@ import { artists } from "./data";
 import * as store from "./store";
 import { TIERS, UNRANKED, type Artist, type Slot, type Tier } from "./types";
 
+/** A single tier change, reported to `onChange` so the page can offer an undo. */
+export interface MoveRecord {
+  name: string;
+  from: Slot;
+  to: Slot;
+}
+
 export interface Board {
   /** Re-place every card according to the store (used after Reset). */
   rerender(): void;
+  /**
+   * Programmatically move an artist's card to a slot (DOM + store + counts),
+   * exactly as a drag would. Used by the undo affordance; it reports no
+   * `MoveRecord` of its own, so undoing never offers an undo-of-the-undo.
+   */
+  move(name: string, slot: Slot): void;
   /**
    * Reveal a picked artist's card large and centred, then animate it back into
    * its place in the grid (FLIP). Honours `prefers-reduced-motion`.
@@ -51,10 +64,12 @@ function createCard(artist: Artist): HTMLElement {
 }
 
 /**
- * Build the board into `container`. `onChange` is invoked after any drag that
- * may have altered tier membership (so the page can refresh Reset/Save/🎲).
+ * Build the board into `container`. `onChange` is invoked after any drag or edit
+ * that may have altered tier membership (so the page can refresh Reset/Save/🎲).
+ * When the change actually relocated an artist between slots, the move is passed
+ * so the page can offer an undo; a no-op (e.g. a within-tier reorder) passes none.
  */
-export function createBoard(container: HTMLElement, onChange: () => void): Board {
+export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord) => void): Board {
   const cardsByName = new Map<string, HTMLElement>();
   const lists = new Map<Slot, HTMLElement>();
   const rowsBySlot = new Map<Slot, HTMLElement>();
@@ -180,12 +195,15 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
         justDragged = false;
       }, 0);
       const name = evt.item.dataset.artist;
-      const slot = (evt.to as HTMLElement).dataset.slot;
-      if (name !== undefined && slot !== undefined) {
-        store.setSlot(name, slot as Slot);
+      const from = (evt.from as HTMLElement).dataset.slot;
+      const to = (evt.to as HTMLElement).dataset.slot;
+      if (name !== undefined && to !== undefined) {
+        store.setSlot(name, to as Slot);
         markMoved(name);
         updateCounts();
-        onChange();
+        // Only a cross-slot drop is a real change worth offering to undo; a
+        // within-tier reorder leaves membership untouched.
+        onChange(from !== to ? { name, from: from as Slot, to: to as Slot } : undefined);
       }
     },
   };
@@ -258,12 +276,13 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
     if (!editorCard) return;
     const name = editorCard.dataset.artist;
     if (name !== undefined) {
+      const from = store.currentSlot(name);
       const slot: Slot = editorSelect.value === "X" ? UNRANKED : (editorSelect.value as Slot);
       store.setSlot(name, slot);
       lists.get(slot)?.appendChild(editorCard);
       markMoved(name);
       updateCounts();
-      onChange();
+      onChange(from !== slot ? { name, from, to: slot } : undefined);
     }
     closeEditor();
   }
@@ -319,6 +338,15 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
   return {
     rerender(): void {
       placeCards();
+    },
+    move(name: string, slot: Slot): void {
+      const card = cardsByName.get(name);
+      if (!card) return;
+      store.setSlot(name, slot);
+      lists.get(slot)?.appendChild(card);
+      markMoved(name);
+      updateCounts();
+      onChange(); // no MoveRecord: undoing a move shouldn't offer to undo the undo
     },
     present(name: string): void {
       const card = cardsByName.get(name);
