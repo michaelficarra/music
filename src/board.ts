@@ -231,6 +231,21 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
     scrollSpeed: 12,
     bubbleScroll: true,
     onStart: () => closeEditor(),
+    // Keep the dragged card at its canonical (alphabetical) position in the list it
+    // is over, instead of following the pointer's x, so the live drop preview shows
+    // the real landing slot (the board is always sorted — PRD §5).
+    //
+    // Split across onMove + onChange so the card is sorted the instant it enters a
+    // tier, not only after it's nudged around inside one:
+    //  - onMove blocks SortableJS's pointer-based reordering *within* a list
+    //    (return false), but leaves *cross-list entry* to SortableJS (return
+    //    undefined) — cancelling entry would corrupt its drop bookkeeping so onEnd
+    //    would read the wrong tier.
+    //  - onChange fires right after SortableJS inserts the card into a list (at the
+    //    pointer); we then re-seat it at its sorted slot. Intra-list moves are
+    //    blocked above, so they never reach onChange — no fight with the pointer.
+    onMove: (evt) => (evt.dragged.parentNode === evt.to ? false : undefined),
+    onChange: (evt) => insertCardSorted(evt.to, evt.item),
     onEnd: (evt) => {
       justDragged = true;
       window.setTimeout(() => {

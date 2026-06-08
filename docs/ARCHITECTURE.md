@@ -150,9 +150,15 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   No extra persisted state backs this — an undo is just another `store.setSlot`.
 - **Render order:** the board keeps every list (each tier and the unranked pool) in canonical name
   order via `insertCardSorted` (`board.ts`), which reuses `compareArtistNames` (`src/sort.ts`). It is
-  applied on initial placement, after every drag (re-seating the dropped card, since SortableJS drops
-  at the pointer), and on edit/undo/`Board.move`. Within-tier order is non-semantic (PRD §5), so this
-  is purely presentational and nothing about ordering is persisted.
+  applied on initial placement, on edit/undo/`Board.move`, and **live during a drag** via two
+  SortableJS hooks: `onMove` returns `false` for moves *within* a list (cancelling the default
+  pointer-based reorder) but `undefined` for *cross-list entry* (a `false` there would corrupt the
+  drop bookkeeping, so `onEnd` would read the wrong tier); `onChange` then fires right after the card
+  is inserted into a list and re-seats it at its sorted slot — so it lands sorted the instant it
+  enters a tier, not only after being nudged within one. Because intra-list moves are blocked in
+  `onMove`, they never reach `onChange`, so there's no fight with the pointer. `onEnd` re-seats once
+  more as a final safety. Within-tier order is non-semantic (PRD §5), so this is purely presentational
+  and nothing about ordering is persisted.
 
 ## 6. Random picker & weighting (`src/random.ts`)
 

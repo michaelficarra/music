@@ -87,6 +87,9 @@ for an artist no longer shipped is simply ignored.
   meaning. Cards are displayed in **canonical name order** (alphabetical, case- and
   accent-insensitive) within every tier *and* the unranked area; this order is maintained
   automatically as cards are moved, so the layout is predictable rather than reflecting drop order.
+  This applies **live while dragging**: the dragged card previews at its alphabetical position in
+  the tier currently under the cursor, rather than following the pointer's horizontal position, so
+  the preview shows where the card will actually land.
 
 ## 6. Persistence
 
