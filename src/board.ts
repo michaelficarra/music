@@ -217,6 +217,19 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
   const options: Sortable.Options = {
     group: "artists",
     animation: 150,
+    // Auto-scroll the page while dragging near a viewport edge, so a card can be
+    // dragged between distant tiers on a tall board without first scrolling.
+    // `forceFallback` is essential: in native HTML5 drag mode SortableJS leaves
+    // window scrolling to the browser (which Chrome doesn't do for the page body),
+    // so auto-scroll silently no-ops on desktop. Forcing the pointer-based fallback
+    // routes auto-scroll through the plugin's own scroller, which scrolls the window
+    // — and matches the path touch input already uses. bubbleScroll lets that target
+    // the window rather than only a nested scroll container.
+    forceFallback: true,
+    scroll: true,
+    scrollSensitivity: 80,
+    scrollSpeed: 12,
+    bubbleScroll: true,
     onStart: () => closeEditor(),
     onEnd: (evt) => {
       justDragged = true;

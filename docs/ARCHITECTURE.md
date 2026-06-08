@@ -11,7 +11,7 @@
 | Build tool         | **Vite**                        | Fast dev server, simple static build, first-class `?raw` asset imports. |
 | Language           | **TypeScript**                  | Type safety for the data model and weighting logic, minimal toolchain. |
 | UI                 | **Vanilla DOM/TS** (no framework) | The app is small; no framework keeps the bundle tiny and the output purely static. |
-| Drag-and-drop      | **SortableJS**                  | Framework-agnostic, zero-dependency, purpose-built for reorderable lists and dragging items between lists, with mouse **and** touch support. |
+| Drag-and-drop      | **SortableJS**                  | Framework-agnostic, zero-dependency, purpose-built for reorderable lists and dragging items between lists, with mouse **and** touch support. Its bundled AutoScroll plugin is enabled and tuned in `board.ts` (`scroll`/`scrollSensitivity`/`scrollSpeed`/`bubbleScroll`) so dragging near a viewport edge scrolls the page. This **requires `forceFallback: true`**: in native HTML5 drag mode SortableJS defers page scrolling to the browser, which Chrome doesn't do for the document body, so auto-scroll silently no-ops on desktop; the pointer-based fallback (already used for touch) runs the plugin's own scroller instead. |
 | Hosting            | **GitHub Pages** via **GitHub Actions** | Free static hosting; the Action builds and deploys, so build artefacts are not committed. |
 
 There is intentionally **no UI framework and no runtime data fetching of images** — the app is a

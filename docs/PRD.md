@@ -72,7 +72,9 @@ for an artist no longer shipped is simply ignored.
 - An artist is represented by a **card** showing its image (or a placeholder if it has none) and
   its name.
 - The user **drags a card** from one tier (or the unranked area) and drops it into another tier
-  or the unranked area. This works with both mouse and touch input.
+  or the unranked area. This works with both mouse and touch input. Dragging a card near the top or
+  bottom edge of the viewport **auto-scrolls** the board, so a card can be moved between tiers that
+  are far apart without scrolling first.
 - Alternatively, **clicking a card** opens a small **tier-selection dropdown** (S, A, B, C, D, E,
   F, or **X** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
   it; pressing **Enter** saves and **Escape** cancels. Saving moves the artist to the chosen tier.
