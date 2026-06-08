@@ -149,7 +149,9 @@ A horizontal line is drawn on the board between the lowest eligible tier and the
 reflecting the selected cutoff (e.g. `D+` draws it between the D and E rows). It updates when the
 cutoff changes. Both `F+` and `X only` draw the line between the F row and the unranked area: for
 `F+` every ranked tier sits above the line as eligible; for `X only` the unranked pool sits below it
-as the sole eligible region.
+as the sole eligible region. The line carries small labels naming the eligible and ineligible
+regions, each pointing to its own side of the line; for `X only` those direction indicators invert,
+since the eligible region sits below the line rather than above it.
 
 Edge behaviour: if the chosen scheme has **no eligible artists** (e.g. `A+` selected but S and A
 are both empty, or `X only` with an empty unranked pool), the 🎲 button performs no action and

@@ -74,9 +74,20 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
   let justDragged = false; // suppresses the click that fires right after a drag
 
   // Divider marking the picker cutoff; reparented between rows by setCutoff().
+  // Two small labels sit on top of the line, centred side by side — "eligible"
+  // then "ineligible" — each painted over the line; setCutoff() fills their arrows.
+  const cutoffEl = document.createElement("div");
+  cutoffEl.className = "cutoff";
+  cutoffEl.setAttribute("aria-hidden", "true");
+
   const cutoffLine = document.createElement("div");
   cutoffLine.className = "cutoff-line";
-  cutoffLine.setAttribute("aria-hidden", "true");
+  const cutoffEligible = document.createElement("div");
+  cutoffEligible.className = "cutoff-label";
+  const cutoffIneligible = document.createElement("div");
+  cutoffIneligible.className = "cutoff-label";
+
+  cutoffEl.append(cutoffLine, cutoffEligible, cutoffIneligible);
 
   function addRow(slot: Slot, label: string, title?: string): void {
     const row = document.createElement("div");
@@ -383,13 +394,21 @@ export function createBoard(container: HTMLElement, onChange: () => void): Board
         });
     },
     setCutoff(cutoff: Slot): void {
-      cutoffLine.remove();
+      cutoffEl.remove();
       // The line always sits just below its anchor row. For a ranked cutoff that
       // is the cutoff tier itself (e.g. "D+" → between D and E). "F+" and "X only"
       // both anchor on F, drawing the line at the F/unranked boundary — for "F+"
       // every ranked tier above is eligible; for "X only" the unranked pool below is.
       const anchor: Tier = cutoff === UNRANKED ? TIERS[TIERS.length - 1]! : cutoff;
-      rowsBySlot.get(anchor)?.after(cutoffLine);
+      rowsBySlot.get(anchor)?.after(cutoffEl);
+      // "eligible"/"ineligible" stay put (left/right); the arrows point at each
+      // region's side of the line. Normally the eligible pool is above and the
+      // ineligible below, but "X only" inverts that — so the arrows flip.
+      const swap = cutoff === UNRANKED;
+      const eligibleArrow = swap ? "↓" : "↑";
+      const ineligibleArrow = swap ? "↑" : "↓";
+      cutoffEligible.textContent = `${eligibleArrow} eligible ${eligibleArrow}`;
+      cutoffIneligible.textContent = `${ineligibleArrow} ineligible ${ineligibleArrow}`;
     },
   };
 }

@@ -320,7 +320,7 @@ button:disabled {
 .tier-row,
 .tier-label,
 .card,
-.cutoff-line {
+.cutoff {
   transition: opacity 0.5s ease;
 }
 
@@ -330,17 +330,43 @@ button:disabled {
   opacity: 0.3;
 }
 
-#app:has(.card.picked) .cutoff-line {
+#app:has(.card.picked) .cutoff {
   opacity: 0.12;
 }
 
-/* Divider marking the random-picker cutoff (drawn between two tier rows). */
+/* The picker cutoff: a glowing divider line (drawn between two tier rows) with
+   two small labels resting on top of it, centred and spaced apart — "eligible"
+   then "ineligible" — naming each region. */
+.cutoff {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+
 .cutoff-line {
-  height: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-  box-shadow: 0 0 6px var(--accent);
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 5px solid var(--text);
   opacity: 0.5;
+}
+
+/* Arrowed eligibility hints sitting over the line. The opaque page-coloured
+   background hides the line behind the text. Decorative, so quiet and
+   unselectable. */
+.cutoff-label {
+  position: relative;
+  background: var(--bg);
+  padding: 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  user-select: none;
 }
 
 .toast {
