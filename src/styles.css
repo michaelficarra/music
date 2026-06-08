@@ -315,12 +315,46 @@ button:disabled {
   color: transparent;
 }
 
+/* Drag visuals (pointer-based fallback drag — forceFallback in board.ts). Two
+   elements coexist mid-drag: the original card left in the list as a placeholder
+   marking where it will land (.sortable-ghost), and a clone tracking the cursor
+   (.sortable-fallback). Without styling both look identical, so a dragged card
+   appears to duplicate; style them to read distinctly — a faded slot vs a lifted
+   card. */
+.card.sortable-ghost {
+  /* Fade the placeholder so it reads as the spot the card came from / will land,
+     clearly subordinate to the lifted, opaque clone tracking the cursor. */
+  opacity: 0.4;
+}
+
+/* The clone travelling under the cursor. SortableJS already positions it fixed at
+   a high z-index with pointer-events disabled; we just lift it off the board.
+   SortableJS sets opacity:0.8 inline on this clone, so override it (!important is
+   required to beat the inline style) to keep the dragged card fully opaque. */
+.card.sortable-fallback {
+  box-shadow: 0 12px 32px #000000aa;
+  opacity: 1 !important;
+}
+
+/* The card's default fill is semi-transparent (cards blend into the panel), which
+   would let the board show through the floating clone; give it an opaque fill.
+   Moved cards keep their opaque pastel via the more-specific .card.moved rule. */
+.card.sortable-fallback:not(.moved) {
+  background: var(--bg);
+}
+
 /* The flying clone shown when an artist is rolled: above everything, centred
    large, then animated back into the card's grid slot (see board.ts present()). */
 .pick-presenter {
   z-index: 1000;
   pointer-events: none;
   will-change: transform, opacity;
+  /* The card's default fill is semi-transparent (#0000004d) so cards blend into
+     the panel; enlarged and flying over the dimmed board, that would let the
+     board show through. Use an opaque fill that matches how the default card
+     reads over the panel (≈ #0000004d composited onto --panel). Moved cards keep
+     their opaque pastel via the more-specific .card.moved rule. */
+  background: var(--bg);
 }
 
 .pick-presenter .thumb {
