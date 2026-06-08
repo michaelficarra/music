@@ -8,7 +8,7 @@ It runs entirely in the browser — there is no backend, no accounts, and no ser
 
 ## What it does
 
-- **Drag-and-drop tiers** — sort artists into six fixed tiers (S, A, B, C, D, F) plus an
+- **Drag-and-drop tiers** — sort artists into seven fixed tiers (S, A, B, C, D, E, F) plus an
   always-visible *unranked* area. Works with mouse and touch.
 - **Remembers your changes** — your arrangement is saved to the browser's local storage and
   restored on your next visit.
@@ -25,9 +25,8 @@ Each artist has a name, a tier, and a representative image. The list of artists 
 For full details, see [docs/PRD.md](./docs/PRD.md) (features/behaviour) and
 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) (how it's built).
 
-> **Status:** the requirements, architecture, and source data are in place; the application code
-> and toolchain are being scaffolded. The build/run steps below describe the intended workflow and
-> will work once the app is scaffolded.
+> **Status:** the app is built and past its MVP — the toolchain, tests, and CI are all in place, so
+> the build/run steps below work as written.
 
 ## Tech stack
 

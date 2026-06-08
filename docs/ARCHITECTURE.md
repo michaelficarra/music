@@ -24,19 +24,25 @@ static bundle plus a build-time-embedded copy of the artist data.
 ├── data/
 │   └── artists.csv          # Source of truth for the artist roster, tiers, and images
 ├── scripts/
-│   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §6)
+│   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §7)
 │   ├── add-artist.ts        # Append an unranked artist to the CSV, then enrich them
-│   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §6)
+│   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §7)
 ├── src/                     # Application source
 │   ├── main.ts              # Entry point: load data, build UI, wire events
-│   ├── data.ts              # CSV parse/serialise + the static baseline import
+│   ├── types.ts             # Core domain types (Tier, Slot, Artist)
+│   ├── csv.ts               # RFC-4180 CSV parse/serialise (see §3)
+│   ├── data.ts              # Embeds data/artists.csv at build time → the static baseline
 │   ├── store.ts             # Local-storage overlay + diff (Reset/Save) logic
 │   ├── board.ts             # Renders tiers + unranked area, wires SortableJS
-│   ├── random.ts            # Weighting schemes + weighted random pick
-│   └── ...                  # (styles, small helpers)
+│   ├── random.ts            # Weighting schemes + weighted random pick (see §6)
+│   ├── sort.ts              # compareArtistNames(): canonical (case/accent-insensitive) name order
+│   └── styles.css           # App styles
+├── public/
+│   └── favicon.svg          # Static asset copied verbatim into the build
 ├── docs/                    # PRD.md, ARCHITECTURE.md (this file)
 ├── .github/workflows/
-│   └── deploy.yml           # Build + deploy to GitHub Pages
+│   ├── ci.yml               # Typecheck + test + format check on push / PR (see §8)
+│   └── deploy.yml           # Build + deploy to GitHub Pages (see §8)
 ├── index.html
 ├── package.json
 ├── tsconfig.json
@@ -58,7 +64,8 @@ Columns, in order:
 - **Quoting:** standard RFC-4180. Fields containing a comma, double-quote, or newline are wrapped
   in double quotes, with embedded double-quotes doubled. This matters for names such as
   `Dan le Sac vs. Scroobius Pip` (safe) and any future name containing a comma.
-- The current file holds 252 artists. It may be edited by hand or by the enrichment script (§6).
+- The file holds the full artist roster (a few hundred rows). It may be edited by hand or by the
+  enrichment script (§7).
 
 ## 4. Data flow & the "static baseline"
 
@@ -93,12 +100,20 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
 
 - **In memory:** the current arrangement is held as a `Map<ArtistName, Tier | UNRANKED>` plus the
   immutable baseline (roster, images, baseline tiers).
-- **Local storage** (`store.ts`): a single key (e.g. `artist-tier-list:v1`) holding JSON:
-  ```json
-  { "version": 1, "assignments": { "Radiohead": "S", "Nickelback": "E", ... } }
-  ```
-  `assignments` is a sparse map of **name → tier** overrides. Only tier is stored (no within-tier
-  order, per PRD §5). Writes happen immediately on every drop.
+- **Local storage** (`store.ts`) holds three independent keys:
+  - `artist-tier-list:v1` — the arrangement, as JSON:
+    ```json
+    { "version": 1, "assignments": { "Radiohead": "S", "Nickelback": "E", ... } }
+    ```
+    `assignments` is a sparse map of **name → tier** overrides. Only tier is stored (no within-tier
+    order, per PRD §5). Writes happen immediately on every drop.
+  - `artist-tier-list:scheme` — the last-used picker scheme as a `cutoff:intensity` id (§6), so the
+    two picker dropdowns restore their selection across reloads (PRD §8).
+  - `artist-tier-list:picked` — the name of the most recently picked artist, so its persistent glow
+    survives a reload until the next 🎲 press (PRD §8).
+
+  The latter two are independent UI preferences: they are never pruned and do not affect the
+  Reset/Save diff, which considers `assignments` only.
 - **Prune on load:** when overrides are hydrated, any stored assignment that now equals the current
   baseline value (e.g. because a rebuild shipped that tier) is redundant and dropped, as are entries
   for unknown artists or invalid slots. If anything was dropped, storage is rewritten with the
@@ -115,7 +130,32 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
     accent-insensitive `localeCompare`) so the exported CSV stays in the list's canonical order.
   - Apply RFC-4180 quoting (§3).
 
-## 6. Image-enrichment tooling (`scripts/enrich-images.ts`)
+## 6. Random picker & weighting (`src/random.ts`)
+
+The 🎲 picker (PRD §8) is pure, side-effect-free logic, so it lives in its own module and is unit
+tested in `src/random.test.ts`. A **scheme** has two independent dimensions — both persisted as a
+single `cutoff:intensity` id (§5):
+
+- **Cutoff** — which slots are eligible. For a ranked cutoff the eligible tiers are S down to the
+  cutoff inclusive (`eligibleTiers`); the special `unranked` cutoff ("X only") instead draws from
+  the unranked pool alone, ignoring intensity.
+- **Intensity** — how a candidate's selection weight is derived from its tier:
+  - Each ranked tier has a base **Fibonacci / planning-poker weight** (`FIB_WEIGHT`): `S 13, A 8,
+    B 5, C 3, D 2, E 1, F 1`.
+  - `unweighted` → every eligible artist has weight 1 (uniform).
+  - `weighted` → weight is `FIB_WEIGHT[tier]`.
+  - `heavily` → weight is `2 × FIB_WEIGHT[tier]` (widening the gap between tiers).
+
+  These multipliers are the concrete realisation of the "probability curve" PRD §8 leaves
+  unspecified; treat the exact numbers as tunable, not contractual.
+
+Selection is **cumulative-weight roulette**: sum the candidates' weights, draw `rng() × total`
+(`rng` defaults to `Math.random` but is injectable for deterministic tests), and walk the list
+subtracting until the threshold goes negative; a final fall-through returns the last candidate to
+absorb floating-point overshoot. The previous pick is **excluded** from the draw (never the same
+artist twice in a row) unless it is the only candidate. `hasEligible` drives whether 🎲 is enabled.
+
+## 7. Image-enrichment tooling (`scripts/enrich-images.ts`)
 
 A **dev-time** Node/TS script, run manually by the maintainer — **not** part of the app bundle.
 
@@ -142,20 +182,25 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   (blank Tier/ImageURL/ImageSource) in sorted position (`compareArtistNames`, keeping the CSV
   sorted by name), then invokes the enrichment above for just that artist. Refuses a duplicate name.
 
-## 7. Build & deploy
+## 8. Build, CI & deploy
 
 - **Dev:** `vite` (dev server with HMR).
 - **Build:** `npm run build` (`tsc --noEmit && vite build`) → static assets in `dist/`.
   `vite.config.ts` sets **`base: './'`** (relative asset URLs), so the bundle works under any GitHub
   Pages project subpath (`https://<user>.github.io/<repo>/`) without hard-coding the repo name.
-- **Deploy:** `.github/workflows/deploy.yml` runs on push to the default branch: install → build →
-  `configure-pages` → `upload-pages-artifact` (`dist`) → `deploy-pages`. **Build artefacts are not
-  committed**; the Action publishes `dist/` to Pages.
+- **CI:** `.github/workflows/ci.yml` runs on every push to the default branch and on pull requests:
+  `npm ci` → `npm run typecheck` → `npm test` → `npx prettier --check .` (a non-rewriting check, vs.
+  the `--write` of `npm run format`). Concurrent runs for the same ref are cancelled.
+- **Deploy:** `.github/workflows/deploy.yml` runs on push to the default branch (or manual
+  `workflow_dispatch`): install → build → `configure-pages` → `upload-pages-artifact` (`dist`) →
+  `deploy-pages`. **Build artefacts are not committed**; the Action publishes `dist/` to Pages.
 
-## 8. Testing & quality (intended)
+## 9. Testing & quality
 
 - **Vitest** unit tests for the pure logic: CSV parse/serialise round-trip (incl. quoting) in
   `src/csv.test.ts`, the overlay/diff/export in `src/store.test.ts` (run under the `jsdom`
-  environment for `localStorage`), and the weighting/selection in `src/random.test.ts`.
-- Type-checking via `tsc --noEmit`; formatting via Prettier. The enrichment script runs under
-  **tsx**. Exact commands are listed in [CLAUDE.md](../CLAUDE.md).
+  environment for `localStorage`), the weighting/selection in `src/random.test.ts`, and the
+  canonical name ordering in `src/sort.test.ts`.
+- Type-checking via `tsc --noEmit`; formatting via Prettier; all enforced in CI (§8). The
+  enrichment and add-artist scripts run under **tsx**. Exact commands are listed in
+  [CLAUDE.md](../CLAUDE.md).

@@ -60,6 +60,12 @@ On load, the app obtains its artist data as follows:
 Either way, every artist is shown in the tier indicated by the loaded data; artists with no tier
 appear in the unranked area.
 
+A saved arrangement remembers **only each artist's tier placement**, not the artist list itself: the
+roster and images always come from the data shipped with the app. So when the shipped data changes,
+a returning visitor with a saved arrangement still sees the **newly added artists** (in the unranked
+area) and any **updated images** — only their own tier placements are layered on top, and a placement
+for an artist no longer shipped is simply ignored.
+
 ## 5. Sorting
 
 - An artist is represented by a **card** showing its image (or a placeholder if it has none) and
@@ -67,8 +73,9 @@ appear in the unranked area.
 - The user **drags a card** from one tier (or the unranked area) and drops it into another tier
   or the unranked area. This works with both mouse and touch input.
 - Alternatively, **clicking a card** opens a small **tier-selection dropdown** (S, A, B, C, D, E,
-  or **X** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
+  F, or **X** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
   it; pressing **Enter** saves and **Escape** cancels. Saving moves the artist to the chosen tier.
+  Clicking elsewhere, or starting to drag a card, dismisses the dropdown without changing the tier.
 - **Only tier membership matters.** The left-to-right position of a card within a tier carries no
   meaning and is not remembered between sessions (it may be re-laid-out freely).
 
@@ -95,7 +102,8 @@ from the **static arrangement** (the source data shipped with the app).
     in a **new tab**. There is no server to save to; the maintainer pastes this CSV over the file
     and commits, redeploying to make the arrangement the new static default. The exported CSV
     changes only each artist's tier, and its rows are **sorted by artist name** (the list's
-    canonical order).
+    canonical order). Save gives brief feedback confirming the copy succeeded, and tells the user
+    if the clipboard could not be accessed (so a failed copy is never silent).
 
 Individual cards whose current tier **differs from the static arrangement** carry a slight
 highlight, so the specific artists contributing to the difference stand out at a glance. A card

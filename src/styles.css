@@ -266,7 +266,7 @@ button:disabled {
   word-break: break-word;
 }
 
-/* Cards moved off their shipped (server) tier get a pastel-purple background
+/* Cards moved off their shipped (baseline) tier get a pastel-purple background
    filling the whole card (thumb + name) so unsaved changes stand out. Distinct
    hue from the blue "picked" glow, which rings the whole card and shows on top. */
 .card.moved {

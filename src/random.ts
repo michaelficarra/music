@@ -1,8 +1,10 @@
 // Weighted random artist picker.
 //
-// A scheme has two independent dimensions: a tier cutoff (which ranked tiers are
-// eligible) and a weighting intensity (how strongly higher tiers are favoured).
-// Unranked artists are never eligible. See PRD §8 / ARCHITECTURE §7.
+// A scheme has two independent dimensions: a cutoff (which slots are eligible —
+// a ranked tier and everything above it, or the unranked pool alone via "X only")
+// and a weighting intensity (how strongly higher tiers are favoured). Under a
+// ranked cutoff the unranked pool is excluded; under "X only" it is the sole
+// eligible region. See PRD §8 / ARCHITECTURE §6.
 
 import { TIERS, UNRANKED, isTier, type Slot, type Tier } from "./types";
 
@@ -62,11 +64,6 @@ export function cutoffLabel(cutoff: Slot): string {
   if (cutoff === TIERS[0]) return "S only"; // nothing ranks above the top tier
   return `${cutoff}+`; // "A+" … "F+" ("F+" being every ranked tier)
 }
-
-/** Every (cutoff × intensity) scheme, for building the dropdown. */
-export const SCHEMES: readonly Scheme[] = TIERS.flatMap((cutoff) =>
-  INTENSITIES.map((intensity): Scheme => ({ cutoff, intensity })),
-);
 
 interface Candidate {
   name: string;

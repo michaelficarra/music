@@ -4,9 +4,9 @@ A single-page, static web app for sorting musical artists into tiers by drag-and
 weighted random picker. See [docs/PRD.md](./docs/PRD.md) for behaviour and
 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for how it is built.
 
-> Status: the documents and source data exist; the application code and toolchain
-> (`package.json`, Vite config, `src/`, CI) are scaffolded during the implementation phase. Until
-> then, the "Commands" below describe the intended workflow rather than what is wired up today.
+> The app and its toolchain (`package.json`, Vite config, `src/`, tests, CI) are in place and the
+> commands below are wired up; the project is past its MVP. The docs remain the source of truth —
+> keep them current with the workflow described next.
 
 ## Doc-driven workflow (source of truth)
 
@@ -32,12 +32,12 @@ the PRD; if it's about how the code achieves it, it's ARCHITECTURE.
   affect the shipped default.
 - The in-app **Save** button exports the current arrangement as CSV to the clipboard; updating the
   static default means pasting that over `data/artists.csv` and committing.
-- Image URLs are populated by `scripts/enrich-images.ts` (ARCHITECTURE §6), which tries
+- Image URLs are populated by `scripts/enrich-images.ts` (ARCHITECTURE §7), which tries
   Apple Music → MusicBrainz → YouTube Music → Wikipedia (preferring thumbnails) and records the
   provider in `ImageSource`. It is idempotent (fills blanks only, unless `--force`).
 - **Never commit** editor swap files (e.g. `data/.artists.csv.swp`); add them to `.gitignore`.
 
-## Commands (intended)
+## Commands
 
 ```sh
 npm install            # install dependencies
@@ -46,7 +46,7 @@ npm run build          # production build → dist/
 npm run preview        # serve the production build locally
 npm run enrich         # run scripts/enrich-images.ts (Apple Music → MusicBrainz → YouTube → Wikipedia)
 npm run add-artist -- "<name>"   # append an unranked artist to the CSV and enrich just them
-npm test               # unit tests (CSV round-trip, store diff, weighting)
+npm test               # unit tests (CSV round-trip, store diff, weighting, name sort)
 npm run typecheck      # tsc --noEmit
 npm run format         # Prettier
 ```
