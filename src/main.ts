@@ -137,7 +137,8 @@ cutoffSelect.addEventListener("change", onSchemeChange);
 intensitySelect.addEventListener("change", onSchemeChange);
 
 rollButton.addEventListener("click", () => {
-  const name = pick(currentSlots(), currentScheme());
+  // Exclude the previous pick so the same artist is never chosen twice in a row.
+  const name = pick(currentSlots(), currentScheme(), Math.random, store.loadPickedName());
   if (name !== null) {
     store.savePickedName(name); // persists the glowing card until the next roll
     board.present(name);

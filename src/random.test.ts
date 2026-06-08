@@ -59,6 +59,25 @@ describe("random", () => {
     expect(pick(slots, scheme, () => 13.5 / 14)).toBe("bottom");
   });
 
+  it("never picks the excluded (previous) artist when an alternative exists", () => {
+    const slots = new Map<string, Slot>([
+      ["top", "S"],
+      ["bottom", "E"],
+    ]);
+    const scheme = { cutoff: "E", intensity: "weighted" } as const; // S=13, E=1, total 14
+    // rng=0 would normally land on "top", but excluding it leaves only "bottom".
+    expect(pick(slots, scheme, () => 0, "top")).toBe("bottom");
+    // Excluding "bottom" leaves only "top", regardless of where rng lands.
+    expect(pick(slots, scheme, () => 13.5 / 14, "bottom")).toBe("top");
+  });
+
+  it("allows a repeat when the excluded artist is the only eligible one", () => {
+    const slots = new Map<string, Slot>([["solo", "S"]]);
+    const scheme = { cutoff: "S", intensity: "unweighted" } as const;
+    // No alternative exists, so the previous pick is allowed again.
+    expect(pick(slots, scheme, () => 0, "solo")).toBe("solo");
+  });
+
   it("round-trips scheme ids and rejects invalid ones", () => {
     const scheme = { cutoff: "C", intensity: "weighted" } as const;
     expect(parseSchemeId(schemeId(scheme))).toEqual(scheme);

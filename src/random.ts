@@ -99,13 +99,19 @@ export function hasEligible(slotByName: ReadonlyMap<string, Slot>, scheme: Schem
 /**
  * Pick one artist name at random under `scheme`, or null if none are eligible.
  * `rng` (defaulting to Math.random) is injectable for deterministic tests.
+ *
+ * `exclude` (typically the previous pick) is kept out of the draw so the same
+ * artist is never chosen twice in a row — unless it is the only eligible artist,
+ * in which case there is no alternative and the repeat is allowed.
  */
 export function pick(
   slotByName: ReadonlyMap<string, Slot>,
   scheme: Scheme,
   rng: () => number = Math.random,
+  exclude: string | null = null,
 ): string | null {
-  const pool = candidates(slotByName, scheme);
+  const eligible = candidates(slotByName, scheme);
+  const pool = eligible.length > 1 ? eligible.filter((c) => c.name !== exclude) : eligible;
   const total = pool.reduce((sum, c) => sum + c.weight, 0);
   if (pool.length === 0 || total <= 0) return null;
 

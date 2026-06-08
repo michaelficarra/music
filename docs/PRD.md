@@ -141,6 +141,10 @@ one for the **weighting intensity**:
 The two dropdowns **default to "D+" and "weighted"** and **remember your last selection** across
 page reloads. The exact probability curve for each intensity is an implementation detail.
 
+Consecutive presses of 🎲 **never pick the same artist twice in a row**: the previously chosen
+artist is excluded from the next draw. The sole exception is when that artist is the *only* eligible
+one under the current scheme — then there is no alternative and the repeat is allowed.
+
 A horizontal line is drawn on the board between the lowest eligible tier and the next row down,
 reflecting the selected cutoff (e.g. `D+` draws it between the D and E rows). It updates when the
 cutoff changes. Both `F+` and `X only` draw the line between the F row and the unranked area: for
