@@ -423,9 +423,32 @@ button:disabled {
   border-radius: 10px;
   padding: 1.25rem 1.5rem;
   max-width: min(92vw, 26rem);
+  /* Never taller than the viewport, so the heading and action buttons stay on screen
+     no matter how long the diff list grows; the list itself takes up the slack (below).
+     The dialog is a flex column so the form below becomes a height-constrained flex item
+     (a percentage max-height on the form wouldn't work — the dialog's own height is
+     auto/indefinite, so it would resolve to none and the whole modal would scroll). */
+  max-height: 90dvh;
   background: var(--panel);
   color: var(--text);
   box-shadow: 0 12px 40px #00000080;
+}
+
+/* Only flex while open: an unconditional `display` would beat the UA
+   `dialog:not([open]) { display: none }` (author styles win over UA regardless of
+   specificity), leaving the closed dialog on screen. */
+.modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The form fills the modal as a flex column so the diff list can flex/scroll while the
+   heading, paragraph, and actions keep their natural height. min-height:0 lets the form
+   (and, in turn, the list) shrink below content height instead of overflowing. */
+.modal form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .modal::backdrop {
@@ -440,6 +463,25 @@ button:disabled {
 .modal p {
   margin: 0 0 1rem;
   color: var(--muted);
+}
+
+/* The changed-artist diff shown inside the Reset/Save modals. It's the flexible region
+   of the modal: it takes its natural height when short, but shrinks and scrolls (rather
+   than growing the modal past the viewport) when a heavily-rearranged list is long, so
+   the action buttons below it stay visible. `flex: 0 1 auto` + `min-height: 0` is what
+   allows the shrink; without them the list would keep its content height and overflow. */
+.diff-list {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  font-size: 0.9rem;
+}
+
+.diff-list li {
+  padding: 0.15rem 0;
 }
 
 .modal-actions {

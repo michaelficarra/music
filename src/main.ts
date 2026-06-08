@@ -45,6 +45,9 @@ const saveButton = app.querySelector<HTMLButtonElement>("#save")!;
 const toast = app.querySelector<HTMLElement>("#toast")!;
 const pickAnnouncer = app.querySelector<HTMLElement>("#pick-announcer")!;
 const resetDialog = app.querySelector<HTMLDialogElement>("#reset-dialog")!;
+const resetDiff = app.querySelector<HTMLElement>("#reset-diff")!;
+const saveDialog = app.querySelector<HTMLDialogElement>("#save-dialog")!;
+const saveDiff = app.querySelector<HTMLElement>("#save-diff")!;
 
 // Populate the two scheme dropdowns: tier cutoff and weighting intensity.
 for (const cutoff of TIERS) {
@@ -124,6 +127,19 @@ function slotLabel(slot: Slot): string {
   return slot === UNRANKED ? "unranked" : slot;
 }
 
+// Fill a confirmation dialog's diff list with one line per changed artist. The arrow
+// direction depends on the action: Save shows base → local (what will be written out),
+// Reset shows local → base (what reverting will restore).
+function renderDiff(listEl: HTMLElement, direction: "save" | "reset"): void {
+  listEl.replaceChildren();
+  for (const { name, baseline, current } of store.getChanges()) {
+    const [from, to] = direction === "save" ? [baseline, current] : [current, baseline];
+    const li = document.createElement("li");
+    li.textContent = `${name}: ${slotLabel(from)} → ${slotLabel(to)}`;
+    listEl.appendChild(li);
+  }
+}
+
 // Offer to undo a just-completed tier move. Held longer than a plain toast so the
 // Undo button stays clickable; pressing it moves the artist back to its old slot.
 function showUndoToast(move: MoveRecord): void {
@@ -173,9 +189,11 @@ rollButton.addEventListener("click", () => {
   }
 });
 
-// Reset is destructive, so confirm via a modal first; the actual reset happens
-// only when the dialog closes with the "confirm" value (Esc/Cancel do nothing).
+// Reset is destructive, so confirm via a modal first; it lists what will be reverted
+// (each changed artist, local rank → base rank). The actual reset happens only when the
+// dialog closes with the "confirm" value (Esc/Cancel do nothing).
 resetButton.addEventListener("click", () => {
+  renderDiff(resetDiff, "reset");
   resetDialog.showModal();
 });
 
@@ -186,10 +204,20 @@ resetDialog.addEventListener("close", () => {
   refreshControls();
 });
 
+// Save also confirms via a modal, listing what will be written out (each changed artist,
+// base rank → local rank). Nothing is copied or opened until the dialog is confirmed.
 saveButton.addEventListener("click", () => {
-  // Start the clipboard write and open GitHub's editor in the same user gesture so
-  // neither the clipboard permission nor the popup blocker rejects them. (window.open
-  // after an awaited promise is treated as a non-user-initiated popup and is blocked.)
+  renderDiff(saveDiff, "save");
+  saveDialog.showModal();
+});
+
+saveDialog.addEventListener("close", () => {
+  if (saveDialog.returnValue !== "confirm") return;
+  // Do the clipboard write and open GitHub's editor in the same user gesture so neither
+  // the clipboard permission nor the popup blocker rejects them. The confirm submit
+  // provides transient activation, and this close handler runs synchronously within that
+  // gesture, so both are still treated as user-initiated. (window.open after an awaited
+  // promise, by contrast, is treated as a non-user-initiated popup and is blocked.)
   const copied = navigator.clipboard.writeText(store.toCSV());
   const onDeployedSite = location.origin + location.pathname === SITE_URL;
   if (onDeployedSite) window.open(EDIT_URL, "_blank", "noopener");

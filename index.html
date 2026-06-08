@@ -36,9 +36,28 @@
             This discards your local changes and reverts to the saved tier list. This can't be
             undone.
           </p>
+          <!-- Populated by main.ts before the dialog opens: each changed artist, with an
+               arrow from its locally assigned rank back to its base rank. -->
+          <ul class="diff-list" id="reset-diff"></ul>
           <div class="modal-actions">
             <button value="cancel" type="submit" autofocus>Cancel</button>
             <button value="confirm" type="submit" class="danger">Reset</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="save-dialog" class="modal">
+        <form method="dialog">
+          <h2>Save tier list?</h2>
+          <p>
+            This copies the updated CSV to your clipboard for you to paste over the source data and
+            commit. Review the changes below.
+          </p>
+          <!-- Populated by main.ts before the dialog opens: each changed artist, with an
+               arrow from its base rank to its locally assigned rank. -->
+          <ul class="diff-list" id="save-diff"></ul>
+          <div class="modal-actions">
+            <button value="cancel" type="submit" autofocus>Cancel</button>
+            <button value="confirm" type="submit">Save</button>
           </div>
         </form>
       </dialog>

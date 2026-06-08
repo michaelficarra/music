@@ -101,18 +101,24 @@ from the **static arrangement** (the source data shipped with the app).
 
 - When the current arrangement is **identical** to the static arrangement (same tier for every
   artist), neither button is shown.
-- When they **differ**, two controls appear:
+- When they **differ**, two controls appear. **Both first open a confirmation modal that lists the
+  diff from the static arrangement** — one line per changed artist showing a move between its two
+  ranks (an arrow between the static tier and the local tier; `unranked` for the X pool). Nothing
+  happens until the user confirms; dismissing the dialog (Cancel / Esc) leaves everything
+  untouched. The two buttons differ in the arrow's direction and in what confirming does:
   - **Reset** — discards local changes by clearing the saved arrangement from local storage, so
-    the app reverts to the static arrangement. Because this is destructive, it first asks for
-    confirmation in a modal dialog (Cancel / Reset); dismissing the dialog leaves the arrangement
-    untouched.
+    the app reverts to the static arrangement. Its modal lists each changed artist as **local tier
+    → static tier** (what reverting will restore). Because this is destructive, confirming is the
+    only thing that clears the overrides.
   - **Save** — copies the updated data, as CSV, to the system **clipboard**, and (only when viewed
     on the deployed site) opens the GitHub edit page for the source data file (`data/artists.csv`)
-    in a **new tab**. There is no server to save to; the maintainer pastes this CSV over the file
-    and commits, redeploying to make the arrangement the new static default. The exported CSV
+    in a **new tab**. Its modal lists each changed artist as **static tier → local tier** (what
+    will be written out). There is no server to save to; the maintainer pastes this CSV over the
+    file and commits, redeploying to make the arrangement the new static default. The exported CSV
     changes only each artist's tier, and its rows are **sorted by artist name** (the list's
-    canonical order). Save gives brief feedback confirming the copy succeeded, and tells the user
-    if the clipboard could not be accessed (so a failed copy is never silent).
+    canonical order). The copy and the GitHub tab happen only on confirm. Save then gives brief
+    feedback confirming the copy succeeded, and tells the user if the clipboard could not be
+    accessed (so a failed copy is never silent).
 
 Individual cards whose current tier **differs from the static arrangement** carry a slight
 highlight, so the specific artists contributing to the difference stand out at a glance. A card

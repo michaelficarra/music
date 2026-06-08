@@ -106,6 +106,25 @@ export function isMoved(name: string): boolean {
   return overrides.has(name);
 }
 
+/** A single artist whose current slot differs from its baseline (shipped) slot. */
+export interface SlotChange {
+  name: string;
+  baseline: Slot; // shipped tier from the CSV
+  current: Slot; // locally assigned tier
+}
+
+/**
+ * The changed artists (current slot differs from baseline), in canonical name
+ * order. Drives the diff shown in the Reset/Save confirmation modals.
+ */
+export function getChanges(): SlotChange[] {
+  const changes: SlotChange[] = [];
+  for (const [name, current] of overrides) {
+    changes.push({ name, baseline: baselineByName.get(name) ?? UNRANKED, current });
+  }
+  return changes.sort((a, b) => compareArtistNames(a.name, b.name));
+}
+
 /** Discard local changes, reverting to the baseline. */
 export function reset(): void {
   overrides.clear();

@@ -86,9 +86,10 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
     who have a saved arrangement.
   - An override for an artist no longer in the CSV is simply ignored.
 - **Current tier** of an artist = its local-storage override if present, else its baseline tier.
-- **Save** writes the serialised CSV (§3) to the clipboard, and — only when the page is served from
-  the deployed site (`location.origin + pathname === "https://michaelficarra.github.io/music/"`) —
-  opens the file's GitHub edit page in a new tab. The guard keeps local dev and forks from spawning
+- **Save** (after confirmation, see §5) writes the serialised CSV (§3) to the clipboard, and — only
+  when the page is served from the deployed site
+  (`location.origin + pathname === "https://michaelficarra.github.io/music/"`) — opens the file's
+  GitHub edit page in a new tab. The guard keeps local dev and forks from spawning
   a tab to a repo the viewer can't push to; the clipboard copy happens regardless. Both the edit URL
   (`https://github.com/michaelficarra/music/edit/main/data/artists.csv`) and the site URL are
   **hard-coded** in `main.ts` — the one place the repo name is baked in (cf. the relative `base` in
@@ -120,10 +121,19 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   cleaned set (or the key removed when nothing genuine remains) so stale data doesn't linger.
 - **Diff for Reset/Save:** compare each artist's current tier with its baseline tier. If any differ,
   the arrangement is "changed" → show Reset and Save. Within-tier order is irrelevant to the diff.
-- **Reset:** confirmed via a native `<dialog>` (`showModal()`, a `<form method="dialog">`); only a
-  `confirm` return value removes the local-storage key and re-renders from the baseline.
-- **Save (clipboard):** serialise the **full** arrangement to CSV and write it to the clipboard via
-  the async Clipboard API (`navigator.clipboard.writeText`). Serialisation rules:
+  `store.getChanges()` returns the changed set as a sorted `SlotChange[]` (`{ name, baseline,
+  current }`, canonical name order) — the data both confirmation modals render, one line per artist.
+- **Confirmation modals:** Reset and Save each have a native `<dialog>` (`#reset-dialog`,
+  `#save-dialog`; `showModal()` + `<form method="dialog">`). Before opening, `main.ts` fills the
+  dialog's `<ul class="diff-list">` from `getChanges()` — Reset shows each change as **current →
+  baseline** (what reverting restores), Save as **baseline → current** (what will be written out).
+  Neither action runs unless the dialog closes with a `confirm` return value.
+- **Reset:** on `confirm`, removes the local-storage key and re-renders from the baseline.
+- **Save (clipboard):** on `confirm`, serialise the **full** arrangement to CSV and write it to the
+  clipboard via the async Clipboard API (`navigator.clipboard.writeText`). The clipboard write and
+  the GitHub-tab `window.open` run synchronously inside the dialog's `close` handler, which is still
+  within the confirm-button's transient activation, so the popup blocker and clipboard permission
+  treat them as user-initiated. Serialisation rules:
   - Update only the `Tier` field of each row to the artist's current tier (blank for unranked); all
     other columns are passed through unchanged.
   - **Sort the data rows by artist name** via `compareArtistNames` (`src/sort.ts`, a case- and

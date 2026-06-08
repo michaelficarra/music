@@ -51,6 +51,30 @@ describe("store", () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
+  it("getChanges lists changed artists (name, baseline, current) in name order", () => {
+    expect(store.getChanges()).toEqual([]); // nothing changed yet
+
+    const aTarget = otherSlot(ABASE);
+    const bTarget = otherSlot(BBASE);
+    store.setSlot(A, aTarget);
+    store.setSlot(B, bTarget);
+
+    const changes = store.getChanges();
+    expect(changes).toHaveLength(2);
+    // Each entry carries the shipped baseline and the locally assigned slot.
+    expect(changes).toContainEqual({ name: A, baseline: ABASE, current: aTarget });
+    expect(changes).toContainEqual({ name: B, baseline: BBASE, current: bTarget });
+    // Sorted by canonical name order.
+    const names = changes.map((c) => c.name);
+    expect(names).toEqual([...names].sort(compareArtistNames));
+  });
+
+  it("getChanges drops an artist returned to its baseline", () => {
+    store.setSlot(A, otherSlot(ABASE));
+    store.setSlot(A, ABASE);
+    expect(store.getChanges()).toEqual([]);
+  });
+
   it("toCSV updates only the Tier column, preserving other columns", () => {
     const target = otherSlot(ABASE); // always a ranked tier (S or A)
     store.setSlot(A, target);
