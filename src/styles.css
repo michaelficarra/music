@@ -6,6 +6,14 @@
   --text: #f2f3f5;
   --muted: #9aa0ad;
   --accent: #4c8dff;
+  /* Between --panel and --muted: visible against either background, but quiet. */
+  --scrollbar-thumb: #4a4e59;
+  /* The app is dark-only; telling the browser so makes its own UI (scrollbars,
+     form controls) render in dark variants instead of the light defaults. */
+  color-scheme: dark;
+  /* A muted thumb over an invisible track, inherited by every scroll container,
+     so scrollbars read as part of the theme rather than browser chrome. */
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   /* Classic tier-list pastels, shared by the board's tier labels and the 📊
      dialog's grade chips. */
   --tier-s: #ff7f7f; /* red */
@@ -19,6 +27,35 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Inner panels (the 🎲 filter's tag list, the modals' diff and stats regions)
+   get the narrow scrollbar variant; the document scrollbar keeps its full
+   width as the page's primary scrolling affordance. */
+.filter-tags,
+.diff-list,
+.stats-body {
+  scrollbar-width: thin;
+}
+
+/* Legacy fallback for engines without standard scrollbar properties (e.g.
+   Safari before 26.2): paint the same theme via the non-standard WebKit
+   pseudo-elements. Guarded so engines supporting both don't double-apply. */
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    /* WebKit needs an explicit size for custom-painted scrollbars to show. */
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 /* Removed from view but kept in the accessibility tree — used for the live region
