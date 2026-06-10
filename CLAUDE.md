@@ -40,6 +40,24 @@ the PRD; if it's about how the code achieves it, it's ARCHITECTURE.
   provider in `ImageSource`. It is idempotent (fills blanks only, unless `--force`).
 - **Never commit** editor swap files (e.g. `data/.artists.csv.swp`); add them to `.gitignore`.
 
+### Adding an artist
+
+When asked to add an artist (optionally at a given tier):
+
+1. Run `npm run add-artist -- "<name>"`. It rejects duplicates, appends an unranked row keeping
+   the CSV alphabetically sorted, and immediately enriches the image (network required, no API
+   keys). If enrichment fails, retry with `npm run enrich -- --artist "<name>"`; a blank image is
+   acceptable — report it rather than hand-crafting a URL.
+2. The script leaves `Tier` and `Tags` blank — edit the new row by hand. Set the tier if one was
+   requested, and pick 5–10 tags per the conventions above: read the rows of the most similar
+   existing artists and reuse their tags; check candidates exist in `src/tag-groups.ts`. A
+   brand-new tag is fine **if** it would not be unique to this artist: suggest at least one
+   existing artist that should also get it, and get the user's confirmation before adding the tag
+   (to the new artist's row, the suggested artists' rows, and `src/tag-groups.ts`).
+3. A pure data row needs **no** PRD/ARCHITECTURE updates. Validate with `npm test`,
+   `npm run typecheck`, and `npm run format` (the tests derive expectations from the loaded
+   roster, so they adapt to the new row).
+
 ## Commands
 
 ```sh
