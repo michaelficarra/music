@@ -157,8 +157,10 @@ const ASPECTS = new Set([
   "New Zealand",
 ]);
 
-/** Era tags are recognised by shape ("1950s" … "2020s") rather than a fixed list. */
-const isEra = (tag: string): boolean => /^\d{4}s$/.test(tag);
+/** Era tags are recognised by shape ("1950s" … "2020s") rather than a fixed
+    list. Exported for the 📊 statistics, which give eras a section of their
+    own (stats.ts). */
+export const isEraTag = (tag: string): boolean => /^\d{4}s$/.test(tag);
 
 /**
  * Partition `tags` (typically data.ts's `allTags`) into labelled groups in a
@@ -169,7 +171,7 @@ export function groupTags(tags: readonly string[]): TagGroup[] {
   const groups: { label: string; matches: (tag: string) => boolean }[] = [
     { label: "Genres", matches: (tag) => GENRES.has(tag) },
     { label: "Musical qualities", matches: (tag) => QUALITIES.has(tag) },
-    { label: "Eras", matches: isEra },
+    { label: "Eras", matches: isEraTag },
     { label: "Notable aspects", matches: (tag) => ASPECTS.has(tag) },
     { label: "Other", matches: () => true },
   ];

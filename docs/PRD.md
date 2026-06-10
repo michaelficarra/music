@@ -23,7 +23,7 @@ Each **artist** has:
 - a **name** (unique; this is how the artist is identified),
 - a **tier** — one of the ranked tiers, or *unranked*,
 - a **representative image** — shown on the artist's card; an artist may have none (and an image
-  that fails to load is treated the same as none — see §10),
+  that fails to load is treated the same as none — see §11),
 - a set of **tags** — descriptive labels (genres, musical qualities, eras, notable aspects) used
   by the random picker's tag filter (§8) and to lay out the artist map (§9); an artist may have
   none.
@@ -247,7 +247,64 @@ clusters** drawn from the artists' tags (§2).
 - A **close control (✕) in the top-right corner** exits the map, as do the platform's standard
   dismissal actions (e.g. the Esc key). Closing returns to the board exactly as it was.
 
-## 10. Empty / edge states
+## 10. Tag statistics (📊)
+
+A **📊** button opens a **read-only dialog of statistics** about the tier list, derived from the
+artists' tags (§2) crossed with their tier placements. The statistics describe the **static
+arrangement** (the data shipped with the app, §7): they are computed from that data alone — never
+hand-curated — so they automatically follow every artist, tier, or tag change shipped in the
+source data. Local rearrangements (§6) do **not** affect them until exported (§7) and shipped.
+
+Ground rules, applying throughout:
+
+- **Unranked artists are excluded** from every statistic.
+- A tag features only when **at least three ranked artists** carry it, so one or two placements
+  cannot masquerade as a trend; rarer tags are ignored entirely.
+- A tag's **average** is the mean of its ranked carriers' tiers (tiers being evenly spaced for
+  this purpose). Each tag entry shows its average as the nearest tier's letter with **+ or −**
+  marking a lean towards the neighbouring tier (e.g. `A−`), alongside a **bar** sized by the
+  average and the **number of artists** counted. The favourite/least-favourite lists stretch
+  their bars between the lowest and highest entries they show, keeping small differences
+  visible; hovering a bar reveals its fill percentage. (Category-favourite entries carry no
+  bar; predictor and outlier entries replace it with the spread displays described below;
+  outlier entries' grades are exact placements rather than averages.)
+
+The dialog presents, in order:
+
+- **Category favourites** — the best-rated tag in each tag category (genre, musical quality,
+  notable aspect). A category with no qualifying tags is omitted.
+- **Favourite and least favourite tags** — the tags with the highest and the lowest averages, as
+  two ranked lists. The lists never overlap: when few tags qualify, the least-favourite list
+  comes up short (or empty) rather than mirroring the favourites.
+- **Best predictors** — the tags whose carriers cluster most tightly around the tag's
+  average, so carrying the tag all but pins an artist's tier. Instead of a bar, each entry
+  shows the full range its artists occupy with a marker for the average, annotated with the
+  typical deviation; a stricter minimum carrier count applies to both predictor lists.
+- **Worst predictors** — the mirror: the tags that least predict where their carriers sit,
+  splitting them into **two camps**: artists at least a full tier above the tag's average,
+  and artists at least a full tier below it. Ranked by how far apart the carriers sit and how
+  evenly the two camps are matched — a lone dissenter does not divide a fanbase. Each entry
+  shows the camp sizes alongside the same range display.
+- **Guilty pleasures and black sheep** — the artists placed **furthest above** (guilty
+  pleasures) and **furthest below** (black sheep) where their tags suggest they would sit;
+  whether an artist sits above or below that suggestion decides which side it can appear on.
+  An artist's suggested placement averages its qualifying tags' averages, each computed **as if
+  that artist were not on the board**, so its own placement cannot vote for itself. Each entry
+  shows the artist's actual tier and the predicted one, with a marker for each on a track and a
+  line joining them — drawing the very gap the list is ranked by. Artists with no qualifying
+  tags are not judged. When no artist sits above (or below) its
+  prediction at all, the section says so — agreement between the tags and the tiers is itself a
+  finding.
+- **Decades** — every qualifying era/decade tag with its average, ordered **oldest to newest**: a
+  preference curve over the decades rather than a ranking. Era tags appear **only here** — they
+  are left out of every other statistic, so a strong decade preference cannot crowd out the
+  rest of the vocabulary.
+
+The exact list lengths, banding boundaries, and spread measure are implementation details. The
+dialog is dismissed with its **Close button**, the Esc key, or a **click outside it**, and
+viewing it changes nothing about tiers, the picker, or filters.
+
+## 11. Empty / edge states
 
 - **Artist with no image:** the card shows a placeholder in place of the image; the name is still
   shown. An artist whose image **fails to load** (e.g. a broken or removed URL) falls back to the
@@ -255,8 +312,11 @@ clusters** drawn from the artists' tags (§2).
 - **Empty tier:** the tier row is still displayed (empty), as a valid drop target.
 - **Empty unranked area:** still displayed, as described in §3.
 - **No eligible artists for a pick:** handled as in §8.
+- **Statistics with too little data:** when nothing is ranked — or no tag is carried by enough
+  ranked artists — the statistics dialog (§10) explains that there is not enough data, instead of
+  presenting empty sections.
 
-## 11. Out of scope (explicitly)
+## 12. Out of scope (explicitly)
 
 The following are intentionally **not** part of the application:
 

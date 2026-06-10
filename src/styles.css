@@ -6,6 +6,15 @@
   --text: #f2f3f5;
   --muted: #9aa0ad;
   --accent: #4c8dff;
+  /* Classic tier-list pastels, shared by the board's tier labels and the 📊
+     dialog's grade chips. */
+  --tier-s: #ff7f7f; /* red */
+  --tier-a: #ffbf7f; /* orange */
+  --tier-b: #ffdf7f; /* gold */
+  --tier-c: #ffff7f; /* yellow */
+  --tier-d: #bfff7f; /* lime */
+  --tier-e: #7fff7f; /* green */
+  --tier-f: #7fffff; /* cyan */
 }
 
 * {
@@ -138,9 +147,10 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* The toolbar's emoji buttons (🎲 roll, ☁️ map) share their sizing. */
+/* The toolbar's emoji buttons (🎲 roll, ☁️ map, 📊 stats) share their sizing. */
 #roll,
-#cloud {
+#cloud,
+#stats {
   font-size: 1.2rem;
   line-height: 1;
   padding: 0.35rem 0.55rem;
@@ -332,25 +342,25 @@ button:disabled {
 }
 
 .tier-row[data-slot="S"] .tier-label {
-  background: #ff7f7f; /* red */
+  background: var(--tier-s);
 }
 .tier-row[data-slot="A"] .tier-label {
-  background: #ffbf7f; /* orange */
+  background: var(--tier-a);
 }
 .tier-row[data-slot="B"] .tier-label {
-  background: #ffdf7f; /* gold */
+  background: var(--tier-b);
 }
 .tier-row[data-slot="C"] .tier-label {
-  background: #ffff7f; /* yellow */
+  background: var(--tier-c);
 }
 .tier-row[data-slot="D"] .tier-label {
-  background: #bfff7f; /* lime */
+  background: var(--tier-d);
 }
 .tier-row[data-slot="E"] .tier-label {
-  background: #7fff7f; /* green */
+  background: var(--tier-e);
 }
 .tier-row[data-slot="F"] .tier-label {
-  background: #7fffff; /* cyan */
+  background: var(--tier-f);
 }
 
 .tier-list {
@@ -814,4 +824,212 @@ body:has(#cloud-dialog[open]) {
   line-height: 1;
   padding: 0.45rem 0.6rem;
   box-shadow: 0 2px 8px #00000080;
+}
+
+/* ——— The 📊 statistics dialog (stats-view.ts) ——— */
+
+/* Wider than the base modal: every statistic lays a name, a bar, a grade, and
+   an annotation out in one row. */
+.stats-modal {
+  width: 100%;
+  max-width: min(92vw, 38rem);
+}
+
+/* The scrollable region of the modal — the same flex arrangement as
+   .diff-list: natural height when short, shrink-and-scroll when long, so the
+   heading and the Close button stay on screen. */
+.stats-body {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* A vertical-scrolling panel must never scroll sideways; with overflow-y
+     non-visible, overflow-x would otherwise compute to auto and a stray
+     pixel of overflow would summon a horizontal scrollbar. */
+  overflow-x: hidden;
+  /* Breathing room between the content (the bars' right ends) and the
+     scrollbar. */
+  padding-right: 0.75rem;
+}
+
+/* Section headings, styled like the filter panel's group labels. */
+.stats-section h3 {
+  margin: 1.1rem 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+/* A section's own paragraphs — the one-line explainer under each heading and
+   any "none to report" line: quiet, and snug against the rows below. Matches
+   `.modal p`'s specificity (and sits later), overriding its 1rem gap. */
+.stats-section p {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* A section's rows share one grid (each row is display:contents) so the three
+   columns — grade, name, bar — align down the whole list. The name column
+   (which carries the parenthesised annotation too) hugs its content up to a
+   cap, so a long entry truncates rather than crushing the bars; the bars take
+   whatever is left. fit-content() must stand alone as the track size — it is
+   not a valid minmax() argument, and one invalid track voids the whole
+   declaration, collapsing the grid to a single full-width column. */
+.stat-rows {
+  display: grid;
+  grid-template-columns: auto fit-content(19rem) minmax(3rem, 1fr);
+  column-gap: 0.6rem;
+  row-gap: 0.3rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.stat-row {
+  display: contents;
+}
+
+.stat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Bar-less rows (the category-favourites and outlier sections): the name
+   annexes the bar's column, so auto-placement can't pull the next row's chip
+   into the gap. */
+.stat-row.no-bar .stat-name {
+  grid-column: 2 / -1;
+}
+
+/* The bar: a dark track whose accent fill is sized by the row's --fraction
+   custom property (set inline by stats-view from the score). */
+.stat-bar {
+  height: 0.5rem;
+  border-radius: 3px;
+  background: #00000059;
+  overflow: hidden;
+}
+
+.stat-fill {
+  display: block; /* spans don't take height; the track's height must */
+  height: 100%;
+  background: var(--accent);
+  width: calc(var(--fraction) * 100%);
+}
+
+/* The spread gauges (predictor and outlier rows): the same track as
+   .stat-bar. The worst/best-predictor rows carry a band over their artists'
+   full range with a dot at the average; outlier rows carry a prediction
+   ring joined to the actual-placement dot by a thin connector. Positions
+   come in as 0..1 fractions of the tier scale (--lo / --hi / --at), set
+   inline by stats-view. No overflow:hidden — the markers stand slightly
+   taller than the track on purpose. */
+.stat-range {
+  position: relative;
+  height: 0.5rem;
+  border-radius: 3px;
+  background: #00000059;
+}
+
+.stat-range-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--lo) * 100%);
+  width: calc((var(--hi) - var(--lo)) * 100%);
+  border-radius: inherit;
+  background: #4c8dff59; /* the accent, quietened to read as a region */
+}
+
+/* The outlier rows' connector: a thin line from the prediction ring to the
+   actual-placement dot, drawing the very delta the list is ranked by. */
+.stat-range-link {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2px;
+  left: calc(var(--lo) * 100%);
+  width: calc((var(--hi) - var(--lo)) * 100%);
+  background: var(--accent);
+}
+
+/* A solid accent dot — the predictor rows' average, the outlier rows' actual
+   placement — the visual counterpart of a bar's end. Its centre is clamped
+   half a marker in from the track's ends, so an extreme score can't
+   overhang the track and widen the dialog. */
+.stat-range-dot {
+  position: absolute;
+  top: 50%;
+  left: clamp(0.275rem, var(--at) * 100%, 100% - 0.275rem);
+  transform: translate(-50%, -50%);
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* A hollow ring — where the outlier rows' tags predicted the artist would
+   sit — end-clamped like the dot above. */
+.stat-range-ring {
+  position: absolute;
+  top: 50%;
+  left: clamp(0.325rem, var(--at) * 100%, 100% - 0.325rem);
+  transform: translate(-50%, -50%);
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--panel);
+}
+
+/* The grade chip ("A−"): the matching board tier's pastel with dark text. */
+.stat-tier {
+  justify-self: center;
+  min-width: 2.2rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1e1f24; /* matches --bg; dark for contrast on the light pastels */
+}
+
+.stat-tier[data-tier="S"] {
+  background: var(--tier-s);
+}
+.stat-tier[data-tier="A"] {
+  background: var(--tier-a);
+}
+.stat-tier[data-tier="B"] {
+  background: var(--tier-b);
+}
+.stat-tier[data-tier="C"] {
+  background: var(--tier-c);
+}
+.stat-tier[data-tier="D"] {
+  background: var(--tier-d);
+}
+.stat-tier[data-tier="E"] {
+  background: var(--tier-e);
+}
+.stat-tier[data-tier="F"] {
+  background: var(--tier-f);
+}
+
+/* The annotation in parentheses after the name: a carrier count, a spread,
+   or an outlier's predicted grade. Inline within .stat-name, which handles
+   the truncation. */
+.stat-detail {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* A muted line for a section with nothing to report, and for the dialog-wide
+   "not enough data" placeholder. */
+.stats-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
 }

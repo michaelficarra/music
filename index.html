@@ -31,6 +31,7 @@
                here. -->
           <div class="tools">
             <button id="cloud" type="button" title="Map artists by tag similarity">☁️</button>
+            <button id="stats" type="button" title="Tag statistics for the tier list">📊</button>
           </div>
         </div>
       </header>
@@ -105,6 +106,24 @@
           <div class="modal-actions">
             <button value="cancel" type="submit" autofocus>Cancel</button>
             <button value="confirm" type="submit">Save</button>
+          </div>
+        </form>
+      </dialog>
+      <!-- The 📊 statistics dialog: tag-based statistics over the built-in
+           arrangement, computed and rendered into .stats-body by stats-view.ts
+           on first open. Read-only, so the form's only control is Close. -->
+      <dialog
+        id="stats-dialog"
+        class="modal stats-modal"
+        closedby="any"
+        aria-labelledby="stats-dialog-title"
+      >
+        <form method="dialog">
+          <h2 id="stats-dialog-title">Tag statistics</h2>
+          <!-- tabindex makes the scrollable region reachable and scrollable by keyboard. -->
+          <div class="stats-body" tabindex="0"></div>
+          <div class="modal-actions">
+            <button value="close" type="submit" autofocus>Close</button>
           </div>
         </form>
       </dialog>

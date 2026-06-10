@@ -8,6 +8,7 @@ import { groupTags } from "./tag-groups";
 import * as store from "./store";
 import { createBoard, type MoveRecord } from "./board";
 import { createCloud } from "./cloud";
+import { createStats } from "./stats-view";
 import { TIERS, UNRANKED, type Slot } from "./types";
 import {
   INTENSITY_LABEL,
@@ -50,6 +51,8 @@ const filterModeRadios = app.querySelectorAll<HTMLInputElement>('input[name="fil
 const rollButton = app.querySelector<HTMLButtonElement>("#roll")!;
 const cloudButton = app.querySelector<HTMLButtonElement>("#cloud")!;
 const cloudDialog = app.querySelector<HTMLDialogElement>("#cloud-dialog")!;
+const statsButton = app.querySelector<HTMLButtonElement>("#stats")!;
+const statsDialog = app.querySelector<HTMLDialogElement>("#stats-dialog")!;
 const dirtyActions = app.querySelector<HTMLElement>(".dirty-actions")!;
 const resetButton = app.querySelector<HTMLButtonElement>("#reset")!;
 const saveButton = app.querySelector<HTMLButtonElement>("#save")!;
@@ -310,6 +313,12 @@ rollButton.addEventListener("click", () => {
 const cloud = createCloud(cloudDialog);
 cloudButton.addEventListener("click", () => cloud.open());
 
+// The 📊 statistics dialog: tag statistics over the built-in arrangement
+// (stats-view.ts). Like the map, its content is fixed at build time, so it is
+// built lazily on the first open and kept.
+const statsView = createStats(statsDialog);
+statsButton.addEventListener("click", () => statsView.open());
+
 // Reset is destructive, so confirm via a modal first; it lists what will be reverted
 // (each changed artist, local rank → base rank). The actual reset happens only when the
 // dialog closes with the "confirm" value (Esc/Cancel do nothing).
@@ -373,6 +382,7 @@ function enableLightDismissFallback(dialog: HTMLDialogElement): void {
 }
 enableLightDismissFallback(resetDialog);
 enableLightDismissFallback(saveDialog);
+enableLightDismissFallback(statsDialog);
 
 board.setCutoff(currentScheme().cutoff);
 updateFilterButton();

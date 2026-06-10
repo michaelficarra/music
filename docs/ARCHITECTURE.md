@@ -24,9 +24,9 @@ static bundle plus a build-time-embedded copy of the artist data.
 ├── data/
 │   └── artists.csv          # Source of truth for the artist roster, tiers, and images
 ├── scripts/
-│   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §8)
+│   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §9)
 │   ├── add-artist.ts        # Append an unranked artist to the CSV, then enrich them
-│   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §8)
+│   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §9)
 ├── src/                     # Application source
 │   ├── main.ts              # Entry point: populate dropdowns, build board, wire events
 │   ├── types.ts             # Core domain types (Tier, Slot, Artist)
@@ -40,14 +40,16 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   ├── tag-groups.ts        # groupTags(): vocabulary categories for the filter panel (see §6)
 │   ├── cloud-layout.ts      # Tag-similarity model + force layout for the ☁️ map (see §7)
 │   ├── cloud.ts             # The ☁️ map dialog: renders the layout, pan/zoom (see §7)
+│   ├── stats.ts             # Tag/tier aggregation behind the 📊 statistics (see §8)
+│   ├── stats-view.ts        # The 📊 statistics dialog: renders stats.ts's results (see §8)
 │   ├── sort.ts              # compareArtistNames(): canonical (case/accent-insensitive) name order
 │   └── styles.css           # App styles
 ├── public/
 │   └── favicon.svg          # Static asset copied verbatim into the build
 ├── docs/                    # PRD.md, ARCHITECTURE.md (this file)
 ├── .github/workflows/
-│   ├── ci.yml               # Typecheck + test + format check on push / PR (see §9)
-│   └── deploy.yml           # Build + deploy to GitHub Pages (see §9)
+│   ├── ci.yml               # Typecheck + test + format check on push / PR (see §10)
+│   └── deploy.yml           # Build + deploy to GitHub Pages (see §10)
 ├── index.html               # Static UI shell (toolbar, board container, reset dialog); main.ts fills the dynamic parts
 ├── package.json
 ├── tsconfig.json
@@ -82,7 +84,7 @@ Columns, in order:
   `Artist.tags` (blank → `[]`) for the 🎲 tag filter (§6); tag matching is **case-sensitive**, so
   keep each tag's spelling identical everywhere it appears.
 - The file holds the full artist roster (a few hundred rows). It may be edited by hand or by the
-  enrichment script (§8).
+  enrichment script (§9).
 
 ## 4. Data flow & the "static baseline"
 
@@ -296,7 +298,64 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
   While it is open, the page's own scroll bar is suppressed
   (`body:has(#cloud-dialog[open])`). The view re-fits to the whole cloud on every open.
 
-## 8. Image-enrichment tooling (`scripts/enrich-images.ts`)
+## 8. Tag statistics (`src/stats.ts`, `src/stats-view.ts`)
+
+The 📊 dialog (PRD §10) follows the map's split: pure aggregation in `stats.ts` (no DOM, unit
+tested in `src/stats.test.ts`), rendering in `stats-view.ts`, and a `<dialog id="stats-dialog">`
+shell in `index.html` — a standard `.modal` like Reset/Save, sharing their `closedby="any"`
+light-dismiss and the `main.ts` click-outside fallback (§5); its only form control is Close.
+
+- **Inputs.** Every statistic is a pure function of the **baseline** (§4): each artist's
+  `baselineSlot` and tags, exactly as embedded from the CSV at build time. Local overrides play
+  no part (PRD §10), so the content is fixed per build — `stats-view.ts` computes and renders it
+  lazily on the first 📊 press and keeps the DOM for the session, like the map's plane. Nothing
+  is hand-curated: a data change reshapes the statistics on the next build.
+- **Scoring.** Tiers map linearly onto scores (`tierScore`): S 7 down to F 1; unranked artists
+  are excluded everywhere. A mean score is displayed via `tierBand`/`tierLabel`: each tier owns
+  the unit of the scale centred on its own score, split into thirds — the middle third reads as
+  the bare letter, the outer thirds lean `+`/`−` (6.5 → `S−`; clamping makes `S+`/`F−`
+  impossible). Bars and gauge markers share `positionFraction` = (score − 1) / 6 — the full
+  tier axis, F at the track's left end and S at its right. The favourite/least-favourite
+  lists further stretch their bar widths between the lowest and highest entries shown (a
+  view-level rescale in `stats-view.ts`), and every bar's tooltip states its fill percentage.
+- **Per-tag aggregates** (`computeTagStats`): the mean, population standard deviation,
+  lowest/highest placement, and two **camp sizes** (carriers at least a full tier above / below
+  the mean) of each tag's ranked carriers' scores, dropping tags with fewer than `MIN_SUPPORT`
+  (3) of them. The favourite/least-favourite lists (`rankTags`) order by mean and are
+  **non-overlapping** — the least-favourites draw from the remainder, so few qualifying tags
+  shorten that list rather than letting it mirror the favourites; both lists run descending
+  (the second ends on the very worst), so together they read as one continuous descent. The
+  worst-predictors list (`rankWorstPredictors`) wants genuine division: it considers only tags
+  with at least `SPREAD_MIN_SUPPORT` (5) carriers and a non-empty camp on **both** sides,
+  ranked by spread × the smaller camp's share of the carriers — far-apart, evenly-matched
+  camps beat a lone dissenter however distant. Its mirror, the best-predictors list
+  (`rankBestPredictors`), ranks the same floor's tags by **ascending** spread (ties to the
+  better-evidenced tag), surfacing the tags that pin a placement down. The dialog renders both
+  lists' entries as a range gauge — a band spanning the carriers' full range with a dot at the
+  mean — in place of a bar, annotated with camp sizes (worst) or ±σ (best). Ties break by
+  carrier count then canonical tag name. Category favourites (`categorySuperlatives`) take the
+  best mean per `tag-groups.ts` category, skipping "Other".
+- **Eras stand apart.** `computeStats` partitions the aggregates on `isEraTag` (exported by
+  `tag-groups.ts`, the same decade-shape test the filter panel's grouping uses): era tags fill
+  their own chronological section (canonical tag order is already chronological for
+  decade-shaped names) and are withheld from the ranked lists, the superlatives, and the
+  outlier prediction model below — being numerous, well-supported, and internally uniform,
+  they would otherwise crowd out the rest of the vocabulary.
+- **Outliers** (`rankOutliers`): an artist's predicted score is the mean of its qualifying tags'
+  **leave-one-out** means — each tag's mean recomputed without the artist itself, so its own
+  placement cannot vote for itself (qualification is the same `MIN_SUPPORT`, leaving at least
+  two other placements per tag; era tags never qualify, as above). Guilty pleasures / black
+  sheep are the artists placed **furthest above / below** their prediction — the delta's sign
+  picks the side, its size the order (guilty pleasures run furthest-above first; black sheep
+  end on the furthest below, descending like the least-favourite tags); artists with no
+  qualifying tags are not judged. The
+  dialog draws each entry as a ring at the prediction joined to a dot at the artist's actual
+  score by a thin connector — the delta the list is ranked by.
+- The list lengths (`TAG_LIST_LIMIT` 10, `PREDICTOR_LIST_LIMIT` 6, `OUTLIER_LIST_LIMIT` 6)
+  and the `MIN_SUPPORT` and `SPREAD_MIN_SUPPORT` thresholds are exported constants in
+  `stats.ts` — **tunable, not contractual** (PRD §10 leaves them unspecified).
+
+## 9. Image-enrichment tooling (`scripts/enrich-images.ts`)
 
 A **dev-time** Node/TS script, run manually by the maintainer — **not** part of the app bundle.
 
@@ -325,7 +384,7 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   name. Tags are **not** auto-populated — fill the `Tags` column by hand afterwards, following the
   conventions in §3 (prefer existing tags from the file over new ones).
 
-## 9. Build, CI & deploy
+## 10. Build, CI & deploy
 
 - **Dev:** `vite` (dev server with HMR).
 - **Build:** `npm run build` (`tsc --noEmit && vite build`) → static assets in `dist/`.
@@ -338,14 +397,16 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   `workflow_dispatch`): install → build → `configure-pages` → `upload-pages-artifact` (`dist`) →
   `deploy-pages`. **Build artefacts are not committed**; the Action publishes `dist/` to Pages.
 
-## 10. Testing & quality
+## 11. Testing & quality
 
 - **Vitest** unit tests for the pure logic: CSV parse/serialise round-trip (incl. quoting) in
   `src/csv.test.ts`, the overlay/diff/export in `src/store.test.ts` (run under the `jsdom`
   environment for `localStorage`), the weighting/selection in `src/random.test.ts`, the
-  canonical name ordering in `src/sort.test.ts`, and the ☁️ map's similarity model and layout in
+  canonical name ordering in `src/sort.test.ts`, the ☁️ map's similarity model and layout in
   `src/cloud-layout.test.ts` (determinism, bounds, and cluster geometry — on synthetic rosters
-  and as a smoke test over the real one).
-- Type-checking via `tsc --noEmit`; formatting via Prettier; all enforced in CI (§9). The
+  and as a smoke test over the real one), and the 📊 statistics aggregation in
+  `src/stats.test.ts` (scoring/banding, minimum support, ranking ties, leave-one-out outliers —
+  likewise on synthetic rosters and the real one).
+- Type-checking via `tsc --noEmit`; formatting via Prettier; all enforced in CI (§10). The
   enrichment and add-artist scripts run under **tsx**. Exact commands are listed in
   [CLAUDE.md](../CLAUDE.md).
