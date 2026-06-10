@@ -160,4 +160,25 @@ describe("store", () => {
     store.savePickedName("Radiohead");
     expect(store.loadPickedName()).toBe("Radiohead");
   });
+
+  it("remembers the 🎲 filter tag selection", () => {
+    expect(store.loadFilterTags()).toEqual([]);
+    store.saveFilterTags(["2000s", "emo"]);
+    expect(store.loadFilterTags()).toEqual(["2000s", "emo"]);
+  });
+
+  it("clears the filter storage when the selection empties", () => {
+    store.saveFilterTags(["emo"]);
+    store.saveFilterTags([]);
+    expect(localStorage.getItem("artist-tier-list:filters")).toBeNull();
+  });
+
+  it("ignores corrupt or mistyped filter storage", () => {
+    localStorage.setItem("artist-tier-list:filters", "not json");
+    expect(store.loadFilterTags()).toEqual([]);
+    localStorage.setItem("artist-tier-list:filters", JSON.stringify({ emo: true }));
+    expect(store.loadFilterTags()).toEqual([]);
+    localStorage.setItem("artist-tier-list:filters", JSON.stringify(["emo", 5]));
+    expect(store.loadFilterTags()).toEqual(["emo"]);
+  });
 });

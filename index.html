@@ -15,6 +15,9 @@
         <h1>Michael's Artist Tier List</h1>
         <div class="picker">
           <select id="cutoff" aria-label="Tier cutoff"></select>
+          <!-- Tag filter for 🎲: the button's text reflects the selection size
+               ("no filters" / "5 filters"); main.ts keeps it current. -->
+          <button id="filter" type="button" popovertarget="filter-panel">no filters</button>
           <select id="intensity" aria-label="Weighting intensity"></select>
           <button id="roll" type="button" title="Pick a random artist">🎲</button>
         </div>
@@ -23,6 +26,17 @@
           <button id="save" type="button">Save</button>
         </div>
       </header>
+      <!-- The 🎲 tag-filter panel. A native popover: the popovertarget button above
+           toggles it, and the browser provides top-layer stacking, Esc, and
+           light-dismiss. main.ts fills #filter-tags with one checkbox per tag and
+           anchors the panel under its button on each open. -->
+      <div id="filter-panel" class="filter-panel" popover aria-label="Filter by tag">
+        <div class="filter-head">
+          <span class="filter-hint">🎲 picks only artists matching every checked tag</span>
+          <button id="filter-clear" type="button">Clear</button>
+        </div>
+        <div id="filter-tags" class="filter-tags"></div>
+      </div>
       <main id="board" class="board"></main>
       <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
       <!-- Visually-hidden live region: announces the 🎲 pick to assistive tech, since

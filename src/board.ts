@@ -3,6 +3,7 @@
 import Sortable from "sortablejs";
 import { artists } from "./data";
 import * as store from "./store";
+import { matchesAllTags } from "./filter";
 import { compareArtistNames } from "./sort";
 import { TIERS, UNRANKED, type Artist, type Slot, type Tier } from "./types";
 
@@ -34,6 +35,12 @@ export interface Board {
    * above it, for "X only" the eligible unranked pool sits below it.
    */
   setCutoff(cutoff: Slot): void;
+  /**
+   * Dim every card whose artist does not carry all of `selected`'s tags (an
+   * empty selection dims nothing). Purely visual — the matching restriction on
+   * 🎲 itself is applied by main.ts when it builds the picker's slot map.
+   */
+  setTagFilter(selected: ReadonlySet<string>): void;
 }
 
 // Render the no-image fallback into a thumb: the artist's first character.
@@ -521,6 +528,13 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
       const ineligibleArrow = swap ? "↑" : "↓";
       cutoffEligible.textContent = `${eligibleArrow} eligible ${eligibleArrow}`;
       cutoffIneligible.textContent = `${ineligibleArrow} ineligible ${ineligibleArrow}`;
+    },
+    setTagFilter(selected: ReadonlySet<string>): void {
+      for (const artist of artists) {
+        cardsByName
+          .get(artist.name)
+          ?.classList.toggle("filtered-out", !matchesAllTags(artist, selected));
+      }
     },
   };
 }

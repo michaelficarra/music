@@ -35,6 +35,8 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   ├── store.ts             # Local-storage overlay + diff (Reset/Save) logic
 │   ├── board.ts             # Renders tiers + unranked area, wires SortableJS
 │   ├── random.ts            # Weighting schemes + weighted random pick (see §6)
+│   ├── filter.ts            # matchesAllTags(): the 🎲 tag filter's matching rule (see §6)
+│   ├── tag-groups.ts        # groupTags(): vocabulary categories for the filter panel (see §6)
 │   ├── sort.ts              # compareArtistNames(): canonical (case/accent-insensitive) name order
 │   └── styles.css           # App styles
 ├── public/
@@ -65,14 +67,17 @@ Columns, in order:
 - **Quoting:** standard RFC-4180. Fields containing a comma, double-quote, or newline are wrapped
   in double quotes, with embedded double-quotes doubled. This matters for names such as
   `Dan le Sac vs. Scroobius Pip` (safe) and any future name containing a comma.
-- **Tags:** lowercase descriptors drawn from a shared controlled vocabulary, joined with `;`
-  (no surrounding spaces), e.g. `pop punk;anthemic choruses;male vocals;2000s;side project`.
-  Each artist carries 5–10 tags spanning genre(s), Pandora-style musical qualities (vocal style,
-  instrumentation, mood, lyrics), the peak decade(s) (`1950s`…`2020s`, typically 1–2), and notable
-  aspects (e.g. `side project`, `comedy`, `british`). Conventions: no commas/semicolons/quotes
-  inside a tag (keeps the field unquoted), no duplicates within an artist, and every tag should be
-  shared by **at least two** artists — reuse an existing tag rather than minting a near-synonym.
-  The app parses the field into `Artist.tags` (blank → `[]`); intended for filtering 🎲 rolls.
+- **Tags:** descriptors drawn from a shared controlled vocabulary, joined with `;` (no
+  surrounding spaces), e.g. `pop punk;anthemic choruses;male vocals;2000s;side project`. Casing
+  is natural: proper nouns and acronyms keep their capitals (`Warped Tour`, `EDM`, `J-pop`),
+  everything else is lowercase. Each artist carries 5–10 tags spanning genre(s), Pandora-style
+  musical qualities (vocal style, instrumentation, mood, lyrics), the peak decade(s)
+  (`1950s`…`2020s`, typically 1–2), and notable aspects (e.g. `side project`, `comedy`,
+  `British`). Conventions: no commas/semicolons/quotes inside a tag (keeps the field unquoted),
+  no duplicates within an artist, and every tag should be shared by **at least two** artists —
+  reuse an existing tag rather than minting a near-synonym. The app parses the field into
+  `Artist.tags` (blank → `[]`) for the 🎲 tag filter (§6); tag matching is **case-sensitive**, so
+  keep each tag's spelling identical everywhere it appears.
 - The file holds the full artist roster (a few hundred rows). It may be edited by hand or by the
   enrichment script (§7).
 
@@ -110,7 +115,7 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
 
 - **In memory:** the current arrangement is held as a `Map<ArtistName, Tier | UNRANKED>` plus the
   immutable baseline (roster, images, baseline tiers).
-- **Local storage** (`store.ts`) holds three independent keys:
+- **Local storage** (`store.ts`) holds four independent keys:
   - `artist-tier-list:v1` — the arrangement, as JSON:
     ```json
     { "version": 1, "assignments": { "Radiohead": "S", "Nickelback": "E", ... } }
@@ -121,9 +126,12 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
     two picker dropdowns restore their selection across reloads (PRD §8).
   - `artist-tier-list:picked` — the name of the most recently picked artist, so its persistent glow
     survives a reload until the next 🎲 press (PRD §8).
+  - `artist-tier-list:filters` — the 🎲 tag filter's selection as a JSON string array of tag names
+    (removed when the selection is empty). On load, `main.ts` drops any stored tag that no longer
+    exists in the roster; malformed entries read as no filter.
 
-  The latter two are independent UI preferences: they are never pruned and do not affect the
-  Reset/Save diff, which considers `assignments` only.
+  The latter three are independent UI preferences: they are never pruned against the baseline and
+  do not affect the Reset/Save diff, which considers `assignments` only.
 - **Prune on load:** when overrides are hydrated, any stored assignment that now equals the current
   baseline value (e.g. because a rebuild shipped that tier) is redundant and dropped, as are entries
   for unknown artists or invalid slots. If anything was dropped, storage is rewritten with the
@@ -197,6 +205,24 @@ Selection is **cumulative-weight roulette**: sum the candidates' weights, draw `
 subtracting until the threshold goes negative; a final fall-through returns the last candidate to
 absorb floating-point overshoot. The previous pick is **excluded** from the draw (never the same
 artist twice in a row) unless it is the only candidate. `hasEligible` drives whether 🎲 is enabled.
+
+**Tag filter (PRD §8).** The picker can additionally be restricted to artists carrying **all** of a
+set of selected tags (§3). The matching rule lives in `src/filter.ts` (`matchesAllTags`, unit
+tested in `src/filter.test.ts`); `random.ts` knows nothing about tags — `main.ts` applies the
+filter *upstream*, building the picker's slot map from only the matching artists, so `pick` and
+`hasEligible` see a pre-filtered pool (and 🎲 disables when the filter and cutoff together leave
+no candidates). The panel itself is a native **popover** (`popover` + `popovertarget` in
+`index.html` — the browser supplies top-layer stacking, Esc, and light-dismiss); `main.ts` fills
+it with one checkbox per tag from `data.ts`'s `allTags` (the sorted distinct tags in the roster),
+anchors it under the toolbar's `#filter` button on each open (popovers are fixed in the top layer,
+so the UA default would centre it), keeps the button's `no filters` / `N filters` label current,
+and persists the selection (§5). The checkboxes are **grouped by vocabulary category** via
+`src/tag-groups.ts` (`groupTags`): genres, musical qualities, eras (matched by the `/^\d{4}s$/`
+shape rather than a list), and notable aspects. The CSV stores tags flat, so the category lists
+live in that module; a tag missing from them lands in a trailing **Other** group rather than
+disappearing — when minting a brand-new tag in the CSV, add it to its category there too. Dimming
+of non-matching cards is `Board.setTagFilter`, which toggles a `filtered-out` class per card —
+visual only, the cards stay interactive.
 
 ## 7. Image-enrichment tooling (`scripts/enrich-images.ts`)
 

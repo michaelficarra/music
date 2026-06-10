@@ -3,6 +3,7 @@
 
 import csvText from "../data/artists.csv?raw";
 import { parseCsv } from "./csv";
+import { compareArtistNames } from "./sort";
 import { UNRANKED, isTier, type Artist, type Slot } from "./types";
 
 /** Column order in data/artists.csv (see ARCHITECTURE §3). */
@@ -45,4 +46,13 @@ export const artists: readonly Artist[] = bodyRows.map((r) => {
 /** Baseline slot for each artist, keyed by name. */
 export const baselineByName: ReadonlyMap<string, Slot> = new Map(
   artists.map((a) => [a.name, a.baselineSlot]),
+);
+
+/**
+ * Every distinct tag in the roster, for the 🎲 filter panel. Sorted with the
+ * same case-insensitive compare as artist names, so mixed-case tags (proper
+ * nouns, acronyms) interleave naturally instead of grouping by capitalisation.
+ */
+export const allTags: readonly string[] = [...new Set(artists.flatMap((a) => a.tags))].sort(
+  compareArtistNames,
 );

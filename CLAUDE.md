@@ -27,8 +27,10 @@ the PRD; if it's about how the code achieves it, it's ARCHITECTURE.
 
 - `data/artists.csv` is the **source of truth** for the artist roster, tiers, images, and tags.
   Its schema (`Artist, Tier, ImageURL, ImageSource, Tags`) and RFC-4180 quoting rules are defined
-  in ARCHITECTURE §3. Tags are semicolon-delimited lowercase descriptors from a shared controlled
-  vocabulary (5–10 per artist; reuse existing tags rather than minting near-synonyms).
+  in ARCHITECTURE §3. Tags are semicolon-delimited descriptors from a shared controlled
+  vocabulary (5–10 per artist; naturally cased — capitals only for proper nouns/acronyms; reuse
+  existing tags rather than minting near-synonyms). When a brand-new tag is unavoidable, also add
+  it to its category in `src/tag-groups.ts` so the 🎲 filter panel groups it correctly.
 - The app embeds this CSV at **build time**; changing the data requires a rebuild/redeploy to
   affect the shipped default.
 - The in-app **Save** button exports the current arrangement as CSV to the clipboard; updating the

@@ -13,6 +13,7 @@ import { UNRANKED, isTier, type Slot } from "./types";
 const STORAGE_KEY = "artist-tier-list:v1";
 const SCHEME_KEY = "artist-tier-list:scheme";
 const PICKED_KEY = "artist-tier-list:picked";
+const FILTER_KEY = "artist-tier-list:filters";
 
 interface Persisted {
   version: 1;
@@ -162,6 +163,24 @@ export function loadSchemeId(): string | null {
 
 export function saveSchemeId(id: string): void {
   localStorage.setItem(SCHEME_KEY, id);
+}
+
+/** The tags selected in the 🎲 filter panel (a JSON string array; [] when unset). */
+export function loadFilterTags(): string[] {
+  const raw = localStorage.getItem(FILTER_KEY);
+  if (raw === null) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((tag): tag is string => typeof tag === "string");
+  } catch {
+    return []; // corrupt storage: fall back to no filter
+  }
+}
+
+export function saveFilterTags(tags: readonly string[]): void {
+  if (tags.length === 0) localStorage.removeItem(FILTER_KEY);
+  else localStorage.setItem(FILTER_KEY, JSON.stringify(tags));
 }
 
 /** The artist most recently chosen by the 🎲 picker, persisted until the next pick. */

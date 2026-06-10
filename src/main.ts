@@ -2,7 +2,9 @@
 // toolbar's Reset, Save, and weighted 🎲 random picker. (The static shell is in index.html.)
 
 import "./styles.css";
-import { artists } from "./data";
+import { allTags, artists } from "./data";
+import { matchesAllTags } from "./filter";
+import { groupTags } from "./tag-groups";
 import * as store from "./store";
 import { createBoard, type MoveRecord } from "./board";
 import { TIERS, UNRANKED, type Slot } from "./types";
@@ -38,6 +40,10 @@ if (!app) throw new Error("#app container not found");
 const boardEl = app.querySelector<HTMLElement>("#board")!;
 const cutoffSelect = app.querySelector<HTMLSelectElement>("#cutoff")!;
 const intensitySelect = app.querySelector<HTMLSelectElement>("#intensity")!;
+const filterButton = app.querySelector<HTMLButtonElement>("#filter")!;
+const filterPanel = app.querySelector<HTMLDivElement>("#filter-panel")!;
+const filterTagsEl = app.querySelector<HTMLElement>("#filter-tags")!;
+const filterClearButton = app.querySelector<HTMLButtonElement>("#filter-clear")!;
 const rollButton = app.querySelector<HTMLButtonElement>("#roll")!;
 const dirtyActions = app.querySelector<HTMLElement>(".dirty-actions")!;
 const resetButton = app.querySelector<HTMLButtonElement>("#reset")!;
@@ -80,9 +86,89 @@ function currentScheme(): Scheme {
   return parseSchemeId(`${cutoffSelect.value}:${intensitySelect.value}`) ?? DEFAULT_SCHEME;
 }
 
-/** Snapshot of every artist's current slot, for the picker. */
+// --- Tag filter: restricts 🎲 to artists carrying every selected tag, and dims
+// the rest of the board (board.setTagFilter). The panel is a native popover
+// (markup in index.html); here we fill it with a checkbox per tag and keep the
+// selection, button label, board, and storage in sync.
+
+// One labelled checkbox per distinct roster tag, grouped by vocabulary category
+// (genres / musical qualities / eras / notable aspects) and sorted within each.
+const filterCheckboxes = new Map<string, HTMLInputElement>();
+for (const group of groupTags(allTags)) {
+  const heading = document.createElement("h3");
+  heading.className = "filter-group-label";
+  heading.textContent = group.label;
+  const grid = document.createElement("div");
+  grid.className = "filter-group-tags";
+  for (const tag of group.tags) {
+    const option = document.createElement("label");
+    option.className = "filter-option";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = tag;
+    option.append(checkbox, document.createTextNode(tag));
+    grid.appendChild(option);
+    filterCheckboxes.set(tag, checkbox);
+  }
+  filterTagsEl.append(heading, grid);
+}
+
+// Restore the persisted selection, dropping tags that no longer exist in the
+// roster (e.g. after a data edit renamed one).
+const selectedTags = new Set(store.loadFilterTags().filter((tag) => filterCheckboxes.has(tag)));
+for (const tag of selectedTags) filterCheckboxes.get(tag)!.checked = true;
+
+function updateFilterButton(): void {
+  const count = selectedTags.size;
+  filterButton.textContent =
+    count === 0 ? "no filters" : count === 1 ? "1 filter" : `${count} filters`;
+}
+
+// After any selection change: persist, relabel the button, re-dim the board, and
+// refresh 🎲 (which disables when no artist matches both the filter and cutoff).
+function onFilterChange(): void {
+  store.saveFilterTags([...selectedTags].sort());
+  updateFilterButton();
+  board.setTagFilter(selectedTags);
+  refreshControls();
+}
+
+filterTagsEl.addEventListener("change", (event) => {
+  const checkbox = event.target as HTMLInputElement;
+  if (checkbox.checked) selectedTags.add(checkbox.value);
+  else selectedTags.delete(checkbox.value);
+  onFilterChange();
+});
+
+filterClearButton.addEventListener("click", () => {
+  selectedTags.clear();
+  for (const checkbox of filterCheckboxes.values()) checkbox.checked = false;
+  onFilterChange();
+});
+
+// Anchor the panel under its button on each open. Popovers are fixed-position in
+// the top layer, so without this the UA default styles would centre it in the
+// viewport. Re-measured per open: the button's position shifts with viewport
+// width and toolbar wrapping. (The toolbar is sticky, so scrolling can't move
+// the anchor while the panel is open.)
+filterPanel.addEventListener("toggle", (event) => {
+  if ((event as ToggleEvent).newState !== "open") return;
+  const anchor = filterButton.getBoundingClientRect();
+  const width = filterPanel.offsetWidth;
+  const left = Math.min(anchor.left + anchor.width / 2 - width / 2, window.innerWidth - width - 8);
+  filterPanel.style.left = `${Math.max(8, left)}px`;
+  filterPanel.style.top = `${anchor.bottom + 8}px`;
+  // Never extend past the bottom of the viewport; the tag grid scrolls instead.
+  filterPanel.style.maxHeight = `calc(100dvh - ${anchor.bottom + 16}px)`;
+});
+
+/** Snapshot of each filter-matching artist's current slot, for the picker. */
 function currentSlots(): Map<string, Slot> {
-  return new Map<string, Slot>(artists.map((a) => [a.name, store.currentSlot(a.name)]));
+  return new Map<string, Slot>(
+    artists
+      .filter((artist) => matchesAllTags(artist, selectedTags))
+      .map((artist) => [artist.name, store.currentSlot(artist.name)]),
+  );
 }
 
 /** An optional actionable button rendered alongside a toast message (e.g. Undo). */
@@ -254,4 +340,6 @@ enableLightDismissFallback(resetDialog);
 enableLightDismissFallback(saveDialog);
 
 board.setCutoff(currentScheme().cutoff);
+updateFilterButton();
+board.setTagFilter(selectedTags); // re-apply a persisted filter's dimming on load
 refreshControls();

@@ -23,10 +23,12 @@ Each **artist** has:
 - a **name** (unique; this is how the artist is identified),
 - a **tier** — one of the ranked tiers, or *unranked*,
 - a **representative image** — shown on the artist's card; an artist may have none (and an image
-  that fails to load is treated the same as none — see §9).
+  that fails to load is treated the same as none — see §9),
+- a set of **tags** — descriptive labels (genres, musical qualities, eras, notable aspects) used
+  by the random picker's tag filter (§8); an artist may have none.
 
 The set of artists is fixed at load time (curated in the source data). Users sort artists; they
-do not add, rename, or delete artists, and do not edit images, from within the app.
+do not add, rename, or delete artists, and do not edit images or tags, from within the app.
 
 ## 3. Tiers
 
@@ -146,8 +148,8 @@ motion, the fly-in is skipped and the card is simply highlighted in place.) Beca
 otherwise purely visual, the chosen artist's name is also **announced to assistive technology** (a
 screen reader reads out the pick) on each press.
 
-**Two dropdowns** next to the button control how the pick is made — one for the **tier cutoff** and
-one for the **weighting intensity**:
+**Two dropdowns and a tag filter** next to the button control how the pick is made — the **tier
+cutoff**, then the **filter**, then the **weighting intensity**:
 
 - **Tier cutoff** — which artists are eligible:
   - `S only` → S only
@@ -167,8 +169,23 @@ one for the **weighting intensity**:
   The `X only` cutoff has no tiers to weight, so the intensity dropdown is **hidden** while it is
   selected (its artists are picked uniformly).
 
-The two dropdowns **default to "D+" and "weighted"** and **remember your last selection** across
-page reloads. The exact probability curve for each intensity is an implementation detail.
+- **Tag filter** — restricts eligibility by the artists' tags (see §2). The control sits between
+  the cutoff and intensity dropdowns and reads **`no filters`** when nothing is selected, else the
+  selection size (e.g. **`5 filters`**). Clicking it opens a **panel listing every tag** present in
+  the roster, each with a **checkbox**, **grouped by kind** (genres, musical qualities, eras,
+  notable aspects), plus a control that **clears** the whole selection; the panel closes on a
+  click elsewhere or Esc. While one or more tags are selected:
+  - 🎲 draws only from artists carrying **every** selected tag (combined with the tier cutoff and
+    weighting as usual), and
+  - every artist **not** carrying all of the selected tags is **dimmed** on the board — across all
+    tiers, regardless of the cutoff — so the matching artists stand out. Dimmed cards remain fully
+    interactive (drag, click-to-edit).
+
+  An artist with no tags matches only the empty selection.
+
+The two dropdowns **default to "D+" and "weighted"**; they and the tag filter **remember your last
+selection** across page reloads. The exact probability curve for each intensity is an
+implementation detail.
 
 Consecutive presses of 🎲 **never pick the same artist twice in a row**: the previously chosen
 artist is excluded from the next draw. The sole exception is when that artist is the *only* eligible
@@ -183,8 +200,9 @@ regions, each pointing to its own side of the line; for `X only` those direction
 since the eligible region sits below the line rather than above it.
 
 Edge behaviour: if the chosen scheme has **no eligible artists** (e.g. `A+` selected but S and A
-are both empty, or `X only` with an empty unranked pool), the 🎲 button performs no action and
-indicates that nothing can be picked (e.g. by being disabled).
+are both empty, `X only` with an empty unranked pool, or a tag filter that no artist in the
+eligible range satisfies), the 🎲 button performs no action and indicates that nothing can be
+picked (e.g. by being disabled).
 
 ## 9. Empty / edge states
 
