@@ -7,6 +7,7 @@ import { isFilterMode, matchesTags, type FilterMode } from "./filter";
 import { groupTags } from "./tag-groups";
 import * as store from "./store";
 import { createBoard, type MoveRecord } from "./board";
+import { createCloud } from "./cloud";
 import { TIERS, UNRANKED, type Slot } from "./types";
 import {
   INTENSITY_LABEL,
@@ -47,6 +48,8 @@ const filterClearButton = app.querySelector<HTMLButtonElement>("#filter-clear")!
 const filterHint = app.querySelector<HTMLElement>(".filter-hint")!;
 const filterModeRadios = app.querySelectorAll<HTMLInputElement>('input[name="filter-mode"]');
 const rollButton = app.querySelector<HTMLButtonElement>("#roll")!;
+const cloudButton = app.querySelector<HTMLButtonElement>("#cloud")!;
+const cloudDialog = app.querySelector<HTMLDialogElement>("#cloud-dialog")!;
 const dirtyActions = app.querySelector<HTMLElement>(".dirty-actions")!;
 const resetButton = app.querySelector<HTMLButtonElement>("#reset")!;
 const saveButton = app.querySelector<HTMLButtonElement>("#save")!;
@@ -301,6 +304,11 @@ rollButton.addEventListener("click", () => {
     pickAnnouncer.textContent = `Picked ${name}`;
   }
 });
+
+// The ☁️ artist map: a full-screen, read-only view of the roster clustered by tag
+// similarity (cloud.ts). It builds its plane lazily on the first open.
+const cloud = createCloud(cloudDialog);
+cloudButton.addEventListener("click", () => cloud.open());
 
 // Reset is destructive, so confirm via a modal first; it lists what will be reverted
 // (each changed artist, local rank → base rank). The actual reset happens only when the

@@ -21,9 +21,17 @@
           <select id="intensity" aria-label="Weighting intensity"></select>
           <button id="roll" type="button" title="Pick a random artist">🎲</button>
         </div>
-        <div class="dirty-actions" hidden>
-          <button id="reset" type="button">Reset</button>
-          <button id="save" type="button">Save</button>
+        <div class="toolbar-end">
+          <div class="dirty-actions" hidden>
+            <button id="reset" type="button">Reset</button>
+            <button id="save" type="button">Save</button>
+          </div>
+          <!-- Always-available feature buttons, kept at the toolbar's far end;
+               future map-like views join the ☁️ artist map (#cloud-dialog below)
+               here. -->
+          <div class="tools">
+            <button id="cloud" type="button" title="Map artists by tag similarity">☁️</button>
+          </div>
         </div>
       </header>
       <!-- The 🎲 tag-filter panel. A native popover: the popovertarget button above
@@ -99,6 +107,14 @@
             <button value="confirm" type="submit">Save</button>
           </div>
         </form>
+      </dialog>
+      <!-- The ☁️ artist map: a full-screen dialog whose plane of artist nodes is
+           built and pan/zoomed by cloud.ts on first open. It fills the screen, so
+           there is no visible backdrop to light-dismiss; the ✕ button and standard
+           close requests (Esc etc. — native to showModal()) are the ways out. -->
+      <dialog id="cloud-dialog" class="cloud-modal" aria-label="Artist map">
+        <div class="cloud-viewport"></div>
+        <button class="cloud-close" type="button" aria-label="Close map" autofocus>✕</button>
       </dialog>
     </div>
     <script type="module" src="/src/main.ts"></script>

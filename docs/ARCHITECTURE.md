@@ -24,9 +24,9 @@ static bundle plus a build-time-embedded copy of the artist data.
 ├── data/
 │   └── artists.csv          # Source of truth for the artist roster, tiers, and images
 ├── scripts/
-│   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §7)
+│   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §8)
 │   ├── add-artist.ts        # Append an unranked artist to the CSV, then enrich them
-│   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §7)
+│   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §8)
 ├── src/                     # Application source
 │   ├── main.ts              # Entry point: populate dropdowns, build board, wire events
 │   ├── types.ts             # Core domain types (Tier, Slot, Artist)
@@ -34,17 +34,20 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   ├── data.ts              # Embeds data/artists.csv at build time → the static baseline
 │   ├── store.ts             # Local-storage overlay + diff (Reset/Save) logic
 │   ├── board.ts             # Renders tiers + unranked area, wires SortableJS
+│   ├── thumb.ts             # createThumb(): artist thumbnail/placeholder, shared by board + map
 │   ├── random.ts            # Weighting schemes + weighted random pick (see §6)
 │   ├── filter.ts            # matchesAllTags(): the 🎲 tag filter's matching rule (see §6)
 │   ├── tag-groups.ts        # groupTags(): vocabulary categories for the filter panel (see §6)
+│   ├── cloud-layout.ts      # Tag-similarity model + force layout for the ☁️ map (see §7)
+│   ├── cloud.ts             # The ☁️ map dialog: renders the layout, pan/zoom (see §7)
 │   ├── sort.ts              # compareArtistNames(): canonical (case/accent-insensitive) name order
 │   └── styles.css           # App styles
 ├── public/
 │   └── favicon.svg          # Static asset copied verbatim into the build
 ├── docs/                    # PRD.md, ARCHITECTURE.md (this file)
 ├── .github/workflows/
-│   ├── ci.yml               # Typecheck + test + format check on push / PR (see §8)
-│   └── deploy.yml           # Build + deploy to GitHub Pages (see §8)
+│   ├── ci.yml               # Typecheck + test + format check on push / PR (see §9)
+│   └── deploy.yml           # Build + deploy to GitHub Pages (see §9)
 ├── index.html               # Static UI shell (toolbar, board container, reset dialog); main.ts fills the dynamic parts
 ├── package.json
 ├── tsconfig.json
@@ -79,7 +82,7 @@ Columns, in order:
   `Artist.tags` (blank → `[]`) for the 🎲 tag filter (§6); tag matching is **case-sensitive**, so
   keep each tag's spelling identical everywhere it appears.
 - The file holds the full artist roster (a few hundred rows). It may be edited by hand or by the
-  enrichment script (§7).
+  enrichment script (§8).
 
 ## 4. Data flow & the "static baseline"
 
@@ -227,7 +230,73 @@ disappearing — when minting a brand-new tag in the CSV, add it to its category
 of non-matching cards is `Board.setTagFilter`, which toggles a `filtered-out` class per card —
 visual only, the cards stay interactive.
 
-## 7. Image-enrichment tooling (`scripts/enrich-images.ts`)
+## 7. Artist map (`src/cloud-layout.ts`, `src/cloud.ts`)
+
+The ☁️ map (PRD §9) is split like the picker: pure geometry in `cloud-layout.ts` (no DOM, unit
+tested in `src/cloud-layout.test.ts`), rendering and interaction in `cloud.ts`, and the
+full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
+
+- **Similarity model** (`pairwiseSimilarities`): each tag gets a **co-occurrence profile** — a
+  vector of how often it appears alongside every tag across the roster, L2-normalised so tags
+  compare by the *shape* of the company they keep rather than their raw frequency. An artist's
+  vector is the **IDF-weighted sum** of its tags' profiles (rare tags are more discriminative
+  than ubiquitous ones), and artist-to-artist similarity is the **cosine** of those vectors.
+  Sharing a tag contributes fully; carrying *related* tags contributes partially — including
+  near-synonyms that rarely share an artist (curators pick one or the other) but keep the same
+  company, e.g. two punk subgenres both co-occurring with `punk rock` and `2000s`. Relatedness
+  is thus **data-driven** — `tag-groups.ts` names the clusters (below) but plays no part in how
+  similar two artists are; its categories (all of "Genres", say) are far too broad for that.
+- **Cluster-first layout** (`computeCloudLayout`): the map is *not* a force-directed embedding —
+  an earlier force-simulation approach produced a uniform-density smear with inexplicable
+  neighbours and was abandoned. Instead the clusters are built explicitly and all geometry
+  follows from them, so every placement has a reason a viewer can reconstruct:
+  1. **Partition.** Each genre tag (per `tag-groups.ts`) claims its carriers, **most specific
+     (rarest) genre first**, so a niche scene (`third-wave ska`) forms before an umbrella genre
+     (`pop rock`) sweeps up the leftovers; a genre founds a cluster only if it can claim at
+     least 4 artists. Artists left unclaimed may be **adopted** — but only on genre evidence
+     (sharing a genre tag with members; mean ≥ 0.5), since counting ubiquitous quality/era tags
+     adopted everyone however poor the fit; artists clearing the bar nowhere stay unclustered,
+     on the rim (PRD §9: membership is never forced). Within a cluster, members are ordered by
+     mean similarity to their fellows — archetypes first.
+  2. **Cluster packing.** A cluster's members occupy the nearest points of a **hexagonal
+     lattice** (the densest packing of equal discs): every neighbour sits at exactly the
+     minimum spacing and the group compactly fills its bounding circle, archetypes at the
+     heart. The ring is the bounding circle of the actual offsets, plus padding.
+  3. **Disc placement, twice over.** The clusters are agglomerated into **families of related
+     sound** (~√k groups, average-linkage on affinity = mean cross-member similarity); a
+     shared greedy primitive (`packDiscs`) then packs each family's rings **edge to edge** —
+     largest first, each walking an Archimedean spiral out from the affinity-weighted centroid
+     of its already-placed kin (affinity squared, favouring the closest) to the first clear
+     position — and packs the families themselves the same way with a **wide gap**. Rings never
+     overlap, related clusters touch, and the gulfs between families carry the visual
+     separation (PRD §9).
+  4. **The loners.** Unclustered artists are placed by the same spiral search: each walks out
+     from the cluster it most resembles to the first spot clear of every ring and every other
+     loner, nestling into the notches beside its nearest kin rather than orbiting the map.
+
+  All geometry is computed in **spacing units** (1 = the minimum artist-to-artist distance) and
+  normalised to the unit square; the returned `spacing` value tells the renderer what one unit
+  became. The whole pipeline is **deterministic — no randomness at all** (PRD §9's stability)
+  and runs in ~10 ms; it is computed **lazily on the first ☁️ press** and kept for the session.
+- **Rendering & interaction** (`cloud.ts`): one absolutely-positioned node per artist (the
+  shared thumbnail from `src/thumb.ts` plus a name caption) on a `.cloud-plane` in **world px**,
+  where the world's size maps the layout's spacing unit onto the node footprint
+  (`NODE_SPACING`) exactly — density is by construction, not tuning. The cluster markers are
+  circles appended **before** the nodes (so they paint behind), filled with a soft white
+  radial gradient rather than an outline and drawn half again larger than the cluster's
+  geometric radius (`GLOW_SCALE`) so the light spills past the boundary; each carries a
+  `title` tooltip naming its genre and members. Loners get a node-sized halo of the same
+  gradient (tooltip: the artist's own). Pan and zoom never touch the nodes: both are a single
+  `translate(…) scale(…)` transform on the plane. Wheel events zoom **anchored on the cursor**
+  (exponential in deltaY, normalised for line-mode deltas; trackpad pinches arrive as
+  ctrl+wheel and work unchanged), clamped between half the fitted overview and a 4× close-up;
+  pointer-capture dragging pans, clamped so part of the world square always stays on screen.
+  The dialog opens via `showModal()` (Esc/close requests are native); being full-screen there
+  is no visible backdrop, so no `closedby` light-dismiss — the ✕ button calls `dialog.close()`.
+  While it is open, the page's own scroll bar is suppressed
+  (`body:has(#cloud-dialog[open])`). The view re-fits to the whole cloud on every open.
+
+## 8. Image-enrichment tooling (`scripts/enrich-images.ts`)
 
 A **dev-time** Node/TS script, run manually by the maintainer — **not** part of the app bundle.
 
@@ -256,7 +325,7 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   name. Tags are **not** auto-populated — fill the `Tags` column by hand afterwards, following the
   conventions in §3 (prefer existing tags from the file over new ones).
 
-## 8. Build, CI & deploy
+## 9. Build, CI & deploy
 
 - **Dev:** `vite` (dev server with HMR).
 - **Build:** `npm run build` (`tsc --noEmit && vite build`) → static assets in `dist/`.
@@ -269,12 +338,14 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   `workflow_dispatch`): install → build → `configure-pages` → `upload-pages-artifact` (`dist`) →
   `deploy-pages`. **Build artefacts are not committed**; the Action publishes `dist/` to Pages.
 
-## 9. Testing & quality
+## 10. Testing & quality
 
 - **Vitest** unit tests for the pure logic: CSV parse/serialise round-trip (incl. quoting) in
   `src/csv.test.ts`, the overlay/diff/export in `src/store.test.ts` (run under the `jsdom`
-  environment for `localStorage`), the weighting/selection in `src/random.test.ts`, and the
-  canonical name ordering in `src/sort.test.ts`.
-- Type-checking via `tsc --noEmit`; formatting via Prettier; all enforced in CI (§8). The
+  environment for `localStorage`), the weighting/selection in `src/random.test.ts`, the
+  canonical name ordering in `src/sort.test.ts`, and the ☁️ map's similarity model and layout in
+  `src/cloud-layout.test.ts` (determinism, bounds, and cluster geometry — on synthetic rosters
+  and as a smoke test over the real one).
+- Type-checking via `tsc --noEmit`; formatting via Prettier; all enforced in CI (§9). The
   enrichment and add-artist scripts run under **tsx**. Exact commands are listed in
   [CLAUDE.md](../CLAUDE.md).

@@ -69,8 +69,17 @@ body {
   gap: 0.4rem;
 }
 
-.dirty-actions {
+/* The toolbar's right end: the conditional Reset/Save pair, then the
+   always-available feature buttons (.tools) in the far corner. */
+.toolbar-end {
   justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.dirty-actions,
+.tools {
   display: flex;
   gap: var(--gap);
 }
@@ -93,7 +102,7 @@ body {
      vertical list. */
   .toolbar h1,
   .picker,
-  .dirty-actions {
+  .toolbar-end {
     justify-self: stretch;
   }
 
@@ -108,7 +117,7 @@ body {
     justify-content: center;
   }
 
-  .dirty-actions {
+  .toolbar-end {
     justify-content: center;
   }
 }
@@ -129,7 +138,9 @@ button:disabled {
   cursor: not-allowed;
 }
 
-#roll {
+/* The toolbar's emoji buttons (🎲 roll, ☁️ map) share their sizing. */
+#roll,
+#cloud {
   font-size: 1.2rem;
   line-height: 1;
   padding: 0.35rem 0.55rem;
@@ -405,7 +416,9 @@ button:disabled {
   color: var(--muted);
 }
 
-.card .name {
+/* Artist name caption, shared by board cards and ☁️ map nodes. */
+.card .name,
+.cloud-node .name {
   font-size: 0.72rem;
   line-height: 1.1;
   text-align: center;
@@ -702,4 +715,103 @@ button:disabled {
    .card opacity transition above makes the dim fade in and out. */
 .card.filtered-out {
   opacity: 0.25;
+}
+
+/* ——— The ☁️ artist map (cloud.ts) ——— */
+
+/* While the map is open, suppress the page's own scrolling: the full-screen
+   dialog covers the document, so a page scroll bar alongside it is noise. */
+body:has(#cloud-dialog[open]) {
+  overflow: hidden;
+}
+
+/* The map's dialog fills the screen edge to edge — no border, padding, or
+   visible backdrop. (A modal dialog's UA styles centre it with auto margins
+   and cap its size at the viewport; zeroing margin + sizing to the viewport
+   makes it flush.) */
+.cloud-modal {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: none;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* The pan/zoom surface. touch-action:none hands every gesture to the script's
+   pointer handlers; user-select stops a drag from selecting node names. */
+.cloud-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.cloud-viewport.panning {
+  cursor: grabbing;
+}
+
+/* The plane all artist nodes sit on, in fixed "world" pixel coordinates;
+   panning and zooming is a single translate+scale of this element (set by
+   cloud.ts), so nodes scale with the map like map markers. */
+.cloud-plane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+/* A genre cluster's marker: a soft white radial glow behind the artist nodes
+   (appended to the plane before them), centred on the cluster (left/top/size
+   set by cloud.ts), brightest at the heart and spilling past the cluster's
+   boundary before feathering out — a pool of light rather than a drawn
+   outline. Quiet by design: a hint of grouping, not a chart element. It
+   stays hoverable (no pointer-events:none): hovering the space inside a
+   cluster surfaces its explanatory title tooltip, while the artist nodes,
+   painted above, keep their own. */
+.cloud-ring {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  /* The stops sample a smoothstep falloff from 12% white to transparent, so
+     the glow eases out — a gentle plateau at the heart and a soft tail at the
+     edge, with no visible knee partway. */
+  background: radial-gradient(
+    circle closest-side,
+    #ffffff1f 0%,
+    #ffffff1a 25%,
+    #ffffff0f 50%,
+    #ffffff05 75%,
+    #ffffff00 100%
+  );
+}
+
+/* One artist on the map: the shared square thumb with the name beneath,
+   centred on its layout point (left/top set by cloud.ts). */
+.cloud-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: var(--card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+/* The way out: a ✕ pinned to the dialog's top-right, floating above the plane.
+   The shadow keeps it legible over whatever nodes drift beneath it. */
+.cloud-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.45rem 0.6rem;
+  box-shadow: 0 2px 8px #00000080;
 }

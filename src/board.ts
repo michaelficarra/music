@@ -5,6 +5,7 @@ import { artists } from "./data";
 import * as store from "./store";
 import { matchesTags, type FilterMode } from "./filter";
 import { compareArtistNames } from "./sort";
+import { artistTooltip, createThumb } from "./thumb";
 import { TIERS, UNRANKED, type Artist, type Slot, type Tier } from "./types";
 
 /** A single tier change, reported to `onChange` so the page can offer an undo. */
@@ -44,15 +45,6 @@ export interface Board {
   setTagFilter(selected: ReadonlySet<string>, mode: FilterMode): void;
 }
 
-// Render the no-image fallback into a thumb: the artist's first character.
-// Used both for artists shipped without an image and when a curated image URL
-// fails to load (see createCard), so a dead link degrades to the same placeholder
-// rather than a broken-image glyph.
-function showPlaceholder(thumb: HTMLElement, name: string): void {
-  thumb.classList.add("placeholder");
-  thumb.textContent = name.slice(0, 1).toUpperCase();
-}
-
 // Insert `card` into `list` so the list stays in canonical artist-name order.
 // Within-tier position carries no meaning (PRD §5), so every list is kept
 // alphabetical for a predictable layout that survives drags, edits, and reloads.
@@ -73,31 +65,13 @@ function createCard(artist: Artist): HTMLElement {
   const card = document.createElement("div");
   card.className = "card";
   card.dataset.artist = artist.name;
-  // Native hover tooltip: the name, plus the artist's tags when it has any.
-  card.title = artist.tags.length > 0 ? `${artist.name}\n${artist.tags.join(", ")}` : artist.name;
-
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  if (artist.imageURL) {
-    const img = document.createElement("img");
-    img.src = artist.imageURL;
-    img.alt = artist.name;
-    img.loading = "lazy";
-    // A rotted/unreachable URL falls back to the initial placeholder.
-    img.addEventListener("error", () => {
-      img.remove();
-      showPlaceholder(thumb, artist.name);
-    });
-    thumb.appendChild(img);
-  } else {
-    showPlaceholder(thumb, artist.name);
-  }
+  card.title = artistTooltip(artist); // hover reveals the name + tags
 
   const label = document.createElement("span");
   label.className = "name";
   label.textContent = artist.name;
 
-  card.append(thumb, label);
+  card.append(createThumb(artist), label);
   return card;
 }
 

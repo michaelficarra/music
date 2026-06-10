@@ -23,9 +23,10 @@ Each **artist** has:
 - a **name** (unique; this is how the artist is identified),
 - a **tier** — one of the ranked tiers, or *unranked*,
 - a **representative image** — shown on the artist's card; an artist may have none (and an image
-  that fails to load is treated the same as none — see §9),
+  that fails to load is treated the same as none — see §10),
 - a set of **tags** — descriptive labels (genres, musical qualities, eras, notable aspects) used
-  by the random picker's tag filter (§8); an artist may have none.
+  by the random picker's tag filter (§8) and to lay out the artist map (§9); an artist may have
+  none.
 
 The set of artists is fixed at load time (curated in the source data). Users sort artists; they
 do not add, rename, or delete artists, and do not edit images or tags, from within the app.
@@ -209,7 +210,44 @@ are both empty, `X only` with an empty unranked pool, or a tag filter that no ar
 eligible range satisfies), the 🎲 button performs no action and indicates that nothing can be
 picked (e.g. by being disabled).
 
-## 9. Empty / edge states
+## 9. Artist map (☁️)
+
+A **☁️** button opens a **full-screen map** of the roster: every artist's card (image — or the
+usual placeholder — and name) laid out on a two-dimensional plane, organised into **genre
+clusters** drawn from the artists' tags (§2).
+
+- **Every artist belongs to at most one cluster** — broadly, the most specific genre it shares
+  with enough other artists. Membership is **never forced**: an artist whose own genres are too
+  rare to form a group joins another cluster only when it genuinely shares that cluster's sound
+  (its genres overlap the members'); artists that fit nowhere well stay **unclustered**, each
+  standing just outside the circle of the cluster it most resembles, with a small **glow of its
+  own**. A cluster represents a real relationship, not a best-effort bucket.
+- Each cluster is marked by a **soft, faint glow** behind its artists — brightest at the heart,
+  spilling a little past the cluster's boundary before fading out. **All of a cluster's members
+  lie inside its circle, tightly and evenly packed**, and clusters never overlap one another.
+  **Hovering the space inside a cluster** explains it in a tooltip: the genre that defines it
+  and the artists it contains (useful zoomed out, when names are too small to read).
+- The grouping is **two-tiered**: clusters of related sound form **families** (the punk scenes
+  in one neighbourhood, electronic pop in another). Within a family the circles pack **snugly,
+  edge to edge**; between families lie **wide gulfs** — so both which artists belong together
+  and which clusters belong together are readable at a glance. Within a cluster, the most
+  representative members sit at the **centre**, with looser fits towards the edge.
+- The map shows **every artist**, regardless of tier placement, picker cutoff, or active tag
+  filter; artists are **spaced apart — never stacked on top of one another** — so every artist
+  stays individually visible.
+- The layout is **stable**: the same roster produces the same map on every open and across
+  reloads. Positions change only when the roster's tags change.
+- **Scrolling zooms** the map in and out, anchored on the pointer's position, between a
+  whole-cloud overview and a close-up; **dragging pans** it. The map opens fitted so the whole
+  cloud is visible, and it can never be zoomed or panned so far that the cloud is lost off
+  screen entirely.
+- As on the board (§5), **hovering an artist** reveals its tags in a tooltip.
+- The map is **read-only**: artists cannot be rearranged from it, and viewing it changes nothing
+  about tiers, the picker, or filters.
+- A **close control (✕) in the top-right corner** exits the map, as do the platform's standard
+  dismissal actions (e.g. the Esc key). Closing returns to the board exactly as it was.
+
+## 10. Empty / edge states
 
 - **Artist with no image:** the card shows a placeholder in place of the image; the name is still
   shown. An artist whose image **fails to load** (e.g. a broken or removed URL) falls back to the
@@ -218,7 +256,7 @@ picked (e.g. by being disabled).
 - **Empty unranked area:** still displayed, as described in §3.
 - **No eligible artists for a pick:** handled as in §8.
 
-## 10. Out of scope (explicitly)
+## 11. Out of scope (explicitly)
 
 The following are intentionally **not** part of the application:
 
