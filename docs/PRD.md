@@ -166,8 +166,9 @@ cutoff**, then the **filter**, then the **weighting intensity**:
     lower tier).
   - `heavily weighted` — strongly favours higher tiers.
 
-  The `X only` cutoff has no tiers to weight, so the intensity dropdown is **hidden** while it is
-  selected (its artists are picked uniformly).
+  The `X only` and `S only` cutoffs each draw from a single pool — the unranked artists, or the
+  one top tier — with no tiers to weight against each other, so the intensity dropdown is
+  **hidden** while either is selected (their artists are picked uniformly).
 
 - **Tag filter** — restricts eligibility by the artists' tags (see §2). The control sits between
   the cutoff and intensity dropdowns and reads **`no filters`** when nothing is selected, else the

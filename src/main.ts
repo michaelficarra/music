@@ -273,8 +273,10 @@ function refreshControls(): void {
   // Reset/Save appear only when the arrangement differs from the shipped CSV.
   dirtyActions.hidden = !store.isChanged();
   const scheme = currentScheme();
-  // The "X only" cutoff has no tiers to weight, so hide its intensity dropdown.
-  intensitySelect.hidden = scheme.cutoff === UNRANKED;
+  // "X only" (the unranked pool) and "S only" (a single tier) each draw from one
+  // pool with no tiers to weight against each other, so weighting intensity is a
+  // no-op — hide its dropdown while either is selected.
+  intensitySelect.hidden = scheme.cutoff === UNRANKED || scheme.cutoff === TIERS[0];
   // 🎲 is disabled when the current scheme has no eligible artists — no ranked
   // artists above the cutoff, or (for "X only") an empty unranked pool.
   rollButton.disabled = !hasEligible(currentSlots(), scheme);
