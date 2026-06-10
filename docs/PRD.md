@@ -81,6 +81,8 @@ for an artist no longer shipped is simply ignored.
   F, or **X** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
   it; pressing **Enter** saves and **Escape** cancels. Saving moves the artist to the chosen tier.
   Clicking elsewhere, or starting to drag a card, dismisses the dropdown without changing the tier.
+- **Hovering a card** reveals the artist's **tags** (§2) alongside its name, in the card's
+  tooltip. An artist with no tags shows just its name.
 - After a move that changes an artist's tier (by drag or via the dropdown), a brief notification
   offers to **undo** it, returning the artist to its previous tier. Undo is **single-level** — it
   reverses the most recent move only — and the notification dismisses itself after a few seconds. A

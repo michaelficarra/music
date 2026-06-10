@@ -73,7 +73,8 @@ function createCard(artist: Artist): HTMLElement {
   const card = document.createElement("div");
   card.className = "card";
   card.dataset.artist = artist.name;
-  card.title = artist.name;
+  // Native hover tooltip: the name, plus the artist's tags when it has any.
+  card.title = artist.tags.length > 0 ? `${artist.name}\n${artist.tags.join(", ")}` : artist.name;
 
   const thumb = document.createElement("div");
   thumb.className = "thumb";
