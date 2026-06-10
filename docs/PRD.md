@@ -174,18 +174,20 @@ cutoff**, then the **filter**, then the **weighting intensity**:
   selection size (e.g. **`5 filters`**). Clicking it opens a **panel listing every tag** present in
   the roster, each with a **checkbox**, **grouped by kind** (genres, musical qualities, eras,
   notable aspects), plus a control that **clears** the whole selection; the panel closes on a
-  click elsewhere or Esc. While one or more tags are selected:
-  - 🎲 draws only from artists carrying **every** selected tag (combined with the tier cutoff and
-    weighting as usual), and
-  - every artist **not** carrying all of the selected tags is **dimmed** on the board — across all
-    tiers, regardless of the cutoff — so the matching artists stand out. Dimmed cards remain fully
-    interactive (drag, click-to-edit).
+  click elsewhere or Esc. An **all / any toggle** in the panel sets how multiple tags combine: an
+  artist **matches** the selection by carrying **every** selected tag (`all`) or **at least one**
+  of them (`any`, the default). While one or more tags are selected:
+  - 🎲 draws only from **matching** artists (combined with the tier cutoff and weighting as
+    usual), and
+  - every **non-matching** artist is **dimmed** on the board — across all tiers, regardless of the
+    cutoff — so the matching artists stand out. Dimmed cards remain fully interactive (drag,
+    click-to-edit).
 
-  An artist with no tags matches only the empty selection.
+  An artist with no tags matches only the empty selection (under either mode).
 
-The two dropdowns **default to "D+" and "weighted"**; they and the tag filter **remember your last
-selection** across page reloads. The exact probability curve for each intensity is an
-implementation detail.
+The two dropdowns **default to "D+" and "weighted"**; they and the tag filter (its tags **and**
+its all/any mode) **remember your last selection** across page reloads. The exact probability
+curve for each intensity is an implementation detail.
 
 Consecutive presses of 🎲 **never pick the same artist twice in a row**: the previously chosen
 artist is excluded from the next draw. The sole exception is when that artist is the *only* eligible

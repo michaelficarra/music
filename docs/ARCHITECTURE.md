@@ -115,7 +115,7 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
 
 - **In memory:** the current arrangement is held as a `Map<ArtistName, Tier | UNRANKED>` plus the
   immutable baseline (roster, images, baseline tiers).
-- **Local storage** (`store.ts`) holds four independent keys:
+- **Local storage** (`store.ts`) holds five independent keys:
   - `artist-tier-list:v1` — the arrangement, as JSON:
     ```json
     { "version": 1, "assignments": { "Radiohead": "S", "Nickelback": "E", ... } }
@@ -129,8 +129,10 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   - `artist-tier-list:filters` — the 🎲 tag filter's selection as a JSON string array of tag names
     (removed when the selection is empty). On load, `main.ts` drops any stored tag that no longer
     exists in the roster; malformed entries read as no filter.
+  - `artist-tier-list:filter-mode` — how the filter combines its tags: `all`, or absent for the
+    default `any` (invalid values also read as `any`).
 
-  The latter three are independent UI preferences: they are never pruned against the baseline and
+  All but the first are independent UI preferences: they are never pruned against the baseline and
   do not affect the Reset/Save diff, which considers `assignments` only.
 - **Prune on load:** when overrides are hydrated, any stored assignment that now equals the current
   baseline value (e.g. because a rebuild shipped that tier) is redundant and dropped, as are entries
@@ -206,8 +208,9 @@ subtracting until the threshold goes negative; a final fall-through returns the 
 absorb floating-point overshoot. The previous pick is **excluded** from the draw (never the same
 artist twice in a row) unless it is the only candidate. `hasEligible` drives whether 🎲 is enabled.
 
-**Tag filter (PRD §8).** The picker can additionally be restricted to artists carrying **all** of a
-set of selected tags (§3). The matching rule lives in `src/filter.ts` (`matchesAllTags`, unit
+**Tag filter (PRD §8).** The picker can additionally be restricted to artists matching a set of
+selected tags (§3) — carrying **all** of them or **at least one**, per the panel's all/any mode
+toggle. The matching rule lives in `src/filter.ts` (`matchesTags(artist, selected, mode)`, unit
 tested in `src/filter.test.ts`); `random.ts` knows nothing about tags — `main.ts` applies the
 filter *upstream*, building the picker's slot map from only the matching artists, so `pick` and
 `hasEligible` see a pre-filtered pool (and 🎲 disables when the filter and cutoff together leave

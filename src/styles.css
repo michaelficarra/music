@@ -173,6 +173,50 @@ button:disabled {
   color: var(--muted);
 }
 
+/* The all/any match-mode toggle: a radio pair presented as conjoined segmented
+   buttons. The inputs are visually hidden (but keep focus and arrow-key
+   behaviour); each label is a segment, and the checked one is filled. */
+.filter-mode-segments {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.filter-mode-segments label {
+  position: relative; /* containing block for the hidden absolute input */
+  padding: 0.15rem 0.6rem;
+  background: #3a3d46;
+  border: 1px solid #00000040;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Round only the outer corners and share the middle edge, so the two segments
+   read as one conjoined control. */
+.filter-mode-segments label:first-of-type {
+  border-radius: 6px 0 0 6px;
+}
+
+.filter-mode-segments label:last-of-type {
+  border-radius: 0 6px 6px 0;
+  border-left: none;
+}
+
+.filter-mode-segments label:not(:has(input:checked)):hover {
+  background: #454956;
+}
+
+.filter-mode-segments label:has(input:checked) {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* The hidden radio still receives keyboard focus; surface it on the segment. */
+.filter-mode-segments label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 #filter-clear {
   font-size: 0.75rem;
   padding: 0.15rem 0.6rem;

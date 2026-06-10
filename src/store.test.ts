@@ -173,6 +173,20 @@ describe("store", () => {
     expect(localStorage.getItem("artist-tier-list:filters")).toBeNull();
   });
 
+  it("defaults the filter mode to any and remembers all", () => {
+    expect(store.loadFilterMode()).toBe("any");
+    store.saveFilterMode("all");
+    expect(store.loadFilterMode()).toBe("all");
+    // "any" is the default, so storing it just clears the key.
+    store.saveFilterMode("any");
+    expect(localStorage.getItem("artist-tier-list:filter-mode")).toBeNull();
+  });
+
+  it("ignores an invalid stored filter mode", () => {
+    localStorage.setItem("artist-tier-list:filter-mode", "most");
+    expect(store.loadFilterMode()).toBe("any");
+  });
+
   it("ignores corrupt or mistyped filter storage", () => {
     localStorage.setItem("artist-tier-list:filters", "not json");
     expect(store.loadFilterTags()).toEqual([]);

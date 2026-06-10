@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchesAllTags } from "./filter";
+import { matchesTags } from "./filter";
 import type { Artist } from "./types";
 
 const artistWithTags = (tags: string[]): Artist => ({
@@ -10,25 +10,29 @@ const artistWithTags = (tags: string[]): Artist => ({
   tags,
 });
 
-describe("matchesAllTags", () => {
-  it("matches every artist when no tags are selected", () => {
-    expect(matchesAllTags(artistWithTags(["emo", "2000s"]), new Set())).toBe(true);
-    expect(matchesAllTags(artistWithTags([]), new Set())).toBe(true);
+describe("matchesTags", () => {
+  it("matches every artist when no tags are selected, in both modes", () => {
+    expect(matchesTags(artistWithTags(["emo", "2000s"]), new Set(), "all")).toBe(true);
+    expect(matchesTags(artistWithTags(["emo", "2000s"]), new Set(), "any")).toBe(true);
+    expect(matchesTags(artistWithTags([]), new Set(), "all")).toBe(true);
+    expect(matchesTags(artistWithTags([]), new Set(), "any")).toBe(true);
   });
 
-  it("matches an artist carrying every selected tag", () => {
+  it("all: matches only an artist carrying every selected tag", () => {
     const artist = artistWithTags(["pop punk", "emo", "2000s"]);
-    expect(matchesAllTags(artist, new Set(["emo"]))).toBe(true);
-    expect(matchesAllTags(artist, new Set(["emo", "2000s"]))).toBe(true);
+    expect(matchesTags(artist, new Set(["emo"]), "all")).toBe(true);
+    expect(matchesTags(artist, new Set(["emo", "2000s"]), "all")).toBe(true);
+    expect(matchesTags(artist, new Set(["emo", "duo"]), "all")).toBe(false);
   });
 
-  it("rejects an artist missing any selected tag", () => {
+  it("any: matches an artist carrying at least one selected tag", () => {
     const artist = artistWithTags(["pop punk", "2000s"]);
-    expect(matchesAllTags(artist, new Set(["emo"]))).toBe(false);
-    expect(matchesAllTags(artist, new Set(["pop punk", "emo"]))).toBe(false);
+    expect(matchesTags(artist, new Set(["emo", "2000s"]), "any")).toBe(true);
+    expect(matchesTags(artist, new Set(["emo", "duo"]), "any")).toBe(false);
   });
 
-  it("rejects an untagged artist once any tag is selected", () => {
-    expect(matchesAllTags(artistWithTags([]), new Set(["emo"]))).toBe(false);
+  it("rejects an untagged artist once any tag is selected, in both modes", () => {
+    expect(matchesTags(artistWithTags([]), new Set(["emo"]), "all")).toBe(false);
+    expect(matchesTags(artistWithTags([]), new Set(["emo"]), "any")).toBe(false);
   });
 });

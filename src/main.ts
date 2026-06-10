@@ -3,7 +3,7 @@
 
 import "./styles.css";
 import { allTags, artists } from "./data";
-import { matchesAllTags } from "./filter";
+import { isFilterMode, matchesTags, type FilterMode } from "./filter";
 import { groupTags } from "./tag-groups";
 import * as store from "./store";
 import { createBoard, type MoveRecord } from "./board";
@@ -44,6 +44,8 @@ const filterButton = app.querySelector<HTMLButtonElement>("#filter")!;
 const filterPanel = app.querySelector<HTMLDivElement>("#filter-panel")!;
 const filterTagsEl = app.querySelector<HTMLElement>("#filter-tags")!;
 const filterClearButton = app.querySelector<HTMLButtonElement>("#filter-clear")!;
+const filterHint = app.querySelector<HTMLElement>(".filter-hint")!;
+const filterModeRadios = app.querySelectorAll<HTMLInputElement>('input[name="filter-mode"]');
 const rollButton = app.querySelector<HTMLButtonElement>("#roll")!;
 const dirtyActions = app.querySelector<HTMLElement>(".dirty-actions")!;
 const resetButton = app.querySelector<HTMLButtonElement>("#reset")!;
@@ -118,19 +120,42 @@ for (const group of groupTags(allTags)) {
 const selectedTags = new Set(store.loadFilterTags().filter((tag) => filterCheckboxes.has(tag)));
 for (const tag of selectedTags) filterCheckboxes.get(tag)!.checked = true;
 
+// How the selected tags combine: "all" (every tag) or "any" (at least one).
+let filterMode: FilterMode = store.loadFilterMode();
+for (const radio of filterModeRadios) radio.checked = radio.value === filterMode;
+
 function updateFilterButton(): void {
   const count = selectedTags.size;
   filterButton.textContent =
     count === 0 ? "no filters" : count === 1 ? "1 filter" : `${count} filters`;
 }
 
-// After any selection change: persist, relabel the button, re-dim the board, and
-// refresh 🎲 (which disables when no artist matches both the filter and cutoff).
+// Keep the panel's hint sentence in step with the mode toggle.
+function updateFilterHint(): void {
+  filterHint.textContent =
+    filterMode === "all"
+      ? "🎲 picks only artists matching every checked tag"
+      : "🎲 picks only artists matching at least one checked tag";
+}
+
+// After any selection or mode change: persist, relabel the button, re-dim the
+// board, and refresh 🎲 (which disables when no artist matches filter + cutoff).
 function onFilterChange(): void {
   store.saveFilterTags([...selectedTags].sort());
+  store.saveFilterMode(filterMode);
   updateFilterButton();
-  board.setTagFilter(selectedTags);
+  updateFilterHint();
+  board.setTagFilter(selectedTags, filterMode);
   refreshControls();
+}
+
+for (const radio of filterModeRadios) {
+  radio.addEventListener("change", () => {
+    if (radio.checked && isFilterMode(radio.value)) {
+      filterMode = radio.value;
+      onFilterChange();
+    }
+  });
 }
 
 filterTagsEl.addEventListener("change", (event) => {
@@ -166,7 +191,7 @@ filterPanel.addEventListener("toggle", (event) => {
 function currentSlots(): Map<string, Slot> {
   return new Map<string, Slot>(
     artists
-      .filter((artist) => matchesAllTags(artist, selectedTags))
+      .filter((artist) => matchesTags(artist, selectedTags, filterMode))
       .map((artist) => [artist.name, store.currentSlot(artist.name)]),
   );
 }
@@ -341,5 +366,6 @@ enableLightDismissFallback(saveDialog);
 
 board.setCutoff(currentScheme().cutoff);
 updateFilterButton();
-board.setTagFilter(selectedTags); // re-apply a persisted filter's dimming on load
+updateFilterHint();
+board.setTagFilter(selectedTags, filterMode); // re-apply a persisted filter's dimming on load
 refreshControls();

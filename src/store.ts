@@ -7,6 +7,7 @@
 
 import { baselineByName, originalRows, COLUMN } from "./data";
 import { serializeCsv } from "./csv";
+import { isFilterMode, type FilterMode } from "./filter";
 import { compareArtistNames } from "./sort";
 import { UNRANKED, isTier, type Slot } from "./types";
 
@@ -14,6 +15,7 @@ const STORAGE_KEY = "artist-tier-list:v1";
 const SCHEME_KEY = "artist-tier-list:scheme";
 const PICKED_KEY = "artist-tier-list:picked";
 const FILTER_KEY = "artist-tier-list:filters";
+const FILTER_MODE_KEY = "artist-tier-list:filter-mode";
 
 interface Persisted {
   version: 1;
@@ -181,6 +183,18 @@ export function loadFilterTags(): string[] {
 export function saveFilterTags(tags: readonly string[]): void {
   if (tags.length === 0) localStorage.removeItem(FILTER_KEY);
   else localStorage.setItem(FILTER_KEY, JSON.stringify(tags));
+}
+
+/** How the 🎲 filter combines its tags: "any" (the default) or "all". */
+export function loadFilterMode(): FilterMode {
+  const raw = localStorage.getItem(FILTER_MODE_KEY);
+  return raw !== null && isFilterMode(raw) ? raw : "any";
+}
+
+export function saveFilterMode(mode: FilterMode): void {
+  if (mode === "any")
+    localStorage.removeItem(FILTER_MODE_KEY); // the default
+  else localStorage.setItem(FILTER_MODE_KEY, mode);
 }
 
 /** The artist most recently chosen by the 🎲 picker, persisted until the next pick. */
