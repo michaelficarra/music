@@ -25,9 +25,10 @@ the PRD; if it's about how the code achieves it, it's ARCHITECTURE.
 
 ## Data conventions
 
-- `data/artists.csv` is the **source of truth** for the artist roster, tiers, and images. Its
-  schema (`Artist, Tier, ImageURL, ImageSource`) and RFC-4180 quoting rules are defined in
-  ARCHITECTURE §3.
+- `data/artists.csv` is the **source of truth** for the artist roster, tiers, images, and tags.
+  Its schema (`Artist, Tier, ImageURL, ImageSource, Tags`) and RFC-4180 quoting rules are defined
+  in ARCHITECTURE §3. Tags are semicolon-delimited lowercase descriptors from a shared controlled
+  vocabulary (5–10 per artist; reuse existing tags rather than minting near-synonyms).
 - The app embeds this CSV at **build time**; changing the data requires a rebuild/redeploy to
   affect the shipped default.
 - The in-app **Save** button exports the current arrangement as CSV to the clipboard; updating the

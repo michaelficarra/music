@@ -21,4 +21,6 @@ export interface Artist {
   baselineSlot: Slot;
   imageURL: string;
   imageSource: string;
+  /** Descriptive tags (genres, musical qualities, eras, notable aspects). */
+  tags: readonly string[];
 }

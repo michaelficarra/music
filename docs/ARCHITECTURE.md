@@ -59,11 +59,20 @@ Columns, in order:
 | `Tier`        | One of `S`, `A`, `B`, `C`, `D`, `E`, `F`, or **blank** for unranked. |
 | `ImageURL`    | URL of a representative image, or blank (→ placeholder). |
 | `ImageSource` | Which provider supplied the image (`apple-music`, `musicbrainz`, `youtube-music`, `wikipedia`), or blank. |
+| `Tags`        | Semicolon-delimited descriptive tags, or blank (a newly added artist). See below. |
 
 - Encoding: UTF-8, first row is the header.
 - **Quoting:** standard RFC-4180. Fields containing a comma, double-quote, or newline are wrapped
   in double quotes, with embedded double-quotes doubled. This matters for names such as
   `Dan le Sac vs. Scroobius Pip` (safe) and any future name containing a comma.
+- **Tags:** lowercase descriptors drawn from a shared controlled vocabulary, joined with `;`
+  (no surrounding spaces), e.g. `pop punk;anthemic choruses;male vocals;2000s;side project`.
+  Each artist carries 5–10 tags spanning genre(s), Pandora-style musical qualities (vocal style,
+  instrumentation, mood, lyrics), the peak decade(s) (`1950s`…`2020s`, typically 1–2), and notable
+  aspects (e.g. `side project`, `comedy`, `british`). Conventions: no commas/semicolons/quotes
+  inside a tag (keeps the field unquoted), no duplicates within an artist, and every tag should be
+  shared by **at least two** artists — reuse an existing tag rather than minting a near-synonym.
+  The app parses the field into `Artist.tags` (blank → `[]`); intended for filtering 🎲 rolls.
 - The file holds the full artist roster (a few hundred rows). It may be edited by hand or by the
   enrichment script (§7).
 
@@ -213,8 +222,10 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   just one artist, always re-fetching it); `--disable <keys>` (comma-separated provider keys to
   skip — used to retry an artist whose previously chosen provider gave a broken image).
 - **`scripts/add-artist.ts`** (`npm run add-artist -- "<name>"`) adds a new artist as unranked
-  (blank Tier/ImageURL/ImageSource) in sorted position (`compareArtistNames`, keeping the CSV
-  sorted by name), then invokes the enrichment above for just that artist. Refuses a duplicate name.
+  (blank Tier/ImageURL/ImageSource/Tags) in sorted position (`compareArtistNames`, keeping the CSV
+  sorted by name), then invokes the enrichment above for just that artist. Refuses a duplicate
+  name. Tags are **not** auto-populated — fill the `Tags` column by hand afterwards, following the
+  conventions in §3 (prefer existing tags from the file over new ones).
 
 ## 8. Build, CI & deploy
 

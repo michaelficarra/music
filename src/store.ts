@@ -143,8 +143,8 @@ export function toCSV(): string {
     .map((row) => {
       const r = [...row];
       const name = r[COLUMN.artist] ?? "";
-      // Pad short rows so the Tier column always exists.
-      while (r.length <= COLUMN.imageSource) r.push("");
+      // Pad short rows so every column exists and the export stays rectangular.
+      while (r.length <= COLUMN.tags) r.push("");
       if (name.length > 0) {
         const slot = currentSlot(name);
         r[COLUMN.tier] = slot === UNRANKED ? "" : slot;

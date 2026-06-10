@@ -11,6 +11,7 @@ export const COLUMN = {
   tier: 1,
   imageURL: 2,
   imageSource: 3,
+  tags: 4,
 } as const;
 
 const rows = parseCsv(csvText);
@@ -33,6 +34,11 @@ export const artists: readonly Artist[] = bodyRows.map((r) => {
     baselineSlot,
     imageURL: r[COLUMN.imageURL] ?? "",
     imageSource: r[COLUMN.imageSource] ?? "",
+    // Semicolon-delimited in the CSV; blank (e.g. a freshly added artist) → [].
+    tags: (r[COLUMN.tags] ?? "")
+      .split(";")
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0),
   };
 });
 

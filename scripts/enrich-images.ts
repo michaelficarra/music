@@ -34,7 +34,7 @@ const CSV_PATH = join(HERE, "..", "data", "artists.csv");
 // A descriptive User-Agent is required by MusicBrainz and Wikimedia.
 const USER_AGENT = "ArtistTierList/0.1 (https://github.com/; image enrichment script)";
 
-const COLUMN = { artist: 0, tier: 1, imageURL: 2, imageSource: 3 } as const;
+const COLUMN = { artist: 0, tier: 1, imageURL: 2, imageSource: 3, tags: 4 } as const;
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -199,7 +199,7 @@ async function main(): Promise<void> {
     if (row === undefined) continue;
     const name = row[COLUMN.artist] ?? "";
     if (name.length === 0) continue;
-    while (row.length <= COLUMN.imageSource) row.push("");
+    while (row.length <= COLUMN.tags) row.push("");
 
     if (artist !== null) {
       // Single-artist mode: process only this artist, always (re)fetching it.

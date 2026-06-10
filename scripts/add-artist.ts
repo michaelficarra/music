@@ -3,8 +3,9 @@
 //
 //   npm run add-artist -- "Artist Name"
 //
-// The artist is appended with a blank Tier/ImageURL/ImageSource and then the
-// enrichment script is invoked with --artist to fill in the image.
+// The artist is appended with a blank Tier/ImageURL/ImageSource/Tags and then
+// the enrichment script is invoked with --artist to fill in the image. Tags are
+// left blank; fill them in by hand (see ARCHITECTURE §3 for the tag rules).
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -30,11 +31,11 @@ if (exists) {
   process.exit(1);
 }
 
-// Add as unranked (Artist, Tier, ImageURL, ImageSource — last three blank) and
-// keep the list sorted by artist name.
-const header = rows[0] ?? ["Artist", "Tier", "ImageURL", "ImageSource"];
+// Add as unranked (Artist, Tier, ImageURL, ImageSource, Tags — last four blank)
+// and keep the list sorted by artist name.
+const header = rows[0] ?? ["Artist", "Tier", "ImageURL", "ImageSource", "Tags"];
 const body = rows.slice(1).filter((r) => (r[ARTIST_COL] ?? "").length > 0);
-body.push([name, "", "", ""]);
+body.push([name, "", "", "", ""]);
 body.sort((a, b) => compareArtistNames(a[ARTIST_COL] ?? "", b[ARTIST_COL] ?? ""));
 writeFileSync(CSV_PATH, serializeCsv([header, ...body]), "utf8");
 console.log(`Added "${name}" (unranked). Enriching…\n`);

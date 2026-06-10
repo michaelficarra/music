@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as store from "./store";
 import { parseCsv } from "./csv";
-import { artists } from "./data";
+import { artists, originalRows, COLUMN } from "./data";
 import { compareArtistNames } from "./sort";
 import { UNRANKED, type Slot } from "./types";
 
@@ -80,11 +80,15 @@ describe("store", () => {
     store.setSlot(A, target);
     const rows = parseCsv(store.toCSV());
 
-    expect(rows[0]).toEqual(["Artist", "Tier", "ImageURL", "ImageSource"]);
+    expect(rows[0]).toEqual(["Artist", "Tier", "ImageURL", "ImageSource", "Tags"]);
     expect(rows.length).toBe(artists.length + 1); // header + full roster, no extra rows
 
     const rowA = rows.find((r) => r[0] === A)!;
     expect(rowA[1]).toBe(target);
+
+    // The Tags column survives the export verbatim.
+    const originalA = originalRows.find((r) => r[COLUMN.artist] === A)!;
+    expect(rowA[COLUMN.tags]).toBe(originalA[COLUMN.tags] ?? "");
 
     // An untouched artist keeps its baseline tier (blank when unranked).
     const rowB = rows.find((r) => r[0] === B)!;
