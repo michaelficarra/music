@@ -238,9 +238,10 @@ clusters** drawn from the artists' tags (§2).
 - The layout is **stable**: the same roster produces the same map on every open and across
   reloads. Positions change only when the roster's tags change.
 - **Scrolling zooms** the map in and out, anchored on the pointer's position, between a
-  whole-cloud overview and a close-up; **dragging pans** it. The map opens fitted so the whole
-  cloud is visible, and it can never be zoomed or panned so far that the cloud is lost off
-  screen entirely.
+  whole-cloud overview and a close-up; on touch screens a **two-finger pinch zooms** the same
+  way, anchored between the fingers (panning at the same time if the fingers travel together).
+  **Dragging pans** it. The map opens fitted so the whole cloud is visible, and it can never be
+  zoomed or panned so far that the cloud is lost off screen entirely.
 - As on the board (§5), **hovering an artist** reveals its tags in a tooltip.
 - The map is **read-only**: artists cannot be rearranged from it, and viewing it changes nothing
   about tiers, the picker, or filters.

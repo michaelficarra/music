@@ -165,35 +165,66 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
     { passive: false },
   );
 
-  // Drag-to-pan via pointer capture, so the drag keeps tracking even when the
-  // pointer leaves the window or passes over nodes.
-  let panPointerId: number | null = null;
-  let lastPointerX = 0;
-  let lastPointerY = 0;
+  // Drag-to-pan and pinch-to-zoom via pointer capture, so a gesture keeps
+  // tracking even when a pointer leaves the window or passes over nodes. One
+  // set of maths drives both: each move keeps the world point under the
+  // tracked pointers' midpoint pinned to it, scaling by the ratio of the
+  // pointers' separation — with a single pointer there is no separation, the
+  // scale holds, and the re-anchoring reduces to a plain pan.
+  const pointers = new Map<number, { x: number; y: number }>();
+  // Midpoint and separation of the tracked pointers, in client coordinates
+  // (separation 0 while only one pointer is down).
+  const gestureState = (): { x: number; y: number; span: number } => {
+    const [first, second] = [...pointers.values()];
+    if (second === undefined) return { x: first!.x, y: first!.y, span: 0 };
+    return {
+      x: (first!.x + second.x) / 2,
+      y: (first!.y + second.y) / 2,
+      span: Math.hypot(second.x - first!.x, second.y - first!.y),
+    };
+  };
   viewport.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0 || panPointerId !== null) return; // primary button/touch only
-    panPointerId = event.pointerId;
-    lastPointerX = event.clientX;
-    lastPointerY = event.clientY;
+    // Primary button/touch only, and at most two pointers — a third finger
+    // would only wobble the midpoint, so it is ignored.
+    if (event.button !== 0 || pointers.size >= 2) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     viewport.setPointerCapture(event.pointerId);
     viewport.classList.add("panning");
   });
   viewport.addEventListener("pointermove", (event) => {
-    if (event.pointerId !== panPointerId) return;
-    offsetX += event.clientX - lastPointerX;
-    offsetY += event.clientY - lastPointerY;
-    lastPointerX = event.clientX;
-    lastPointerY = event.clientY;
+    const tracked = pointers.get(event.pointerId);
+    if (tracked === undefined) return;
+    const before = gestureState();
+    tracked.x = event.clientX;
+    tracked.y = event.clientY;
+    const after = gestureState();
+    // Pinch: scale by how much the fingers spread, within the wheel zoom's
+    // bounds. (Guarding both spans also covers fingers landing on the exact
+    // same spot, whose ratio would otherwise degenerate to 0.)
+    const nextScale =
+      before.span > 0 && after.span > 0
+        ? Math.min(
+            Math.max((scale * after.span) / before.span, fitScale * MIN_SCALE_FACTOR),
+            Math.max(MAX_SCALE, fitScale),
+          )
+        : scale;
+    // Re-anchor so the world point that was under the old midpoint lands
+    // under the new one (the same anchoring as the wheel zoom's).
+    const rect = viewport.getBoundingClientRect();
+    offsetX = after.x - rect.left - ((before.x - rect.left - offsetX) * nextScale) / scale;
+    offsetY = after.y - rect.top - ((before.y - rect.top - offsetY) * nextScale) / scale;
+    scale = nextScale;
     clampPan();
     applyTransform();
   });
-  const endPan = (event: PointerEvent): void => {
-    if (event.pointerId !== panPointerId) return;
-    panPointerId = null;
-    viewport.classList.remove("panning");
+  // A pointer lifting mid-pinch leaves the survivor panning alone; the next
+  // move measures from the survivor's own midpoint, so the view doesn't jump.
+  const releasePointer = (event: PointerEvent): void => {
+    if (!pointers.delete(event.pointerId)) return;
+    if (pointers.size === 0) viewport.classList.remove("panning");
   };
-  viewport.addEventListener("pointerup", endPan);
-  viewport.addEventListener("pointercancel", endPan);
+  viewport.addEventListener("pointerup", releasePointer);
+  viewport.addEventListener("pointercancel", releasePointer);
 
   closeButton.addEventListener("click", () => dialog.close());
 

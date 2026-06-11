@@ -291,8 +291,12 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
   gradient (tooltip: the artist's own). Pan and zoom never touch the nodes: both are a single
   `translate(…) scale(…)` transform on the plane. Wheel events zoom **anchored on the cursor**
   (exponential in deltaY, normalised for line-mode deltas; trackpad pinches arrive as
-  ctrl+wheel and work unchanged), clamped between half the fitted overview and a 4× close-up;
-  pointer-capture dragging pans, clamped so part of the world square always stays on screen.
+  ctrl+wheel and work unchanged), clamped between half the fitted overview and a 4× close-up.
+  Dragging and touch pinching share one pointer-capture handler over up to two tracked
+  pointers: each move re-anchors the view so the world point under the pointers' midpoint
+  follows it, scaled by the ratio of their separation — with one pointer that reduces to a
+  plain pan, with two it is a pinch zoom (same scale clamp as the wheel). Panning is clamped
+  so part of the world square always stays on screen.
   The dialog opens via `showModal()` (Esc/close requests are native); being full-screen there
   is no visible backdrop, so no `closedby` light-dismiss — the ✕ button calls `dialog.close()`.
   While it is open, the page's own scroll bar is suppressed
