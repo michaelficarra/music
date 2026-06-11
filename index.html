@@ -111,7 +111,7 @@
       </dialog>
       <!-- The 📊 statistics dialog: tag-based statistics over the built-in
            arrangement, computed and rendered into .stats-body by stats-view.ts
-           on first open. Read-only, so the form's only control is Close. -->
+           on first open. Read-only, so the form's only control is the ✕. -->
       <dialog
         id="stats-dialog"
         class="modal stats-modal"
@@ -120,11 +120,17 @@
       >
         <form method="dialog">
           <h2 id="stats-dialog-title">Tag statistics</h2>
+          <button
+            class="modal-close"
+            value="close"
+            type="submit"
+            aria-label="Close statistics"
+            autofocus
+          >
+            ✕
+          </button>
           <!-- tabindex makes the scrollable region reachable and scrollable by keyboard. -->
           <div class="stats-body" tabindex="0"></div>
-          <div class="modal-actions">
-            <button value="close" type="submit" autofocus>Close</button>
-          </div>
         </form>
       </dialog>
       <!-- The ☁️ artist map: a full-screen dialog whose plane of artist nodes is
@@ -133,7 +139,9 @@
            close requests (Esc etc. — native to showModal()) are the ways out. -->
       <dialog id="cloud-dialog" class="cloud-modal" aria-label="Artist map">
         <div class="cloud-viewport"></div>
-        <button class="cloud-close" type="button" aria-label="Close map" autofocus>✕</button>
+        <button class="modal-close cloud-close" type="button" aria-label="Close map" autofocus>
+          ✕
+        </button>
       </dialog>
     </div>
     <script type="module" src="/src/main.ts"></script>

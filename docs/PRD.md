@@ -301,7 +301,7 @@ The dialog presents, in order:
   rest of the vocabulary.
 
 The exact list lengths, banding boundaries, and spread measure are implementation details. The
-dialog is dismissed with its **Close button**, the Esc key, or a **click outside it**, and
+dialog is dismissed with its **✕ close button**, the Esc key, or a **click outside it**, and
 viewing it changes nothing about tiers, the picker, or filters.
 
 ## 11. Empty / edge states

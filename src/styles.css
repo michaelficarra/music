@@ -715,6 +715,19 @@ button:disabled {
   gap: var(--gap);
 }
 
+/* A ✕ pinned to a dialog's top-right corner (the 📊 and ☁️ dialogs' way out).
+   Absolute positioning resolves against the dialog itself: it sits in the top
+   layer as the nearest positioned ancestor. */
+.modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.45rem 0.6rem;
+}
+
 .danger {
   background: #b3402f;
 }
@@ -850,16 +863,8 @@ body:has(#cloud-dialog[open]) {
   gap: 0.2rem;
 }
 
-/* The way out: a ✕ pinned to the dialog's top-right, floating above the plane.
-   The shadow keeps it legible over whatever nodes drift beneath it. */
+/* The shadow keeps the map's ✕ legible over whatever nodes drift beneath it. */
 .cloud-close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  z-index: 1;
-  font-size: 1.1rem;
-  line-height: 1;
-  padding: 0.45rem 0.6rem;
   box-shadow: 0 2px 8px #00000080;
 }
 
@@ -874,7 +879,7 @@ body:has(#cloud-dialog[open]) {
 
 /* The scrollable region of the modal — the same flex arrangement as
    .diff-list: natural height when short, shrink-and-scroll when long, so the
-   heading and the Close button stay on screen. */
+   heading stays on screen. */
 .stats-body {
   flex: 0 1 auto;
   min-height: 0;

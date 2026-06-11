@@ -303,7 +303,9 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
 The 📊 dialog (PRD §10) follows the map's split: pure aggregation in `stats.ts` (no DOM, unit
 tested in `src/stats.test.ts`), rendering in `stats-view.ts`, and a `<dialog id="stats-dialog">`
 shell in `index.html` — a standard `.modal` like Reset/Save, sharing their `closedby="any"`
-light-dismiss and the `main.ts` click-outside fallback (§5); its only form control is Close.
+light-dismiss and the `main.ts` click-outside fallback (§5); its only form control is a top-right
+✕ (still submitted through the dialog form), styled by the shared `.modal-close` rule the map's
+✕ also uses.
 
 - **Inputs.** Every statistic is a pure function of the **baseline** (§4): each artist's
   `baselineSlot` and tags, exactly as embedded from the CSV at build time. Local overrides play
