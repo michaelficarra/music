@@ -106,8 +106,8 @@ for (const group of groupTags(allTags)) {
   const heading = document.createElement("h3");
   heading.className = "filter-group-label";
   heading.textContent = group.label;
-  const grid = document.createElement("div");
-  grid.className = "filter-group-tags";
+  const tagList = document.createElement("div");
+  tagList.className = "filter-group-tags";
   for (const tag of group.tags) {
     const option = document.createElement("label");
     option.className = "filter-option";
@@ -115,10 +115,10 @@ for (const group of groupTags(allTags)) {
     checkbox.type = "checkbox";
     checkbox.value = tag;
     option.append(checkbox, document.createTextNode(tag));
-    grid.appendChild(option);
+    tagList.appendChild(option);
     filterCheckboxes.set(tag, checkbox);
   }
-  filterTagsEl.append(heading, grid);
+  filterTagsEl.append(heading, tagList);
 }
 
 // Restore the persisted selection, dropping tags that no longer exist in the
