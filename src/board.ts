@@ -502,8 +502,8 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
       const swap = cutoff === UNRANKED;
       const eligibleArrow = swap ? "↓" : "↑";
       const ineligibleArrow = swap ? "↑" : "↓";
-      cutoffEligible.textContent = `${eligibleArrow} eligible ${eligibleArrow}`;
-      cutoffIneligible.textContent = `${ineligibleArrow} ineligible ${ineligibleArrow}`;
+      cutoffEligible.textContent = `${eligibleArrow} 🎲 eligible ${eligibleArrow}`;
+      cutoffIneligible.textContent = `${ineligibleArrow} 🎲 ineligible ${ineligibleArrow}`;
     },
     setTagFilter(selected: ReadonlySet<string>, mode: FilterMode): void {
       for (const artist of artists) {
