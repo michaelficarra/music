@@ -17,6 +17,7 @@ const GENRES = new Set([
   "post-hardcore",
   "screamo",
   "emo",
+  "death metal",
   "metalcore",
   "nu metal",
   "alternative metal",
