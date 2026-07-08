@@ -21,6 +21,14 @@
 // --disable <keys>  comma-separated provider keys to skip (apple-music,
 //                   musicbrainz, youtube-music, wikipedia).
 // --force           in bulk mode, re-fetch artists that already have a URL.
+//
+// Throttling (env vars, useful for large bulk re-fetches that trip provider
+// rate limits — Apple's iTunes Search in particular starts returning 429/403):
+//   ENRICH_DELAY_MS    pause between artists (default 300).
+//   ENRICH_MAX_RETRIES retries on a 429/403 before giving up on a provider
+//                      and falling through to the next one (default 3).
+//   ENRICH_BACKOFF_MS  base back-off for the first retry; doubles each retry
+//                      and honours a Retry-After header when present (default 8000).
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -38,21 +46,56 @@ const COLUMN = { artist: 0, tier: 1, imageURL: 2, imageSource: 3, tags: 4 } as c
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
+// Read a non-negative integer env var, falling back to a default if unset/invalid.
+const envInt = (name: string, fallback: number): number => {
+  const parsed = Number(process.env[name]);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+};
+
+// Pause between artists in bulk mode. Overridable so a large re-fetch can space
+// requests out enough to stay under provider rate limits.
+const ARTIST_DELAY_MS = envInt("ENRICH_DELAY_MS", 300);
+const MAX_RETRIES = envInt("ENRICH_MAX_RETRIES", 3);
+const BACKOFF_BASE_MS = envInt("ENRICH_BACKOFF_MS", 8000);
+// Statuses that mean "you're going too fast" rather than "no such resource":
+// worth waiting out and retrying instead of falling straight through.
+const RATE_LIMIT_STATUSES = new Set([429, 403]);
+
 interface Found {
   url: string;
   source: string;
 }
 
+// fetch() wrapper that retries on rate-limit responses with exponential back-off
+// (honouring Retry-After when the server sends it). Non-rate-limit responses —
+// including genuine 404s — are returned as-is for the caller to handle.
+async function fetchWithBackoff(url: string, headers: Record<string, string>): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { headers });
+    if (res.ok || !RATE_LIMIT_STATUSES.has(res.status) || attempt >= MAX_RETRIES) {
+      return res;
+    }
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const waitMs =
+      Number.isFinite(retryAfter) && retryAfter > 0
+        ? retryAfter * 1000
+        : BACKOFF_BASE_MS * 2 ** attempt;
+    console.warn(
+      `  rate-limited (${res.status}) on ${url}; backing off ${Math.round(waitMs / 1000)}s ` +
+        `(retry ${attempt + 1}/${MAX_RETRIES})`,
+    );
+    await sleep(waitMs);
+  }
+}
+
 async function fetchJson(url: string): Promise<unknown> {
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-  });
+  const res = await fetchWithBackoff(url, { "User-Agent": USER_AGENT, Accept: "application/json" });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return res.json();
 }
 
 async function fetchText(url: string): Promise<string> {
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+  const res = await fetchWithBackoff(url, { "User-Agent": USER_AGENT });
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return res.text();
 }
@@ -220,7 +263,7 @@ async function main(): Promise<void> {
     } else {
       console.log(`· ${name} → (no image found)`);
     }
-    await sleep(300); // Be polite between artists.
+    await sleep(ARTIST_DELAY_MS); // Be polite between artists (see ENRICH_DELAY_MS).
   }
 
   if (artist !== null && !matched) {

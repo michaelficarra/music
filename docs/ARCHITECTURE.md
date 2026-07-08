@@ -381,6 +381,13 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   Wikimedia, which require it). The script is **idempotent** — re-running only fills blanks unless
   `--force` is passed. It **writes after each fill** so partial progress survives an interruption,
   using the same RFC-4180 serialiser as the app (§5).
+- Rate-limit resilience: a `429`/`403` from a provider (Apple's iTunes Search throttles a large
+  bulk run) triggers **exponential back-off and retry** — honouring `Retry-After` when present —
+  rather than immediately falling through to a lower-priority provider. Three env vars tune this
+  for big re-fetches: `ENRICH_DELAY_MS` (pause between artists, default 300), `ENRICH_MAX_RETRIES`
+  (retries before giving up on a provider, default 3), and `ENRICH_BACKOFF_MS` (base back-off,
+  doubled per retry, default 8000). A throttled bulk re-fetch is best run with a raised
+  `ENRICH_DELAY_MS` (e.g. `ENRICH_DELAY_MS=5000 npm run enrich`).
 - **Flags:** `--force` (re-fetch already-filled rows in bulk mode); `--artist "<name>"` (process
   just one artist, always re-fetching it); `--disable <keys>` (comma-separated provider keys to
   skip — used to retry an artist whose previously chosen provider gave a broken image).
