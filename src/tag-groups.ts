@@ -11,6 +11,7 @@ export interface TagGroup {
 
 const GENRES = new Set([
   "pop punk",
+  "easycore",
   "skate punk",
   "punk rock",
   "hardcore",
