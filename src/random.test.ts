@@ -84,12 +84,13 @@ describe("random", () => {
     expect(parseSchemeId("Z:nope")).toBeNull();
   });
 
-  it("labels the cutoffs ('S only', 'C+', 'F+', 'X only')", () => {
+  it("labels the cutoffs ('S only', 'C+', 'F+ (all ranked)', 'unrestricted', 'unranked only')", () => {
     expect(cutoffLabel("S")).toBe("S only");
     expect(cutoffLabel("C")).toBe("C+");
     expect(cutoffLabel("E")).toBe("E+");
-    expect(cutoffLabel("F")).toBe("F+");
-    expect(cutoffLabel("unranked")).toBe("X only");
+    expect(cutoffLabel("F")).toBe("F+ (all ranked)"); // the F cutoff = every ranked tier
+    expect(cutoffLabel("all")).toBe("unrestricted");
+    expect(cutoffLabel("unranked")).toBe("unranked only");
   });
 
   it("the 'unranked' cutoff picks only from the unranked pool, ignoring intensity", () => {
@@ -116,6 +117,47 @@ describe("random", () => {
 
   it("round-trips an 'unranked' scheme id", () => {
     const scheme = { cutoff: "unranked", intensity: "weighted" } as const;
+    expect(parseSchemeId(schemeId(scheme))).toEqual(scheme);
+  });
+
+  it("the 'all' cutoff draws from the whole roster (ranked and unranked)", () => {
+    const slots = new Map<string, Slot>([
+      ["ranked", "S"],
+      ["loose", "unranked"],
+    ]);
+    // Unweighted: both weigh 1, so rng picks each half of the [0,1) range.
+    const scheme = { cutoff: "all", intensity: "unweighted" } as const;
+    expect(hasEligible(slots, scheme)).toBe(true);
+    expect(pick(slots, scheme, () => 0)).toBe("ranked");
+    expect(pick(slots, scheme, () => 0.75)).toBe("loose");
+  });
+
+  it("the 'all' cutoff weights unranked artists as the lowest tier (F)", () => {
+    const slots = new Map<string, Slot>([
+      ["effie", "F"],
+      ["uma", "unranked"],
+    ]);
+    // Heavily weighted: F weighs 2, and an unranked artist weighs the same (F=2),
+    // so the two split the draw 50/50 — the boundary sits exactly at rng 0.5.
+    // (Were unranked fixed at weight 1, the total would be 3 and rng 0.5 → "effie".)
+    const scheme = { cutoff: "all", intensity: "heavily" } as const;
+    expect(pick(slots, scheme, () => 0.49)).toBe("effie");
+    expect(pick(slots, scheme, () => 0.5)).toBe("uma");
+  });
+
+  it("the 'all' cutoff still favours higher tiers under weighting", () => {
+    const slots = new Map<string, Slot>([
+      ["star", "S"],
+      ["loose", "unranked"],
+    ]);
+    // Weighted: S weighs 13, unranked weighs 1 (F) — S owns [0,13) of the total 14.
+    const scheme = { cutoff: "all", intensity: "weighted" } as const;
+    expect(pick(slots, scheme, () => 13.5 / 14)).toBe("loose");
+    expect(pick(slots, scheme, () => 12.5 / 14)).toBe("star");
+  });
+
+  it("round-trips an 'all' scheme id", () => {
+    const scheme = { cutoff: "all", intensity: "weighted" } as const;
     expect(parseSchemeId(schemeId(scheme))).toEqual(scheme);
   });
 });

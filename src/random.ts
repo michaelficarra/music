@@ -1,12 +1,13 @@
 // Weighted random artist picker.
 //
 // A scheme has two independent dimensions: a cutoff (which slots are eligible —
-// a ranked tier and everything above it, or the unranked pool alone via "X only")
-// and a weighting intensity (how strongly higher tiers are favoured). Under a
-// ranked cutoff the unranked pool is excluded; under "X only" it is the sole
-// eligible region. See PRD §8 / ARCHITECTURE §6.
+// a ranked tier and everything above it, the whole roster via "unrestricted", or
+// the unranked pool alone via "unranked only") and a weighting intensity (how
+// strongly higher tiers are favoured). Under a ranked cutoff the unranked pool is
+// excluded; under "unrestricted" it joins the draw weighted as the lowest tier;
+// under "unranked only" it is the sole eligible region. See PRD §8 / ARCHITECTURE §6.
 
-import { TIERS, UNRANKED, isTier, type Slot, type Tier } from "./types";
+import { ALL, TIERS, UNRANKED, isTier, type Cutoff, type Slot, type Tier } from "./types";
 
 /** Fibonacci weight per tier (planning-poker scale): F=1 … S=13. */
 export const FIB_WEIGHT: Record<Tier, number> = { S: 13, A: 8, B: 5, C: 3, D: 2, E: 1, F: 1 };
@@ -17,13 +18,14 @@ export const INTENSITIES: readonly Intensity[] = ["unweighted", "weighted", "hea
 
 export const INTENSITY_LABEL: Record<Intensity, string> = {
   unweighted: "unweighted",
-  weighted: "weighted",
+  weighted: "gently weighted",
   heavily: "heavily weighted",
 };
 
 export interface Scheme {
-  // A ranked-tier cutoff, or UNRANKED to draw exclusively from the unranked pool.
-  cutoff: Slot;
+  // A ranked-tier cutoff, ALL for the whole roster, or UNRANKED to draw
+  // exclusively from the unranked pool.
+  cutoff: Cutoff;
   intensity: Intensity;
 }
 
@@ -52,17 +54,26 @@ export function schemeId(scheme: Scheme): string {
 export function parseSchemeId(id: string): Scheme | null {
   const [cutoff, intensity] = id.split(":");
   if (cutoff === undefined || intensity === undefined) return null;
-  if ((cutoff !== UNRANKED && !isTier(cutoff)) || !INTENSITIES.includes(intensity as Intensity)) {
+  if (
+    (cutoff !== ALL && cutoff !== UNRANKED && !isTier(cutoff)) ||
+    !INTENSITIES.includes(intensity as Intensity)
+  ) {
     return null;
   }
-  return { cutoff: cutoff as Slot, intensity: intensity as Intensity };
+  return { cutoff: cutoff as Cutoff, intensity: intensity as Intensity };
 }
 
-/** Human label for a cutoff: "S only" for the top tier, "X only" for unranked, else "C+". */
-export function cutoffLabel(cutoff: Slot): string {
-  if (cutoff === UNRANKED) return "X only"; // the unranked pool (the board's "X" row)
+/**
+ * Human label for a cutoff: "unrestricted" for the whole roster, "unranked only"
+ * for the unranked pool, "S only" for the top tier, "F+ (all ranked)" for every
+ * ranked tier (the F cutoff), else "C+".
+ */
+export function cutoffLabel(cutoff: Cutoff): string {
+  if (cutoff === ALL) return "unrestricted"; // the whole roster: every ranked tier plus the unranked pool
+  if (cutoff === UNRANKED) return "unranked only"; // the unranked pool (the board's "?" row)
   if (cutoff === TIERS[0]) return "S only"; // nothing ranks above the top tier
-  return `${cutoff}+`; // "A+" … "F+" ("F+" being every ranked tier)
+  if (cutoff === TIERS[TIERS.length - 1]) return "F+ (all ranked)"; // the F cutoff = every ranked tier
+  return `${cutoff}+`; // "A+" … "E+"
 }
 
 interface Candidate {
@@ -77,6 +88,17 @@ function candidates(slotByName: ReadonlyMap<string, Slot>, scheme: Scheme): Cand
     // are no tiers to favour, so weighting intensity does not apply.
     for (const [name, slot] of slotByName) {
       if (slot === UNRANKED) result.push({ name, weight: 1 });
+    }
+    return result;
+  }
+  if (scheme.cutoff === ALL) {
+    // The "unrestricted" (ALL) cutoff draws from the whole roster. Ranked artists
+    // keep their tier weight; unranked artists are weighted as the lowest tier (F)
+    // so they surface about as often as the bottom of the ranking under any intensity.
+    const lowestTier = TIERS[TIERS.length - 1]!;
+    for (const [name, slot] of slotByName) {
+      const tier = slot === UNRANKED ? lowestTier : slot;
+      result.push({ name, weight: tierWeight(tier, scheme.intensity) });
     }
     return result;
   }

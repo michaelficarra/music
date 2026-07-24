@@ -29,7 +29,7 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §9)
 ├── src/                     # Application source
 │   ├── main.ts              # Entry point: populate dropdowns, build board, wire events
-│   ├── types.ts             # Core domain types (Tier, Slot, Artist)
+│   ├── types.ts             # Core domain types (Tier, Slot, Cutoff, Artist)
 │   ├── csv.ts               # RFC-4180 CSV parse/serialise (see §3)
 │   ├── data.ts              # Embeds data/artists.csv at build time → the static baseline
 │   ├── store.ts             # Local-storage overlay + diff (Reset/Save) logic
@@ -190,9 +190,12 @@ The 🎲 picker (PRD §8) is pure, side-effect-free logic, so it lives in its ow
 tested in `src/random.test.ts`. A **scheme** has two independent dimensions — both persisted as a
 single `cutoff:intensity` id (§5):
 
-- **Cutoff** — which slots are eligible. For a ranked cutoff the eligible tiers are S down to the
-  cutoff inclusive (`eligibleTiers`); the special `unranked` cutoff ("X only") instead draws from
-  the unranked pool alone, ignoring intensity.
+- **Cutoff** — which slots are eligible (typed `Cutoff = Slot | typeof ALL`; the `ALL` sentinel is
+  a picker-only value, never a stored `Slot`). For a ranked cutoff the eligible tiers are S down to
+  the cutoff inclusive (`eligibleTiers`); the special `unranked` cutoff ("unranked only") instead
+  draws from the unranked pool alone, ignoring intensity; the `ALL` cutoff ("unrestricted") draws
+  from the **whole roster** — ranked artists keep their tier weight and unranked artists are weighted
+  as the lowest ranked tier (F), so intensity still applies.
 - **Intensity** — how a candidate's selection weight is derived from its tier:
   - Each ranked tier has a base **Fibonacci / planning-poker weight** (`FIB_WEIGHT`): `S 13, A 8,
     B 5, C 3, D 2, E 1, F 1`.

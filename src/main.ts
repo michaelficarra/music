@@ -9,7 +9,7 @@ import * as store from "./store";
 import { createBoard, type MoveRecord } from "./board";
 import { createCloud } from "./cloud";
 import { createStats } from "./stats-view";
-import { TIERS, UNRANKED, type Slot } from "./types";
+import { ALL, TIERS, UNRANKED, type Slot } from "./types";
 import {
   INTENSITY_LABEL,
   INTENSITIES,
@@ -19,6 +19,7 @@ import {
   hasEligible,
   pick,
   type Scheme,
+  type Intensity,
 } from "./random";
 
 const DEFAULT_SCHEME: Scheme = { cutoff: "D", intensity: "weighted" };
@@ -70,11 +71,16 @@ for (const cutoff of TIERS) {
   option.textContent = cutoffLabel(cutoff);
   cutoffSelect.appendChild(option);
 }
-// "X only" sits at the bottom: it draws from the unranked pool rather than any ranked tier.
+// "unranked only" draws from the unranked pool rather than any ranked tier.
 const unrankedCutoffOption = document.createElement("option");
 unrankedCutoffOption.value = UNRANKED;
 unrankedCutoffOption.textContent = cutoffLabel(UNRANKED);
 cutoffSelect.appendChild(unrankedCutoffOption);
+// "unrestricted" sits at the bottom: it draws from the whole roster (every ranked tier plus the unranked pool).
+const allCutoffOption = document.createElement("option");
+allCutoffOption.value = ALL;
+allCutoffOption.textContent = cutoffLabel(ALL);
+cutoffSelect.appendChild(allCutoffOption);
 for (const intensity of INTENSITIES) {
   const option = document.createElement("option");
   option.value = intensity;
@@ -87,11 +93,32 @@ const initialScheme = (() => {
   const saved = store.loadSchemeId();
   return (saved !== null ? parseSchemeId(saved) : null) ?? DEFAULT_SCHEME;
 })();
+// The user's chosen weighting. The single-pool cutoffs ("S only", "unranked only")
+// pick uniformly, so they show the weighting dropdown disabled on "unweighted"; this
+// remembers the real choice so it can be restored when a weighted cutoff is reselected.
+let lastWeighting: Intensity = initialScheme.intensity;
 cutoffSelect.value = initialScheme.cutoff;
-intensitySelect.value = initialScheme.intensity;
+syncWeightingControl();
 
 function currentScheme(): Scheme {
-  return parseSchemeId(`${cutoffSelect.value}:${intensitySelect.value}`) ?? DEFAULT_SCHEME;
+  // A single-pool cutoff displays a disabled "unweighted", but the scheme keeps the
+  // user's real weighting: a no-op for those cutoffs, and preserved for when a
+  // weighted cutoff is reselected (and across reloads).
+  return parseSchemeId(`${cutoffSelect.value}:${lastWeighting}`) ?? DEFAULT_SCHEME;
+}
+
+// The two single-pool cutoffs draw from one pool, so weighting is a no-op for them.
+function isSinglePool(cutoff: string): boolean {
+  return cutoff === UNRANKED || cutoff === TIERS[0];
+}
+
+// Reflect the current cutoff onto the weighting dropdown: a single-pool cutoff shows
+// it disabled on "unweighted"; any other cutoff re-enables it and restores the last
+// chosen weighting.
+function syncWeightingControl(): void {
+  const singlePool = isSinglePool(cutoffSelect.value);
+  intensitySelect.disabled = singlePool;
+  intensitySelect.value = singlePool ? "unweighted" : lastWeighting;
 }
 
 // --- Tag filter: restricts 🎲 to artists carrying every selected tag, and dims
@@ -239,7 +266,7 @@ function showToast(message: string, action?: ToastAction, duration = 2000): void
   toastTimer = window.setTimeout(hideToast, duration);
 }
 
-/** A slot's human-readable name for messages ("unranked" for the X pool). */
+/** A slot's human-readable name for messages ("unranked" for the unranked pool). */
 function slotLabel(slot: Slot): string {
   return slot === UNRANKED ? "unranked" : slot;
 }
@@ -279,12 +306,8 @@ function refreshControls(): void {
   // Reset/Save appear only when the arrangement differs from the shipped CSV.
   dirtyActions.hidden = !store.isChanged();
   const scheme = currentScheme();
-  // "X only" (the unranked pool) and "S only" (a single tier) each draw from one
-  // pool with no tiers to weight against each other, so weighting intensity is a
-  // no-op — hide its dropdown while either is selected.
-  intensitySelect.hidden = scheme.cutoff === UNRANKED || scheme.cutoff === TIERS[0];
   // 🎲 is disabled when the current scheme has no eligible artists — no ranked
-  // artists above the cutoff, or (for "X only") an empty unranked pool.
+  // artists above the cutoff, or (for "unranked only") an empty unranked pool.
   rollButton.disabled = !hasEligible(currentSlots(), scheme);
 }
 
@@ -294,8 +317,14 @@ function onSchemeChange(): void {
   board.setCutoff(scheme.cutoff);
   refreshControls();
 }
-cutoffSelect.addEventListener("change", onSchemeChange);
-intensitySelect.addEventListener("change", onSchemeChange);
+cutoffSelect.addEventListener("change", () => {
+  syncWeightingControl(); // enable/disable and restore-or-force the weighting dropdown
+  onSchemeChange();
+});
+intensitySelect.addEventListener("change", () => {
+  lastWeighting = intensitySelect.value as Intensity; // remember the user's choice
+  onSchemeChange();
+});
 
 rollButton.addEventListener("click", () => {
   // Exclude the previous pick so the same artist is never chosen twice in a row.

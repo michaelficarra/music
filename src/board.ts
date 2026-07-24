@@ -6,7 +6,7 @@ import * as store from "./store";
 import { matchesTags, type FilterMode } from "./filter";
 import { compareArtistNames } from "./sort";
 import { artistTooltip, createThumb } from "./thumb";
-import { TIERS, UNRANKED, type Artist, type Slot, type Tier } from "./types";
+import { ALL, TIERS, UNRANKED, type Artist, type Cutoff, type Slot, type Tier } from "./types";
 
 /** A single tier change, reported to `onChange` so the page can offer an undo. */
 export interface MoveRecord {
@@ -31,11 +31,13 @@ export interface Board {
   present(name: string): void;
   /**
    * Draw a divider line just below `cutoff`'s row to mark the picker's eligible
-   * range (e.g. "D+" → between D and E). "F+" and UNRANKED ("X only") both draw
-   * the line at the F/unranked boundary — for "F+" the eligible ranked tiers sit
-   * above it, for "X only" the eligible unranked pool sits below it.
+   * range (e.g. "D+" → between D and E). "F+ (all ranked)" (the F cutoff) and
+   * UNRANKED ("unranked only") both draw the line at the F/unranked boundary — for
+   * "F+ (all ranked)" the eligible ranked tiers sit above it, for "unranked only"
+   * the eligible unranked pool sits below it. "unrestricted" (the whole roster)
+   * draws no line at all.
    */
-  setCutoff(cutoff: Slot): void;
+  setCutoff(cutoff: Cutoff): void;
   /**
    * Dim every card whose artist does not match `selected` under `mode` — all of
    * the tags, or at least one (an empty selection dims nothing). Purely visual —
@@ -187,7 +189,7 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
   // Build rows: the seven ranked tiers, then the always-visible unranked pool.
   container.innerHTML = "";
   for (const tier of TIERS) addRow(tier, tier);
-  addRow(UNRANKED, "X", "Unranked — artists not sorted into a tier");
+  addRow(UNRANKED, "?", "Unranked — artists not sorted into a tier");
 
   for (const artist of artists) cardsByName.set(artist.name, createCard(artist));
   placeCards();
@@ -268,8 +270,8 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
     editorSelect.appendChild(option);
   }
   const unrankedOption = document.createElement("option");
-  unrankedOption.value = "X"; // X = unranked
-  unrankedOption.textContent = "X";
+  unrankedOption.value = UNRANKED; // shown as "?" among the ranked tier symbols
+  unrankedOption.textContent = "?";
   editorSelect.appendChild(unrankedOption);
 
   const saveButton = document.createElement("button");
@@ -290,7 +292,7 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
     editorCard = card;
     card.classList.add("editing"); // dim the card beneath the form
     const slot = store.currentSlot(name);
-    editorSelect.value = slot === UNRANKED ? "X" : slot;
+    editorSelect.value = slot; // option values are the Slot strings (incl. UNRANKED)
 
     editorEl.hidden = false;
     // Centre the form over the card (clamped to the viewport), then convert to
@@ -320,7 +322,7 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
     const name = editorCard.dataset.artist;
     if (name !== undefined) {
       const from = store.currentSlot(name);
-      const slot: Slot = editorSelect.value === "X" ? UNRANKED : (editorSelect.value as Slot);
+      const slot: Slot = editorSelect.value as Slot;
       store.setSlot(name, slot);
       const list = lists.get(slot);
       if (list) insertCardSorted(list, editorCard);
@@ -488,17 +490,21 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
           /* cancelled by a newer pick — that call already cleaned up */
         });
     },
-    setCutoff(cutoff: Slot): void {
+    setCutoff(cutoff: Cutoff): void {
       cutoffEl.remove();
+      // "unrestricted" makes the whole board eligible, so there is no eligible/
+      // ineligible boundary to draw — leave the divider detached (no line, no arrows).
+      if (cutoff === ALL) return;
       // The line always sits just below its anchor row. For a ranked cutoff that
-      // is the cutoff tier itself (e.g. "D+" → between D and E). "F+" and "X only"
-      // both anchor on F, drawing the line at the F/unranked boundary — for "F+"
-      // every ranked tier above is eligible; for "X only" the unranked pool below is.
+      // is the cutoff tier itself (e.g. "D+" → between D and E). "F+ (all ranked)"
+      // (the F cutoff) and "unranked only" both anchor on F, drawing the line at the
+      // F/unranked boundary — for "F+ (all ranked)" every ranked tier above is
+      // eligible; for "unranked only" the unranked pool below is.
       const anchor: Tier = cutoff === UNRANKED ? TIERS[TIERS.length - 1]! : cutoff;
       rowsBySlot.get(anchor)?.after(cutoffEl);
       // "eligible"/"ineligible" stay put (left/right); the arrows point at each
       // region's side of the line. Normally the eligible pool is above and the
-      // ineligible below, but "X only" inverts that — so the arrows flip.
+      // ineligible below, but "unranked only" inverts that — so the arrows flip.
       const swap = cutoff === UNRANKED;
       const eligibleArrow = swap ? "↓" : "↑";
       const ineligibleArrow = swap ? "↑" : "↓";

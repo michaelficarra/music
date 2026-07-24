@@ -10,6 +10,16 @@ export const UNRANKED = "unranked";
 /** Where an artist currently sits: a ranked tier, or the unranked pool. */
 export type Slot = Tier | typeof UNRANKED;
 
+/**
+ * Picker-only sentinel for the 🎲 cutoff that draws from the whole roster (every
+ * ranked tier *and* the unranked pool). Not a `Slot` — an artist is never placed
+ * in "all"; it exists only as a tier-cutoff selection.
+ */
+export const ALL = "all";
+
+/** The values the 🎲 tier-cutoff can take: a `Slot` (ranked tier / unranked), or `ALL`. */
+export type Cutoff = Slot | typeof ALL;
+
 /** Narrowing guard: is an arbitrary string one of the ranked tiers? */
 export function isTier(value: string): value is Tier {
   return (TIERS as readonly string[]).includes(value);

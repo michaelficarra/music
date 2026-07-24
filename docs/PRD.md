@@ -79,7 +79,7 @@ for an artist no longer shipped is simply ignored.
   bottom edge of the viewport **auto-scrolls** the board, so a card can be moved between tiers that
   are far apart without scrolling first.
 - Alternatively, **clicking a card** opens a small **tier-selection dropdown** (S, A, B, C, D, E,
-  F, or **X** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
+  F, or **?** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
   it; pressing **Enter** saves and **Escape** cancels. Saving moves the artist to the chosen tier.
   Clicking elsewhere, or starting to drag a card, dismisses the dropdown without changing the tier.
 - **Hovering a card** reveals the artist's **tags** (§2) alongside its name, in the card's
@@ -111,7 +111,7 @@ from the **static arrangement** (the source data shipped with the app).
   artist), neither button is shown.
 - When they **differ**, two controls appear. **Both first open a confirmation modal that lists the
   diff from the static arrangement** — one line per changed artist showing a move between its two
-  ranks (an arrow between the static tier and the local tier; `unranked` for the X pool). Nothing
+  ranks (an arrow between the static tier and the local tier; `unranked` denotes the unranked pool). Nothing
   happens until the user confirms; dismissing the dialog (Cancel, Esc, or a click outside it)
   leaves everything untouched. The two buttons differ in the arrow's direction and in what
   confirming does:
@@ -139,7 +139,8 @@ tier does not, by itself, make the arrangement count as changed.
 ## 8. Random artist picker
 
 A prominent **🎲** button picks a single artist at random. By default it draws from the **ranked**
-tiers; the `X only` tier cutoff (below) instead draws **only from the unranked pool**. When pressed, the chosen artist's **card and name are shown
+tiers; the `unranked only` tier cutoff (below) instead draws **only from the unranked pool**, and the
+`unrestricted` cutoff draws from the **whole roster**. When pressed, the chosen artist's **card and name are shown
 large and centred**, then **animate back into that card's place** in the grid. While it is enlarged
 and flying, **its grid slot shows a placeholder** so the board keeps its shape and the spot the card
 returns to stays visible. The chosen artist's
@@ -161,17 +162,23 @@ cutoff**, then the **filter**, then the **weighting intensity**:
   - `C+` → S, A, B, C
   - `D+` → S, A, B, C, D
   - `E+` → S, A, B, C, D, E
-  - `F+` → S, A, B, C, D, E, F (all ranked tiers)
-  - `X only` → the unranked pool only (no ranked tiers)
+  - `F+ (all ranked)` → S, A, B, C, D, E, F (every ranked tier)
+  - `unranked only` → the unranked pool only (no ranked tiers)
+  - `unrestricted` → the whole roster (every ranked tier **and** the unranked pool)
 - **Weighting intensity** — how probability is spread across the eligible artists:
   - `unweighted` — every eligible artist is equally likely.
-  - `weighted` — favours higher tiers (an artist in a higher tier is more likely than one in a
-    lower tier).
+  - `gently weighted` — favours higher tiers (an artist in a higher tier is more likely than one in
+    a lower tier).
   - `heavily weighted` — strongly favours higher tiers.
 
-  The `X only` and `S only` cutoffs each draw from a single pool — the unranked artists, or the
-  one top tier — with no tiers to weight against each other, so the intensity dropdown is
-  **hidden** while either is selected (their artists are picked uniformly).
+  Under the `unrestricted` cutoff, ranked artists are weighted by their tier as usual and the
+  unranked artists are weighted **as if they were the lowest ranked tier**, so they surface about
+  as often as the bottom of the ranking.
+
+  The `unranked only` and `S only` cutoffs each draw from a single pool — the unranked artists, or
+  the one top tier — with no tiers to weight against each other, so their artists are picked
+  uniformly. While either is selected the intensity dropdown is shown **disabled on `unweighted`**;
+  reselecting a weighted cutoff (a ranked tier or `unrestricted`) restores the last-used weighting.
 
 - **Tag filter** — restricts eligibility by the artists' tags (see §2). The control sits between
   the cutoff and intensity dropdowns and reads **`no filters`** when nothing is selected, else the
@@ -189,7 +196,7 @@ cutoff**, then the **filter**, then the **weighting intensity**:
 
   An artist with no tags matches only the empty selection (under either mode).
 
-The two dropdowns **default to "D+" and "weighted"**; they and the tag filter (its tags **and**
+The two dropdowns **default to "D+" and "gently weighted"**; they and the tag filter (its tags **and**
 its all/any mode) **remember your last selection** across page reloads. The exact probability
 curve for each intensity is an implementation detail.
 
@@ -199,14 +206,16 @@ one under the current scheme — then there is no alternative and the repeat is 
 
 A horizontal line is drawn on the board between the lowest eligible tier and the next row down,
 reflecting the selected cutoff (e.g. `D+` draws it between the D and E rows). It updates when the
-cutoff changes. Both `F+` and `X only` draw the line between the F row and the unranked area: for
-`F+` every ranked tier sits above the line as eligible; for `X only` the unranked pool sits below it
-as the sole eligible region. The line carries small labels naming the eligible and ineligible
-regions, each pointing to its own side of the line; for `X only` those direction indicators invert,
-since the eligible region sits below the line rather than above it.
+cutoff changes. Both `F+ (all ranked)` and `unranked only` draw the line between the F row and the
+unranked area: for `F+ (all ranked)` every ranked tier sits above the line as eligible; for
+`unranked only` the unranked pool sits below it as the sole eligible region. The line carries small
+labels naming the eligible and ineligible regions, each pointing to its own side of the line; for
+`unranked only` those direction indicators invert, since the eligible region sits below the line
+rather than above it. The `unrestricted` cutoff draws **no line** at all: every row is eligible, so
+there is no boundary to mark.
 
 Edge behaviour: if the chosen scheme has **no eligible artists** (e.g. `A+` selected but S and A
-are both empty, `X only` with an empty unranked pool, or a tag filter that no artist in the
+are both empty, `unranked only` with an empty unranked pool, or a tag filter that no artist in the
 eligible range satisfies), the 🎲 button performs no action and indicates that nothing can be
 picked (e.g. by being disabled).
 
