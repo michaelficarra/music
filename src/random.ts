@@ -7,10 +7,16 @@
 // excluded; under "unrestricted" it joins the draw weighted as the lowest tier;
 // under "unranked only" it is the sole eligible region. See PRD §8 / ARCHITECTURE §6.
 
-import { ALL, TIERS, UNRANKED, isTier, type Cutoff, type Slot, type Tier } from "./types";
-
-/** Fibonacci weight per tier (planning-poker scale): F=1 … S=13. */
-export const FIB_WEIGHT: Record<Tier, number> = { S: 13, A: 8, B: 5, C: 3, D: 2, E: 1, F: 1 };
+import {
+  ALL,
+  TIERS,
+  TIER_WEIGHT,
+  UNRANKED,
+  isTier,
+  type Cutoff,
+  type Slot,
+  type Tier,
+} from "./types";
 
 export type Intensity = "unweighted" | "weighted" | "heavily";
 
@@ -40,9 +46,9 @@ export function tierWeight(tier: Tier, intensity: Intensity): number {
     case "unweighted":
       return 1;
     case "weighted":
-      return FIB_WEIGHT[tier]; // Fibonacci scale (F=1 … S=13)
+      return TIER_WEIGHT[tier]; // the shared Fibonacci scale (F=1 … S=13)
     case "heavily":
-      return 2 * FIB_WEIGHT[tier]; // double Fibonacci (F=2 … S=26)
+      return 2 * TIER_WEIGHT[tier]; // double Fibonacci (F=2 … S=26)
   }
 }
 

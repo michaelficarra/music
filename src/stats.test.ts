@@ -1,25 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { artists as roster } from "./data";
 import {
-  PREDICTOR_LIST_LIMIT,
+  MIN_CAMP_SIZE,
   MIN_SUPPORT,
-  OUTLIER_LIST_LIMIT,
+  ARTIST_LIST_LIMIT,
+  PREDICTOR_LIST_LIMIT,
   SPREAD_MIN_SUPPORT,
   TAG_LIST_LIMIT,
-  categorySuperlatives,
+  categoryComposition,
   computeStats,
   computeTagStats,
   positionFraction,
-  rankBestPredictors,
-  rankWorstPredictors,
-  rankOutliers,
-  rankTags,
+  rankByFavouriteIndex,
+  rankByRatio,
+  rankIsolation,
+  measurePredictivePower,
+  rankReliable,
+  rankVariable,
   tierLabel,
-  tierScore,
+  tierPosition,
   type TagStat,
 } from "./stats";
 import { isEraTag } from "./tag-groups";
-import { TIERS, type Artist, type Slot } from "./types";
+import { TIERS, TIER_WEIGHT, type Artist, type Slot } from "./types";
 
 const artist = (name: string, slot: Slot, tags: string[]): Artist => ({
   name,
@@ -29,26 +32,56 @@ const artist = (name: string, slot: Slot, tags: string[]): Artist => ({
   tags,
 });
 
-/** A TagStat literal for testing the ranking functions in isolation. */
-const stat = (
-  tag: string,
-  mean: number,
-  count = MIN_SUPPORT,
-  spread = 0,
-  low = mean,
-  high = mean,
-  above = 0,
-  below = 0,
-): TagStat => ({ tag, count, mean, spread, low, high, above, below });
+/** `count` artists on one tier sharing one set of tags, uniquely named. */
+const cohort = (prefix: string, slot: Slot, count: number, tags: string[]): Artist[] =>
+  Array.from({ length: count }, (_, i) => artist(`${prefix}${i}`, slot, tags));
 
-describe("tierScore", () => {
-  it("maps the tiers linearly, S = 7 down to F = 1", () => {
-    expect(TIERS.map(tierScore)).toEqual([7, 6, 5, 4, 3, 2, 1]);
+/** A TagStat literal for testing the ranking functions in isolation. Only the
+    fields a given ranking reads need overriding. */
+const stat = (tag: string, over: Partial<TagStat> = {}): TagStat => ({
+  tag,
+  count: MIN_SUPPORT,
+  prevalence: 0,
+  meanWeight: 3,
+  ratio: 1,
+  favourites: 0,
+  favouriteRate: 0,
+  favouriteIndex: 1,
+  mean: 4,
+  spread: 0,
+  low: 4,
+  high: 4,
+  above: 0,
+  below: 0,
+  elevationIsReal: true,
+  clusteringIsReal: true,
+  ...over,
+});
+
+describe("the two tier valuations", () => {
+  it("positions the tiers linearly, S = 7 down to F = 1", () => {
+    expect(TIERS.map(tierPosition)).toEqual([7, 6, 5, 4, 3, 2, 1]);
+  });
+
+  it("weights every tier positively, never penalising a placement", () => {
+    // The roster is a list of artists the user likes: being on it, anywhere,
+    // may only ever add.
+    for (const tier of TIERS) expect(TIER_WEIGHT[tier]).toBeGreaterThan(0);
+  });
+
+  it("weights the tiers in ranking order, with widening gaps towards the top", () => {
+    const weights = TIERS.map((tier) => TIER_WEIGHT[tier]);
+    for (let i = 1; i < weights.length; i++) {
+      expect(weights[i - 1]!).toBeGreaterThanOrEqual(weights[i]!);
+    }
+    // The S→A step dwarfs the E→F one: a favourite counts for far more than a
+    // one-tier promotion at the bottom does.
+    expect(TIER_WEIGHT.S - TIER_WEIGHT.A).toBeGreaterThan(TIER_WEIGHT.E - TIER_WEIGHT.F);
   });
 });
 
 describe("tierLabel", () => {
-  it("gives whole scores the bare letter", () => {
+  it("gives whole positions the bare letter", () => {
     expect(tierLabel(7)).toBe("S");
     expect(tierLabel(6)).toBe("A");
     expect(tierLabel(1)).toBe("F");
@@ -63,7 +96,7 @@ describe("tierLabel", () => {
     expect(tierLabel(1.2)).toBe("F+");
   });
 
-  it("rounds half-scores up to the better tier's − side", () => {
+  it("rounds half-positions up to the better tier's − side", () => {
     expect(tierLabel(6.5)).toBe("S−");
   });
 
@@ -78,26 +111,34 @@ describe("tierLabel", () => {
 });
 
 describe("positionFraction", () => {
-  it("spans the full axis: F at the left end, S at the right", () => {
-    expect(positionFraction(1)).toBe(0);
-    expect(positionFraction(7)).toBe(1);
-    expect(positionFraction(4)).toBe(0.5);
-    // Out-of-range scores clamp to the scale.
-    expect(positionFraction(0.5)).toBe(0);
-    expect(positionFraction(7.5)).toBe(1);
+  it("spans the tiers the roster actually occupies, not the theoretical axis", () => {
+    // E (2) to S (7): the empty bottom tier must not eat a sixth of the track.
+    const occupied = { low: 2, high: 7 };
+    expect(positionFraction(2, occupied)).toBe(0);
+    expect(positionFraction(7, occupied)).toBe(1);
+    expect(positionFraction(4.5, occupied)).toBe(0.5);
+    // Positions outside the occupied span clamp to its ends.
+    expect(positionFraction(1, occupied)).toBe(0);
+    expect(positionFraction(9, occupied)).toBe(1);
+  });
+
+  it("puts everything at the top when only one tier is occupied", () => {
+    expect(positionFraction(4, { low: 4, high: 4 })).toBe(1);
   });
 });
 
 describe("computeTagStats", () => {
-  it("computes mean and population spread over a tag's ranked carriers", () => {
+  it("computes prevalence, placement and spread over a tag's ranked carriers", () => {
     const stats = computeTagStats([
-      artist("a", "S", ["punk"]), // 7
-      artist("b", "A", ["punk"]), // 6
-      artist("c", "B", ["punk"]), // 5
+      artist("a", "S", ["punk"]), // position 7, weight 13
+      artist("b", "A", ["punk"]), // position 6, weight 8
+      artist("c", "B", ["punk"]), // position 5, weight 5
     ]);
     expect(stats).toHaveLength(1);
     expect(stats[0]!.tag).toBe("punk");
     expect(stats[0]!.count).toBe(3);
+    // Every ranked artist carries the tag, so it covers the whole roster.
+    expect(stats[0]!.prevalence).toBe(1);
     expect(stats[0]!.mean).toBe(6);
     expect(stats[0]!.spread).toBeCloseTo(Math.sqrt(2 / 3), 12);
     expect(stats[0]!.low).toBe(5);
@@ -107,16 +148,38 @@ describe("computeTagStats", () => {
     expect(stats[0]!.below).toBe(1);
   });
 
+  it("gives a tag carrying the whole roster a ratio of exactly 1", () => {
+    // Its carriers *are* the average, so it can be neither lifted nor typical.
+    const stats = computeTagStats(cohort("a", "C", 6, ["everywhere"]));
+    expect(stats[0]!.ratio).toBeCloseTo(1, 12);
+    expect(stats[0]!.prevalence).toBe(1);
+  });
+
+  it("counts prevalence by head, leaving the tiers out of it", () => {
+    const stats = computeTagStats([
+      ...cohort("top", "S", 3, ["loved"]),
+      ...cohort("low", "E", 3, ["quiet"]),
+    ]);
+    const byTag = new Map(stats.map((s) => [s.tag, s]));
+    // Three artists each, at opposite ends of the board — and prevalence, the
+    // descriptive measure, treats them identically. That is the point: presence
+    // is the positive signal, and a tier-weighted version of this quietly
+    // reintroduced "lower means less".
+    expect(byTag.get("loved")!.prevalence).toBeCloseTo(0.5, 12);
+    expect(byTag.get("quiet")!.prevalence).toBeCloseTo(0.5, 12);
+    // The tiers survive only in the inferential half.
+    expect(byTag.get("loved")!.meanWeight).toBeGreaterThan(byTag.get("quiet")!.meanWeight);
+  });
+
   it("ignores unranked carriers entirely", () => {
     const stats = computeTagStats([
-      artist("a", "S", ["punk"]),
-      artist("b", "S", ["punk"]),
-      artist("c", "S", ["punk"]),
-      artist("d", "unranked", ["punk"]), // must not dilute count or mean
+      ...cohort("r", "S", 3, ["punk"]),
+      artist("d", "unranked", ["punk"]), // must not dilute count, prevalence or mean
       artist("e", "unranked", ["punk"]),
     ]);
     expect(stats[0]!.count).toBe(3);
     expect(stats[0]!.mean).toBe(7);
+    expect(stats[0]!.prevalence).toBe(1);
   });
 
   it("drops tags below the minimum support and keeps those exactly at it", () => {
@@ -134,200 +197,343 @@ describe("computeTagStats", () => {
   });
 
   it("ignores tagless artists and sorts tags canonically", () => {
-    const trio = (slot: Slot, tags: string[]): Artist[] =>
-      ["x", "y", "z"].map((n) => artist(n + tags[0], slot, tags));
     const stats = computeTagStats([
-      ...trio("A", ["Zeta"]),
-      ...trio("A", ["alpha"]),
+      ...cohort("z", "A", 3, ["Zeta"]),
+      ...cohort("a", "A", 3, ["alpha"]),
       artist("tagless", "S", []),
     ]);
     // Case-insensitive name order, and the tagless artist changed nothing.
     expect(stats.map((s) => s.tag)).toEqual(["alpha", "Zeta"]);
   });
-});
 
-describe("rankTags", () => {
-  it("ranks favourites by mean descending and the rest descending toward the worst", () => {
-    const { favourites, leastFavourites } = rankTags(
-      [stat("mid", 4), stat("best", 6), stat("worst", 2)],
-      1,
-    );
-    expect(favourites.map((s) => s.tag)).toEqual(["best"]);
-    expect(leastFavourites.map((s) => s.tag)).toEqual(["worst"]);
-  });
-
-  it("breaks mean ties by support, then by name", () => {
-    const { favourites } = rankTags([stat("b", 5, 3), stat("a", 5, 3), stat("popular", 5, 9)]);
-    expect(favourites.map((s) => s.tag)).toEqual(["popular", "a", "b"]);
-  });
-
-  it("never lets the two lists overlap", () => {
-    // 12 qualifying tags with a limit of 10: the bottom list gets only the
-    // 2 leftovers (descending, the very worst last), not a mirror of the top.
-    const stats = Array.from({ length: 12 }, (_, i) => stat(`tag${i}`, i + 1));
-    const { favourites, leastFavourites } = rankTags(stats, 10);
-    expect(favourites).toHaveLength(10);
-    expect(leastFavourites.map((s) => s.tag)).toEqual(["tag1", "tag0"]);
-
-    // And with fewer tags than the limit, everything is a favourite.
-    const few = rankTags([stat("a", 5), stat("b", 4), stat("c", 3)], 10);
-    expect(few.favourites).toHaveLength(3);
-    expect(few.leastFavourites).toEqual([]);
+  it("counts carriers in the favourite tiers, derived from the roster's own shape", () => {
+    // 40 ranked artists: the favourite tiers are the top ones covering a
+    // quarter of them, so S (4) and A (8) — 12 artists, 30%.
+    const stats = computeTagStats([
+      ...cohort("s", "S", 4, ["elite", "wide"]),
+      ...cohort("a", "A", 8, ["elite", "wide"]),
+      ...cohort("c", "C", 28, ["wide"]),
+    ]);
+    const byTag = new Map(stats.map((s) => [s.tag, s]));
+    expect(byTag.get("elite")!.favourites).toBe(12);
+    expect(byTag.get("elite")!.favouriteRate).toBe(1);
+    expect(byTag.get("wide")!.favourites).toBe(12);
+    expect(byTag.get("wide")!.favouriteRate).toBeCloseTo(12 / 40, 12);
+    // "wide" is the whole roster, so it can only ever match the baseline.
+    expect(byTag.get("wide")!.favouriteIndex).toBeCloseTo(1, 12);
+    expect(byTag.get("elite")!.favouriteIndex).toBeGreaterThan(1);
   });
 });
 
-describe("categorySuperlatives", () => {
+describe("shrinkage towards the roster average", () => {
+  // The failure the whole rework exists to fix: on the real roster, ranking
+  // tags by their raw average crowned three-artist tags ("New Zealand",
+  // "bedroom pop") while a 36-artist scene never appeared at all.
+  const noisyVsEstablished = [
+    ...cohort("rare", "A", 3, ["niche"]), // 3 carriers, the highest raw average
+    ...cohort("scene", "B", 20, ["established"]), // 20 carriers, a lower one
+    ...cohort("filler", "E", 60, ["backdrop"]),
+  ];
+
+  it("lets a well-evidenced tag beat a higher-scoring handful", () => {
+    const stats = computeTagStats(noisyVsEstablished);
+    const byTag = new Map(stats.map((s) => [s.tag, s]));
+    const niche = byTag.get("niche")!;
+    const established = byTag.get("established")!;
+
+    // Raw averages: the three-artist tag is comfortably ahead…
+    expect(TIER_WEIGHT.A).toBeGreaterThan(TIER_WEIGHT.B);
+    // …but with the evidence weighed, the scene wins.
+    expect(established.ratio).toBeGreaterThan(niche.ratio);
+    expect(rankByRatio(stats)[0]!.tag).toBe("established");
+  });
+
+  it("still lets a small tag rank when its evidence is extreme enough", () => {
+    // Shrinkage tempers small samples; it does not silence them.
+    const stats = computeTagStats([
+      ...cohort("rare", "S", 3, ["niche"]),
+      ...cohort("filler", "E", 30, ["backdrop"]),
+    ]);
+    const byTag = new Map(stats.map((s) => [s.tag, s]));
+    expect(byTag.get("niche")!.ratio).toBeGreaterThan(byTag.get("backdrop")!.ratio);
+  });
+
+  it("pulls a tag with the least evidence closest to the roster average", () => {
+    const stats = computeTagStats(noisyVsEstablished);
+    const byTag = new Map(stats.map((s) => [s.tag, s]));
+    // Both tags sit above the roster average; the sparser one is dragged back
+    // towards 1.00 harder.
+    expect(byTag.get("niche")!.ratio).toBeGreaterThan(1);
+    expect(byTag.get("established")!.ratio).toBeGreaterThan(byTag.get("niche")!.ratio);
+  });
+});
+
+describe("rankByRatio", () => {
+  it("orders by affection ratio, most lifted first", () => {
+    const ranked = rankByRatio([
+      stat("typical", { ratio: 1 }),
+      stat("lifting", { ratio: 1.3 }),
+      stat("ordinary", { ratio: 0.8 }),
+    ]);
+    expect(ranked.map((s) => s.tag)).toEqual(["lifting", "typical", "ordinary"]);
+  });
+});
+
+describe("rankByFavouriteIndex", () => {
+  it("orders by concentration in the favourite tiers", () => {
+    const ranked = rankByFavouriteIndex([
+      stat("even", { favouriteIndex: 1, count: SPREAD_MIN_SUPPORT }),
+      stat("crowded", { favouriteIndex: 2.2, count: SPREAD_MIN_SUPPORT }),
+    ]);
+    expect(ranked.map((s) => s.tag)).toEqual(["crowded", "even"]);
+  });
+
+  it("demands more evidence than a bare average does", () => {
+    // A rate over three carriers can only read 0, 1/3, 2/3 or 1 — far too
+    // coarse to call a trend, so this list applies the higher floor.
+    const ranked = rankByFavouriteIndex([
+      stat("thin", { favouriteIndex: 9, count: SPREAD_MIN_SUPPORT - 1 }),
+      stat("solid", { favouriteIndex: 1.5, count: SPREAD_MIN_SUPPORT }),
+    ]);
+    expect(ranked.map((s) => s.tag)).toEqual(["solid"]);
+  });
+});
+
+describe("categoryComposition", () => {
   // Era stats never reach this function — computeStats partitions them into
   // their own section first — so none feature in these inputs.
-  it("picks the best-rated tag per vocabulary category, in display order", () => {
-    const superlatives = categorySuperlatives([
-      // Genres (vocabulary from tag-groups.ts)
-      stat("pop punk", 6),
-      stat("emo", 5),
-      // Musical qualities
-      stat("catchy hooks", 4),
-      // Notable aspects
-      stat("British", 2),
+  it("groups tags by vocabulary category, in display order, most common first", () => {
+    const composition = categoryComposition([
+      stat("pop punk", { prevalence: 0.3 }),
+      stat("emo", { prevalence: 0.5 }),
+      stat("catchy hooks", { prevalence: 0.2 }),
+      stat("British", { prevalence: 0.1 }),
     ]);
-    expect(superlatives.map((s) => [s.category, s.stat.tag])).toEqual([
-      ["Genres", "pop punk"],
-      ["Musical qualities", "catchy hooks"],
-      ["Notable aspects", "British"],
+    expect(composition.map((c) => [c.category, c.stats.map((t) => t.tag)])).toEqual([
+      ["Genres", ["emo", "pop punk"]],
+      ["Musical qualities", ["catchy hooks"]],
+      ["Notable aspects", ["British"]],
     ]);
+  });
+
+  it("keeps the most common tag even where it says nothing about the ranking", () => {
+    // The point of the reframing: prevalence is a description of what was
+    // collected, so the biggest tag belongs in it whatever its tiers look like.
+    // "male vocals" leads this roster and sits *below* its average placement —
+    // an earlier version dropped it for that, which was the tier-as-quality
+    // assumption creeping back in.
+    const composition = categoryComposition([
+      stat("male vocals", { prevalence: 0.62, ratio: 0.9, elevationIsReal: false }),
+      stat("female vocals", { prevalence: 0.28, ratio: 1.16, elevationIsReal: false }),
+    ]);
+    expect(composition.map((c) => c.stats.map((t) => t.tag))).toEqual([
+      ["male vocals", "female vocals"],
+    ]);
+  });
+
+  it("honours the per-category limit", () => {
+    // All four are genres per tag-groups.ts, so they compete within one category.
+    const genres = ["emo", "pop punk", "post-hardcore", "electropop"].map((tag, i) =>
+      stat(tag, { prevalence: 0.5 - i / 100 }),
+    );
+    expect(categoryComposition(genres, 2)[0]!.stats.map((s) => s.tag)).toEqual(["emo", "pop punk"]);
   });
 
   it("omits empty categories and never surfaces an 'Other' tag", () => {
-    const superlatives = categorySuperlatives([stat("emo", 5), stat("not in vocabulary", 7)]);
-    expect(superlatives.map((s) => [s.category, s.stat.tag])).toEqual([["Genres", "emo"]]);
-  });
-
-  it("breaks mean ties by support", () => {
-    const superlatives = categorySuperlatives([stat("emo", 5, 3), stat("pop punk", 5, 8)]);
-    expect(superlatives[0]!.stat.tag).toBe("pop punk");
+    const composition = categoryComposition([
+      stat("emo", { prevalence: 0.2 }),
+      stat("not in vocabulary", { prevalence: 0.9 }),
+    ]);
+    expect(composition.map((c) => [c.category, c.stats.map((t) => t.tag)])).toEqual([
+      ["Genres", ["emo"]],
+    ]);
   });
 });
 
-describe("rankWorstPredictors", () => {
-  it("wants two far-apart, evenly-matched camps over enough carriers", () => {
+describe("prevalence", () => {
+  it("is a plain headcount, indifferent to where the carriers sit", () => {
+    const stats = computeTagStats([
+      ...cohort("wide", "E", 40, ["wide"]),
+      ...cohort("narrow", "S", 4, ["narrow"]),
+      ...cohort("filler", "C", 80, ["backdrop"]),
+    ]);
+    const byTag = new Map(stats.map((s) => [s.tag, s]));
+    // "narrow" is four S-tier artists; "wide" is forty at the bottom of the
+    // board. Prevalence says the collection is far more made of "wide", which
+    // is simply true — and is exactly the statement a tier-weighted measure
+    // would have suppressed.
+    expect(byTag.get("narrow")!.ratio).toBeGreaterThan(byTag.get("wide")!.ratio);
+    expect(byTag.get("wide")!.prevalence).toBeGreaterThan(byTag.get("narrow")!.prevalence);
+  });
+
+  it("is the carrier count over the ranked roster, and nothing else", () => {
+    const stats = computeTagStats([
+      ...cohort("a", "S", 5, ["punk"]),
+      ...cohort("b", "E", 15, ["other"]),
+    ]);
+    const punk = stats.find((s) => s.tag === "punk")!;
+    expect(punk.prevalence).toBeCloseTo(5 / 20, 12);
+  });
+});
+
+describe("rankVariable", () => {
+  const qualifying = (tag: string, spread: number): TagStat =>
+    stat(tag, { count: 10, spread, low: 1, high: 7, above: 3, below: 3 });
+
+  it("ranks by widest spread, the exact mirror of rankReliable", () => {
+    const stats = [qualifying("narrow", 1.2), qualifying("widest", 2.4), qualifying("wide", 2)];
+    expect(rankVariable(stats).map((s) => s.tag)).toEqual(["widest", "wide", "narrow"]);
+    expect(rankVariable(stats, 1).map((s) => s.tag)).toEqual(["widest"]);
+    // Reversing the same qualifying tags through the mirror gives the same order.
+    expect(
+      rankReliable(stats)
+        .map((s) => s.tag)
+        .reverse(),
+    ).toEqual(rankVariable(stats).map((s) => s.tag));
+  });
+
+  it("wants both ends of a tag's range to hold more than one artist", () => {
     const stats = [
-      stat("balanced", 4, 10, 2, 1, 7, 5, 5), // spread 2 × smaller-camp share 0.5 = 1
-      stat("lopsided", 4, 10, 2.4, 1, 7, 1, 8), // wider spread, but one camp of one: 0.24
-      stat("flat", 4, 10, 0.5, 3, 5, 0, 4), // no upper camp at all: not divisive
-      stat("small", 4, 4, 3, 1, 7, 2, 2), // too few carriers for this list
+      qualifying("spanning", 2),
+      // Wider, but its upper end is a single artist: one far-flung placement,
+      // not a tag that genuinely reaches across the board — and reach is a gate
+      // now, so no amount of spread rescues it.
+      stat("oneFarPlacement", { count: 10, spread: 2.4, low: 1, high: 7, above: 1, below: 8 }),
+      // Nothing at the upper end at all.
+      stat("flat", { count: 10, spread: 2.4, low: 1, high: 7, above: 0, below: 4 }),
+      // Genuinely spanning, but too few carriers for this list.
+      stat("small", { count: 4, spread: 3, low: 1, high: 7, above: 2, below: 2 }),
     ];
-    expect(rankWorstPredictors(stats).map((s) => s.tag)).toEqual(["balanced", "lopsided"]);
-    expect(rankWorstPredictors(stats, 1).map((s) => s.tag)).toEqual(["balanced"]);
+    expect(rankVariable(stats).map((s) => s.tag)).toEqual(["spanning"]);
   });
 });
 
-describe("rankBestPredictors", () => {
+describe("rankReliable", () => {
   it("ranks by tightest spread, better-evidenced tags first on ties", () => {
     const stats = [
-      stat("loose", 4, 10, 2, 1, 7, 5, 5),
-      stat("tight", 5, 10, 0.3, 4.5, 5.5),
-      stat("tightToo", 5, 20, 0.3, 4.5, 5.5), // same spread, twice the evidence
-      stat("tiny", 5, 4, 0), // perfectly tight, but too few carriers
+      stat("loose", { count: 10, spread: 2, low: 1, high: 7, above: 5, below: 5 }),
+      stat("tight", { count: 10, spread: 0.3, low: 4.5, high: 5.5 }),
+      stat("tightToo", { count: 20, spread: 0.3, low: 4.5, high: 5.5 }), // twice the evidence
+      stat("tiny", { count: 4, spread: 0 }), // perfectly tight, but too few carriers
     ];
-    expect(rankBestPredictors(stats).map((s) => s.tag)).toEqual(["tightToo", "tight", "loose"]);
-    expect(rankBestPredictors(stats, 1).map((s) => s.tag)).toEqual(["tightToo"]);
+    expect(rankReliable(stats).map((s) => s.tag)).toEqual(["tightToo", "tight", "loose"]);
+    expect(rankReliable(stats, 1).map((s) => s.tag)).toEqual(["tightToo"]);
   });
 });
 
-describe("rankOutliers", () => {
-  // One tag, four carriers: an S among three Cs. Leave-one-out, the S artist
-  // is predicted (4+4+4)/3 = 4 (delta +3); each C is predicted (7+4+4)/3 = 5
-  // (delta −1).
-  const sAmongCs = [
-    artist("star", "S", ["punk"]),
-    artist("c1", "C", ["punk"]),
-    artist("c2", "C", ["punk"]),
-    artist("c3", "C", ["punk"]),
+describe("rankIsolation", () => {
+  // A tight scene of six sharing a vocabulary, plus one artist sharing none of
+  // it — the shape the "one of a kind" list exists to find.
+  const sceneAndStranger = [
+    ...cohort("scene", "B", 6, ["emo", "pop punk", "male vocals"]),
+    artist("stranger", "C", ["jazz fusion", "virtuosic playing", "instrumental"]),
   ];
 
-  it("computes leave-one-out predictions and signed deltas", () => {
-    const { guiltyPleasures, blackSheep } = rankOutliers(sAmongCs);
-    expect(guiltyPleasures.map((o) => o.name)).toEqual(["star"]);
-    expect(guiltyPleasures[0]!.predicted).toBe(4);
-    expect(guiltyPleasures[0]!.delta).toBe(3);
-    // The three Cs all sit one tier below prediction — the furthest below on
-    // this roster — name-ordered for selection, then reversed for display.
-    expect(blackSheep.map((o) => o.name)).toEqual(["c3", "c2", "c1"]);
-    expect(blackSheep[0]!.delta).toBe(-1);
+  it("counts the artists sharing at least half of each artist's tags", () => {
+    const { core, distinctive } = rankIsolation(sceneAndStranger);
+    // Each of the six scene artists has the other five for company…
+    expect(core[0]!.kin).toBe(5);
+    // …and nothing in the roster shares half of the stranger's tags.
+    expect(distinctive[0]!.kin).toBe(0);
   });
 
-  it("splits the sides by the delta's sign; an exact match joins neither", () => {
-    // An S among three As: the S sits +1 above its prediction, each A only
-    // −1/3 below — small, but still the furthest below on this roster.
-    const { guiltyPleasures, blackSheep } = rankOutliers([
-      artist("top", "S", ["punk"]),
-      artist("a1", "A", ["punk"]),
-      artist("a2", "A", ["punk"]),
-      artist("a3", "A", ["punk"]),
+  it("orders both ends by that count, the figure the dialog shows", () => {
+    // A third group sits between the two: it shares two of the scene's three
+    // tags, so it is kin to the scene but has fewer of its own.
+    const { core } = rankIsolation([
+      ...sceneAndStranger,
+      ...cohort("fringe", "C", 2, ["emo", "pop punk", "screamed vocals"]),
     ]);
-    expect(guiltyPleasures.map((o) => o.name)).toEqual(["top"]);
-    expect(blackSheep.map((o) => o.name)).toEqual(["a3", "a2", "a1"]);
-
-    // Carriers all on one tier predict each other exactly: delta 0 for
-    // everyone, and neither side lists anyone.
-    const flat = rankOutliers(["f1", "f2", "f3"].map((n) => artist(n, "B", ["punk"])));
-    expect(flat.guiltyPleasures).toEqual([]);
-    expect(flat.blackSheep).toEqual([]);
+    const counts = core.map((artist) => artist.kin);
+    expect([...counts].sort((a, b) => b - a)).toEqual(counts);
+    expect(core[0]!.name).toMatch(/^scene/);
   });
 
-  it("averages the leave-one-out means of all qualifying tags", () => {
-    // "subject" carries two predictor tags with different leave-one-out
-    // means: "high" predicts (7+7)/2 = 7, "low" predicts (4+4)/2 = 4, so the
-    // combined prediction is 5.5 and the F-placed subject's delta is −4.5.
-    const { blackSheep } = rankOutliers([
-      artist("subject", "F", ["high", "low"]),
-      artist("h1", "S", ["high"]),
-      artist("h2", "S", ["high"]),
-      artist("l1", "C", ["low"]),
-      artist("l2", "C", ["low"]),
+  it("puts the artist with the least company at the distinctive end", () => {
+    const { core, distinctive } = rankIsolation(sceneAndStranger);
+    expect(distinctive[0]!.name).toBe("stranger");
+    expect(core[0]!.name).toMatch(/^scene/);
+    expect(distinctive[0]!.kinship).toBeLessThan(core[0]!.kinship);
+  });
+
+  it("annotates each artist with its least-shared tag", () => {
+    const { distinctive } = rankIsolation(sceneAndStranger);
+    // Every one of the stranger's tags is unique to it; the tie breaks by name.
+    expect(distinctive[0]!.rarestTag).toBe("instrumental");
+  });
+
+  it("never explains an artist with an era tag", () => {
+    // Eras belong to their own section, and "the 1950s" says nothing about why
+    // an artist is unlike its neighbours.
+    const { core, distinctive } = rankIsolation([
+      ...cohort("scene", "B", 6, ["emo", "pop punk", "1990s"]),
+      artist("crooner", "C", ["1950s", "traditional pop"]),
     ]);
-    const subject = blackSheep.find((o) => o.name === "subject")!;
-    expect(subject.predicted).toBe(5.5);
-    expect(subject.delta).toBe(1 - 5.5);
+    for (const entry of [...core, ...distinctive]) {
+      expect(entry.rarestTag).not.toBeNull();
+      expect(isEraTag(entry.rarestTag!)).toBe(false);
+    }
+    expect(distinctive[0]!.rarestTag).toBe("traditional pop");
   });
 
-  it("excludes artists with no sufficiently-supported tags, and unranked ones", () => {
-    const { guiltyPleasures, blackSheep } = rankOutliers([
-      artist("untagged", "S", []),
-      artist("rare", "S", ["one-off", "two-off"]), // both tags below support
-      artist("other", "F", ["two-off"]),
-      artist("ghost", "unranked", ["punk"]), // not a subject…
-      ...sAmongCs, // …and absent from punk's totals (tested above: predictions unchanged)
+  it("ranks both ends over the same artists, and excludes unranked ones", () => {
+    const { core, distinctive } = rankIsolation([
+      ...sceneAndStranger,
+      artist("ghost", "unranked", ["emo", "pop punk"]),
     ]);
-    const names = [...guiltyPleasures, ...blackSheep].map((o) => o.name);
-    expect(names).not.toContain("untagged");
-    expect(names).not.toContain("rare");
-    expect(names).not.toContain("ghost");
-    expect(guiltyPleasures[0]!.predicted).toBe(4); // the unranked carrier changed nothing
+    expect([...core, ...distinctive].map((a) => a.name)).not.toContain("ghost");
+    // Seven ranked artists over a limit of six: the two ends are the same
+    // ranking read from opposite directions, so the least typical artist is
+    // exactly the one the core list has no room for.
+    expect(core).toHaveLength(ARTIST_LIST_LIMIT);
+    expect(core.map((a) => a.name)).not.toContain("stranger");
+    expect(distinctive[0]!.name).toBe("stranger");
   });
 
-  it("caps each list at the limit", () => {
-    // c1 and c2 make the cut (selection is name-ordered on tied deltas);
-    // the display order then reverses.
-    const { blackSheep } = rankOutliers(sAmongCs, 2);
-    expect(blackSheep.map((o) => o.name)).toEqual(["c2", "c1"]);
+  it("has nothing to say about a roster with no company in it", () => {
+    expect(rankIsolation([])).toEqual({ core: [], distinctive: [] });
+    expect(rankIsolation([artist("only", "S", ["emo"])])).toEqual({ core: [], distinctive: [] });
+  });
+});
+
+describe("measurePredictivePower", () => {
+  it("reports a perfect correlation when the tags do decide the placement", () => {
+    // Two tags, each on its own tier: knowing the tag tells you the tier.
+    const power = measurePredictivePower([
+      ...cohort("top", "S", 4, ["loud"]),
+      ...cohort("low", "E", 4, ["quiet"]),
+    ])!;
+    expect(power.judged).toBe(8);
+    expect(power.correlation).toBeCloseTo(1, 6);
+    expect(power.explained).toBeCloseTo(1, 6);
   });
 
-  it("never uses era tags as predictors", () => {
-    // "1990s" is carried by plenty of ranked artists, but eras sit outside
-    // the prediction model: "lone" has no other tag, so it is not judged at
-    // all rather than scored against its decade…
-    const { guiltyPleasures, blackSheep } = rankOutliers([
-      artist("lone", "S", ["1990s"]),
-      artist("d1", "D", ["1990s", "punk"]),
-      artist("d2", "D", ["1990s", "punk"]),
-      artist("d3", "D", ["1990s", "punk"]),
-      artist("star", "S", ["1990s", "punk"]),
-    ]);
-    expect([...guiltyPleasures, ...blackSheep].map((o) => o.name)).not.toContain("lone");
-    // …and "star"'s prediction comes from "punk" alone (leave-one-out mean
-    // (3+3+3)/3 = 3), unmoved by the high-scoring era carriers.
-    expect(guiltyPleasures.map((o) => o.name)).toEqual(["star"]);
-    expect(guiltyPleasures[0]!.predicted).toBe(3);
+  it("reports nothing to correlate when every artist shares one tag", () => {
+    // One tag on everyone predicts the same value for everyone, so there is no
+    // variation to correlate — a null result, not a zero one.
+    expect(measurePredictivePower(cohort("a", "C", 6, ["everywhere"]))).toBeNull();
+    expect(measurePredictivePower([])).toBeNull();
+  });
+
+  it("judges only artists carrying a supported tag", () => {
+    const power = measurePredictivePower([
+      ...cohort("top", "S", 4, ["loud"]),
+      ...cohort("low", "E", 4, ["quiet"]),
+      artist("untagged", "B", []),
+      artist("rare", "B", ["one-off"]),
+      artist("ghost", "unranked", ["loud"]),
+    ])!;
+    expect(power.judged).toBe(8);
+  });
+
+  it("finds almost no link on the real roster", () => {
+    // The finding two removed sections existed to dress up: what a tag says and
+    // where an artist sits are very nearly independent here. If a data change
+    // ever makes the tags genuinely predictive, this test should fail loudly and
+    // be reconsidered rather than relaxed.
+    const power = measurePredictivePower(roster)!;
+    expect(power.judged).toBeGreaterThan(200);
+    expect(power.explained).toBeLessThan(0.1);
   });
 });
 
@@ -340,79 +546,170 @@ describe("computeStats", () => {
     expect(stats.rankedCount).toBe(0);
     expect(stats.tagCount).toBe(0);
     expect(stats.eras).toEqual([]);
-    expect(stats.rankings.favourites).toEqual([]);
-    expect(stats.rankings.leastFavourites).toEqual([]);
-    expect(stats.superlatives).toEqual([]);
-    expect(stats.worstPredictors).toEqual([]);
-    expect(stats.bestPredictors).toEqual([]);
-    expect(stats.outliers.guiltyPleasures).toEqual([]);
-    expect(stats.outliers.blackSheep).toEqual([]);
+    expect(stats.lifts).toEqual([]);
+    expect(stats.favouriteTraits).toEqual([]);
+    expect(stats.composition).toEqual([]);
+    expect(stats.variable).toEqual([]);
+    expect(stats.reliable).toEqual([]);
+    expect(stats.prediction).toBeNull();
+    expect(stats.isolation.core).toEqual([]);
+    expect(stats.isolation.distinctive).toEqual([]);
+    expect(stats.summary.favouriteCount).toBe(0);
+  });
+
+  it("summarises the roster's shape, including the tiers nobody occupies", () => {
+    const stats = computeStats([
+      ...cohort("s", "S", 2, ["emo"]),
+      ...cohort("c", "C", 6, ["emo", "2000s"]),
+      artist("waiting", "unranked", ["emo"]),
+    ]);
+    expect(stats.summary.artistCount).toBe(9);
+    expect(stats.summary.rankedCount).toBe(8);
+    expect(stats.summary.vocabularySize).toBe(2);
+    // Every tier appears, so the histogram shows the whole board's shape.
+    expect(stats.summary.tierCounts.map((t) => t.tier)).toEqual([...TIERS]);
+    expect(stats.summary.tierCounts.find((t) => t.tier === "S")!.count).toBe(2);
+    expect(stats.summary.tierCounts.find((t) => t.tier === "F")!.count).toBe(0);
+    expect(stats.summary.favouriteTiers).toEqual(["S"]); // 2 of 8 clears the quarter
+    // The gauges span the occupied tiers only: C (4) up to S (7).
+    expect(stats.positions).toEqual({ low: 4, high: 7 });
   });
 
   it("gives era tags their own chronological section and keeps them out of the rest", () => {
     // Three qualifying tags: two eras (the newer rated highest of all, the
-    // older lowest) and one genre in between.
-    const trio = (names: string[], slot: Slot, tags: string[]): Artist[] =>
-      names.map((n) => artist(n, slot, tags));
+    // older lowest) and one genre in between, itself above the roster average
+    // so that it does qualify as a signature and the eras' absence is the only
+    // thing under test.
     const stats = computeStats([
-      ...trio(["n1", "n2", "n3"], "S", ["2020s"]),
-      ...trio(["g1", "g2", "g3"], "B", ["emo"]),
-      ...trio(["o1", "o2", "o3"], "F", ["1960s"]),
+      ...cohort("n", "S", 3, ["2020s"]),
+      ...cohort("g", "A", 3, ["emo"]),
+      ...cohort("o", "E", 3, ["1960s"]),
     ]);
     // Oldest decade first, regardless of rating.
     expect(stats.eras.map((s) => s.tag)).toEqual(["1960s", "2020s"]);
     expect(stats.tagCount).toBe(3); // eras still count toward the total
-    // Despite being the extremes, the eras feature in no ranked list…
-    expect(stats.rankings.favourites.map((s) => s.tag)).toEqual(["emo"]);
-    expect(stats.rankings.leastFavourites).toEqual([]);
-    expect(stats.worstPredictors).toEqual([]); // 3 carriers sits below the spread floor…
-    expect(stats.bestPredictors).toEqual([]); // …for both spread-based lists
-    // …and no Eras superlative is offered.
-    expect(stats.superlatives.map((s) => s.category)).toEqual(["Genres"]);
+    // Despite being the extremes, the eras reach no other list. On a roster
+    // this small nothing clears the significance gate either, so the ranked
+    // lists are empty for that reason as well — hence checking the partition
+    // itself rather than what came through it.
+    expect(stats.eras.every((s) => isEraTag(s.tag))).toBe(true);
+    expect(stats.evidence.tested).toBe(1); // "emo" alone; the eras stand apart
+    for (const list of [stats.lifts, stats.favouriteTraits, stats.variable, stats.reliable]) {
+      expect(list.some((s) => isEraTag(s.tag))).toBe(false);
+    }
+    expect(stats.composition.some((s) => s.category === "Eras")).toBe(false);
   });
 
   // Invariant checks over the real shipped roster, so a data change that
   // produces degenerate statistics is caught in CI.
   describe("on the real roster", () => {
     const stats = computeStats(roster);
+    const tagLists = [
+      stats.lifts,
+      stats.favouriteTraits,
+      stats.eras,
+      stats.variable,
+      stats.reliable,
+      stats.composition.flatMap((c) => c.stats),
+    ];
 
     it("finds plenty of ranked artists and supported tags", () => {
       expect(stats.rankedCount).toBeGreaterThan(0);
       expect(stats.tagCount).toBeGreaterThan(0);
+      expect(stats.summary.favouriteCount).toBeGreaterThan(0);
+      // The sections that describe the collection rather than infer from it are
+      // always populated; the inferential ones are gated on beating chance and
+      // may legitimately be empty (see below).
+      expect(stats.isolation.core.length).toBeGreaterThan(0);
+      expect(stats.isolation.distinctive.length).toBeGreaterThan(0);
+      expect(stats.eras.length).toBeGreaterThan(0);
+      expect(stats.evidence.tested).toBeGreaterThan(50);
     });
 
-    it("keeps every score on the tier scale and every list within its limit", () => {
-      const allTagStats = [
-        ...stats.eras,
-        ...stats.rankings.favourites,
-        ...stats.rankings.leastFavourites,
-        ...stats.superlatives.map((s) => s.stat),
-        ...stats.worstPredictors,
-        ...stats.bestPredictors,
-      ];
-      for (const tagStat of allTagStats) {
+    it("gates the lists that infer, and only those", () => {
+      // A list claiming a tag says something about the ranking may never
+      // contain a tag that failed the test — that is the contract of the gate.
+      for (const list of [stats.lifts, stats.favouriteTraits]) {
+        for (const entry of list) expect(entry.elevationIsReal).toBe(true);
+      }
+      for (const list of [stats.reliable, stats.variable]) {
+        for (const entry of list) expect(entry.clusteringIsReal).toBe(true);
+      }
+      // …and is empty exactly when nothing cleared it.
+      if (stats.evidence.elevated === 0) {
+        expect(stats.lifts).toEqual([]);
+        expect(stats.favouriteTraits).toEqual([]);
+      }
+      if (stats.evidence.clustered === 0) {
+        expect(stats.reliable).toEqual([]);
+        expect(stats.variable).toEqual([]);
+      }
+    });
+
+    it("never gates the lists that only describe", () => {
+      // The counterpart, and the more easily lost half: what the collection is
+      // made of is a fact, with no hypothesis to reject. On this roster no tag
+      // clears the gate at all, so a composition list that survives is proof it
+      // was never subject to it.
+      expect(stats.evidence.elevated).toBe(0);
+      expect(stats.composition.length).toBeGreaterThan(0);
+      expect(stats.composition.flatMap((c) => c.stats).length).toBeGreaterThan(0);
+      expect(stats.worlds.worlds.length).toBeGreaterThan(0);
+      expect(stats.isolation.core.length).toBeGreaterThan(0);
+      expect(stats.eras.length).toBeGreaterThan(0);
+    });
+
+    it("finds no tag preference that survives correction, on this roster", () => {
+      // Documenting the finding, not asserting it must stay true: 127 tags with
+      // ~9 clearing p<0.05 individually is what 127 coin flips would give. If a
+      // data change ever produces real preferences this fails, and the right
+      // response is to update the expectation — the dialog handles both.
+      expect(stats.evidence.elevated).toBe(0);
+      expect(stats.evidence.clustered).toBe(0);
+    });
+
+    it("keeps every statistic in its meaningful range", () => {
+      for (const tagStat of tagLists.flat()) {
+        expect(tagStat.prevalence).toBeGreaterThan(0);
+        expect(tagStat.prevalence).toBeLessThanOrEqual(1);
+        expect(tagStat.ratio).toBeGreaterThan(0);
+        expect(tagStat.favouriteRate).toBeGreaterThanOrEqual(0);
+        expect(tagStat.favouriteRate).toBeLessThanOrEqual(1);
         expect(tagStat.low).toBeGreaterThanOrEqual(1);
         expect(tagStat.low).toBeLessThanOrEqual(tagStat.mean);
         expect(tagStat.mean).toBeLessThanOrEqual(tagStat.high);
-        expect(tagStat.high).toBeLessThanOrEqual(7);
+        expect(tagStat.high).toBeLessThanOrEqual(TIERS.length);
         expect(tagStat.count).toBeGreaterThanOrEqual(MIN_SUPPORT);
       }
-      for (const outlier of [...stats.outliers.guiltyPleasures, ...stats.outliers.blackSheep]) {
-        expect(outlier.predicted).toBeGreaterThanOrEqual(1);
-        expect(outlier.predicted).toBeLessThanOrEqual(7);
-        expect(Math.abs(outlier.delta)).toBeGreaterThan(0);
+      for (const artistStat of [...stats.isolation.core, ...stats.isolation.distinctive]) {
+        expect(artistStat.kinship).toBeGreaterThanOrEqual(0);
+        expect(artistStat.kinship).toBeLessThanOrEqual(1);
+        expect(artistStat.kin).toBeGreaterThanOrEqual(0);
+        expect(artistStat.kin).toBeLessThan(stats.rankedCount);
+        expect(artistStat.rarestTag).not.toBeNull();
       }
-      expect(stats.rankings.favourites.length).toBeLessThanOrEqual(TAG_LIST_LIMIT);
-      expect(stats.rankings.leastFavourites.length).toBeLessThanOrEqual(TAG_LIST_LIMIT);
-      expect(stats.worstPredictors.length).toBeLessThanOrEqual(PREDICTOR_LIST_LIMIT);
-      expect(stats.outliers.guiltyPleasures.length).toBeLessThanOrEqual(OUTLIER_LIST_LIMIT);
-      expect(stats.outliers.blackSheep.length).toBeLessThanOrEqual(OUTLIER_LIST_LIMIT);
+      // The two ends must actually separate, or the section says nothing.
+      expect(stats.isolation.core[0]!.kin).toBeGreaterThan(
+        stats.isolation.distinctive[0]!.kin * 10,
+      );
     });
 
-    it("keeps the favourite and least-favourite lists disjoint", () => {
-      const favourites = new Set(stats.rankings.favourites.map((s) => s.tag));
-      for (const least of stats.rankings.leastFavourites) {
-        expect(favourites.has(least.tag)).toBe(false);
+    it("keeps every list within its limit", () => {
+      expect(stats.lifts.length).toBeLessThanOrEqual(TAG_LIST_LIMIT);
+      expect(stats.favouriteTraits.length).toBeLessThanOrEqual(TAG_LIST_LIMIT);
+      expect(stats.variable.length).toBeLessThanOrEqual(PREDICTOR_LIST_LIMIT);
+      expect(stats.reliable.length).toBeLessThanOrEqual(PREDICTOR_LIST_LIMIT);
+      expect(stats.isolation.core.length).toBeLessThanOrEqual(ARTIST_LIST_LIMIT);
+      expect(stats.isolation.distinctive.length).toBeLessThanOrEqual(ARTIST_LIST_LIMIT);
+    });
+
+    it("never lets a barely-supported tag top a headline list", () => {
+      // The regression this rework exists to prevent: three-artist tags owning
+      // the favourites list while a whole scene went unmentioned. The
+      // significance gate now removes them at source, so the check is that any
+      // survivor is well-evidenced rather than that a survivor exists.
+      for (const list of [stats.lifts, stats.favouriteTraits]) {
+        for (const entry of list) expect(entry.count).toBeGreaterThan(MIN_SUPPORT);
       }
     });
 
@@ -422,29 +719,43 @@ describe("computeStats", () => {
       const chronological = [...stats.eras.map((s) => s.tag)].sort();
       expect(stats.eras.map((s) => s.tag)).toEqual(chronological);
       const elsewhere = [
-        ...stats.rankings.favourites,
-        ...stats.rankings.leastFavourites,
-        ...stats.superlatives.map((s) => s.stat),
-        ...stats.worstPredictors,
-        ...stats.bestPredictors,
-      ];
+        stats.lifts,
+        stats.favouriteTraits,
+        stats.variable,
+        stats.reliable,
+        stats.composition.flatMap((c) => c.stats),
+      ].flat();
       expect(elsewhere.some((s) => isEraTag(s.tag))).toBe(false);
     });
 
-    it("keeps each worst predictor genuinely two-camped", () => {
-      expect(stats.worstPredictors.length).toBeGreaterThan(0);
-      for (const tagStat of stats.worstPredictors) {
-        expect(tagStat.count).toBeGreaterThanOrEqual(SPREAD_MIN_SUPPORT);
-        expect(tagStat.above).toBeGreaterThanOrEqual(1);
-        expect(tagStat.below).toBeGreaterThanOrEqual(1);
-      }
+    it("spans only the tiers the board actually occupies", () => {
+      // F has been empty since the F-tier artists were removed; the gauges must
+      // not reserve a sixth of every track for it.
+      const occupied = TIERS.filter((tier) =>
+        roster.some((candidate) => candidate.baselineSlot === tier),
+      );
+      expect(stats.positions.low).toBe(tierPosition(occupied[occupied.length - 1]!));
+      expect(stats.positions.high).toBe(tierPosition(occupied[0]!));
+      expect(positionFraction(stats.positions.low, stats.positions)).toBe(0);
+      expect(positionFraction(stats.positions.high, stats.positions)).toBe(1);
     });
 
-    it("ranks the best predictors tightest-first, over the same floor", () => {
-      expect(stats.bestPredictors.length).toBeGreaterThan(0);
-      const spreads = stats.bestPredictors.map((s) => s.spread);
+    it("keeps each variable tag genuinely two-camped, widest first", () => {
+      for (const tagStat of stats.variable) {
+        expect(tagStat.count).toBeGreaterThanOrEqual(SPREAD_MIN_SUPPORT);
+        expect(tagStat.above).toBeGreaterThanOrEqual(MIN_CAMP_SIZE);
+        expect(tagStat.below).toBeGreaterThanOrEqual(MIN_CAMP_SIZE);
+      }
+      // Both predictor lists must be ordered by the ± they display, in opposite
+      // directions — that is the whole point of them being mirrors.
+      const spreads = stats.variable.map((s) => s.spread);
+      expect([...spreads].sort((a, b) => b - a)).toEqual(spreads);
+    });
+
+    it("ranks the reliable tags tightest-first, over the same floor", () => {
+      const spreads = stats.reliable.map((s) => s.spread);
       expect([...spreads].sort((a, b) => a - b)).toEqual(spreads);
-      for (const tagStat of stats.bestPredictors) {
+      for (const tagStat of stats.reliable) {
         expect(tagStat.count).toBeGreaterThanOrEqual(SPREAD_MIN_SUPPORT);
       }
     });

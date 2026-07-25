@@ -38,9 +38,9 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   ├── random.ts            # Weighting schemes + weighted random pick (see §6)
 │   ├── filter.ts            # matchesAllTags(): the 🎲 tag filter's matching rule (see §6)
 │   ├── tag-groups.ts        # groupTags(): vocabulary categories for the filter panel (see §6)
-│   ├── cloud-layout.ts      # Tag-similarity model + force layout for the ☁️ map (see §7)
+│   ├── cloud-layout.ts      # Tag similarity, scene/world grouping + layout for ☁️ (see §7)
 │   ├── cloud.ts             # The ☁️ map dialog: renders the layout, pan/zoom (see §7)
-│   ├── stats.ts             # Tag/tier aggregation behind the 📊 statistics (see §8)
+│   ├── stats.ts             # Roster/tag/tier aggregation behind the 📊 statistics (see §8)
 │   ├── stats-view.ts        # The 📊 statistics dialog: renders stats.ts's results (see §8)
 │   ├── sort.ts              # compareArtistNames(): canonical (case/accent-insensitive) name order
 │   └── styles.css           # App styles
@@ -197,11 +197,12 @@ single `cutoff:intensity` id (§5):
   from the **whole roster** — ranked artists keep their tier weight and unranked artists are weighted
   as the lowest ranked tier (F), so intensity still applies.
 - **Intensity** — how a candidate's selection weight is derived from its tier:
-  - Each ranked tier has a base **Fibonacci / planning-poker weight** (`FIB_WEIGHT`): `S 13, A 8,
-    B 5, C 3, D 2, E 1, F 1`.
+  - Each ranked tier has a base **Fibonacci / planning-poker weight** (`TIER_WEIGHT`, exported from
+    `types.ts`): `S 13, A 8, B 5, C 3, D 2, E 1, F 1`. The 📊 statistics (§8) share it, so the two
+    features value a tier identically.
   - `unweighted` → every eligible artist has weight 1 (uniform).
-  - `weighted` → weight is `FIB_WEIGHT[tier]`.
-  - `heavily` → weight is `2 × FIB_WEIGHT[tier]` (widening the gap between tiers).
+  - `weighted` → weight is `TIER_WEIGHT[tier]`.
+  - `heavily` → weight is `2 × TIER_WEIGHT[tier]` (widening the gap between tiers).
 
   These multipliers are the concrete realisation of the "probability curve" PRD §8 leaves
   unspecified; treat the exact numbers as tunable, not contractual.
@@ -305,7 +306,7 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
   While it is open, the page's own scroll bar is suppressed
   (`body:has(#cloud-dialog[open])`). The view re-fits to the whole cloud on every open.
 
-## 8. Tag statistics (`src/stats.ts`, `src/stats-view.ts`)
+## 8. Statistics (`src/stats.ts`, `src/stats-view.ts`)
 
 The 📊 dialog (PRD §10) follows the map's split: pure aggregation in `stats.ts` (no DOM, unit
 tested in `src/stats.test.ts`), rendering in `stats-view.ts`, and a `<dialog id="stats-dialog">`
@@ -319,50 +320,212 @@ light-dismiss and the `main.ts` click-outside fallback (§5); its only form cont
   no part (PRD §10), so the content is fixed per build — `stats-view.ts` computes and renders it
   lazily on the first 📊 press and keeps the DOM for the session, like the map's plane. Nothing
   is hand-curated: a data change reshapes the statistics on the next build.
-- **Scoring.** Tiers map linearly onto scores (`tierScore`): S 7 down to F 1; unranked artists
-  are excluded everywhere. A mean score is displayed via `tierBand`/`tierLabel`: each tier owns
-  the unit of the scale centred on its own score, split into thirds — the middle third reads as
-  the bare letter, the outer thirds lean `+`/`−` (6.5 → `S−`; clamping makes `S+`/`F−`
-  impossible). Bars and gauge markers share `positionFraction` = (score − 1) / 6 — the full
-  tier axis, F at the track's left end and S at its right. The favourite/least-favourite
-  lists further stretch their bar widths between the lowest and highest entries shown (a
-  view-level rescale in `stats-view.ts`), and every bar's tooltip states its fill percentage.
-- **Per-tag aggregates** (`computeTagStats`): the mean, population standard deviation,
-  lowest/highest placement, and two **camp sizes** (carriers at least a full tier above / below
-  the mean) of each tag's ranked carriers' scores, dropping tags with fewer than `MIN_SUPPORT`
-  (3) of them. The favourite/least-favourite lists (`rankTags`) order by mean and are
-  **non-overlapping** — the least-favourites draw from the remainder, so few qualifying tags
-  shorten that list rather than letting it mirror the favourites; both lists run descending
-  (the second ends on the very worst), so together they read as one continuous descent. The
-  worst-predictors list (`rankWorstPredictors`) wants genuine division: it considers only tags
-  with at least `SPREAD_MIN_SUPPORT` (5) carriers and a non-empty camp on **both** sides,
-  ranked by spread × the smaller camp's share of the carriers — far-apart, evenly-matched
-  camps beat a lone dissenter however distant. Its mirror, the best-predictors list
-  (`rankBestPredictors`), ranks the same floor's tags by **ascending** spread (ties to the
-  better-evidenced tag), surfacing the tags that pin a placement down. The dialog renders both
-  lists' entries as a range gauge — a band spanning the carriers' full range with a dot at the
-  mean — in place of a bar, annotated with camp sizes (worst) or ±σ (best). Ties break by
-  carrier count then canonical tag name. Category favourites (`categorySuperlatives`) take the
-  best mean per `tag-groups.ts` category, skipping "Other".
-- **Eras stand apart.** `computeStats` partitions the aggregates on `isEraTag` (exported by
-  `tag-groups.ts`, the same decade-shape test the filter panel's grouping uses): era tags fill
-  their own chronological section (canonical tag order is already chronological for
-  decade-shaped names) and are withheld from the ranked lists, the superlatives, and the
-  outlier prediction model below — being numerous, well-supported, and internally uniform,
-  they would otherwise crowd out the rest of the vocabulary.
-- **Outliers** (`rankOutliers`): an artist's predicted score is the mean of its qualifying tags'
-  **leave-one-out** means — each tag's mean recomputed without the artist itself, so its own
-  placement cannot vote for itself (qualification is the same `MIN_SUPPORT`, leaving at least
-  two other placements per tag; era tags never qualify, as above). Guilty pleasures / black
-  sheep are the artists placed **furthest above / below** their prediction — the delta's sign
-  picks the side, its size the order (guilty pleasures run furthest-above first; black sheep
-  end on the furthest below, descending like the least-favourite tags); artists with no
-  qualifying tags are not judged. The
-  dialog draws each entry as a ring at the prediction joined to a dot at the artist's actual
-  score by a thin connector — the delta the list is ranked by.
-- The list lengths (`TAG_LIST_LIMIT` 10, `PREDICTOR_LIST_LIMIT` 6, `OUTLIER_LIST_LIMIT` 6)
-  and the `MIN_SUPPORT` and `SPREAD_MIN_SUPPORT` thresholds are exported constants in
-  `stats.ts` — **tunable, not contractual** (PRD §10 leaves them unspecified).
+
+### 8.1 Two tier valuations, deliberately
+
+PRD §10.1's premise — presence is positive, comparisons are to the user's own average — is
+implemented by keeping two *different* questions on two different scales. They are not a
+duplication to be tidied away:
+
+- **`TIER_WEIGHT` (`types.ts`) — how much an artist counts.** The Fibonacci weights shared with the
+  🎲 picker (§6). Every value is positive, so no placement can subtract, and the gaps widen towards
+  the top, matching how a tier list is used. Drives `share` and `ratio`.
+- **`tierPosition` (`stats.ts`) — where an artist sits.** The ordinal index, S 7 down to F 1. Used
+  *only* for statements about placement: the predictor range gauges, the outlier prediction model,
+  and `tierBand`/`tierLabel`, which band a mean position onto a letter (each tier owns the unit of
+  the scale centred on its own position, split into thirds — middle third the bare letter, outer
+  thirds leaning `+`/`−`; 6.5 → `S−`, and clamping makes `S+`/`F−` impossible).
+
+`computeBaseline` derives the roster-wide denominators once: `totalWeight`, `meanWeight`, the
+occupied `positions` range, and the **favourite tiers** — the top tiers covering at least
+`FAVOURITE_SHARE` (0.25) of the ranked roster, taken from the data rather than hard-coded so a
+reshuffle moves the boundary with it.
+
+`positionFraction(position, range)` maps a placement onto a gauge track across the **occupied**
+span, not the theoretical 1..7. The old absolute axis reserved a sixth of every track for `F`,
+which has held nobody since the F-tier artists were removed; with every tag's mean landing inside a
+tier and a half of every other, that forced a view-level rescale hack in `stats-view.ts` just to
+tell the rows apart. Deriving the ends from the data retires it.
+
+### 8.2 Per-tag aggregates (`computeTagStats`)
+
+Each tag's ranked carriers yield, alongside the placement facts (mean position, population standard
+deviation, lowest/highest, and how many carriers sit a full tier either side of the mean):
+
+- `prevalence` = carriers ÷ ranked roster — a plain 0..1 headcount, **deliberately unweighted by
+  tier**, and the currency of every descriptive section. A tier-weighted `share` stood here and was
+  removed: it quietly re-imported the assumption that a low placement counts for less, which is the
+  premise this module exists to reject. Bars render it directly.
+- `ratio` = shrunk mean carrier weight ÷ `meanWeight`, where shrinkage mixes in a prior worth
+  `PRIOR_STRENGTH` (10) artists at the roster average. **This is the fix for the failure that
+  prompted the rework**: ranking by a raw average crowned three-artist tags (`New Zealand`,
+  `bedroom pop`) while a 36-artist scene (`pop punk`) never appeared. A tag needs about
+  `PRIOR_STRENGTH` carriers before it earns half the elevation its raw average claims.
+- `meanWeight` — mean `TIER_WEIGHT` of the carriers; feeds `ratio` and the chance test, never
+  displayed, since it is a claim about placement rather than a description.
+- `favourites` / `favouriteRate` / `favouriteIndex` — carriers in the favourite tiers, as a count, a
+  rate, and that rate shrunk against the roster's own rate.
+
+Tags with fewer than `MIN_SUPPORT` (3) carriers are dropped. The rankings: `rankByRatio`, and
+`rankByFavouriteIndex` (which applies the higher `SPREAD_MIN_SUPPORT` floor — a rate over three
+carriers can only read 0, ⅓, ⅔ or 1).
+
+`rankVariable` and `rankReliable` are exact mirrors, ranking the same `SPREAD_MIN_SUPPORT` (5)
+floor by **descending** and **ascending** spread respectively — the one number both lists display.
+`rankVariable` additionally gates on genuine reach: **both** ends of a tag's range must hold at
+least `MIN_CAMP_SIZE` (2) carriers, so one far-flung placement cannot stand in for a tag that
+spans the board. That used to be part of the score (spread × the smaller end's share) instead; the resulting
+order moved with no displayed column, so the list read as unsorted. Making it a gate keeps the
+guarantee and lets the ± explain the ranking. Ties break by carrier count then canonical tag name
+throughout.
+
+`categoryComposition` groups the top `COMPOSITION_PER_CATEGORY` (5) tags of each `tag-groups.ts`
+category (skipping "Other") by `prevalence`, and is **ungated** — see §8.2a for why that is the
+point rather than an oversight. Per category because one flat list is filled by vocal-style and
+production tags, burying "what genres is this made of" under the answer to a different question.
+
+A predecessor ranked by a tier-derived surplus (`excess`) and required it to beat chance. That was a
+category error twice over: it made a descriptive count inferential, and it measured preference by
+tier position — the very assumption the module is built to avoid. On the roster of the day the
+biggest tag was excluded for sitting below its average placement, when "62% of this collection
+carries it" is simply a true and useful description of the collection.
+
+`rankTasteWorlds` (§8.3) is descriptive in the same way and likewise ungated.
+
+### 8.2a The significance gate
+
+`markSignificant` runs as a second pass over every tag, because the correction has to see the whole
+vocabulary at once. For each tag it asks two questions — is its average elevated, are its carriers
+unusually clustered — by **shuffling the tier assignments across the roster** (leaving each artist's
+tags alone) `NULL_SAMPLES` (10 000) times and seeing how often a group of that size lands as far
+out by luck. A prefix of a shuffle *is* a uniform random subset, so one walk down each shuffle
+yields the null for every carrier count at once; the RNG is seeded, so the dialog stays a pure
+function of the roster. Cost is ~45 ms on the shipped data, inside the existing lazy first-open
+build.
+
+Shuffling rather than a normal approximation, because `TIER_WEIGHT` is badly skewed (S counts 13,
+E counts 1) and a handful of carriers has a lumpy null that a bell curve misjudges precisely in the
+tail. The resulting p-values are corrected with **Benjamini–Hochberg** at `FALSE_DISCOVERY_RATE`
+(0.05); `rankByRatio` and `rankByFavouriteIndex` gate on `elevationIsReal`,
+`rankReliable` and `rankVariable` on `clusteringIsReal`.
+
+`NULL_SAMPLES` is load-bearing, not a tuning knob: with S shuffles the smallest observable p-value
+is 1/(S+1), and BH's rank-1 threshold here is 0.05/127 ≈ 0.0004. At 2 000 shuffles **no tag could
+pass however real it was**, which would look like a finding rather than the measurement artefact it
+is.
+
+On the shipped roster **nothing clears the gate**, and the dialog says so rather than showing a
+heading over nothing. The strongest tag is `male vocals` at p = 0.0033 against a rank-1 threshold of
+0.0004; nine tags clear p < 0.05 uncorrected, where 127 × 0.05 = 6.4 is what chance alone produces.
+That result is pinned in `stats.test.ts` so a data change that produces real preferences fails
+loudly and gets looked at.
+
+### 8.3 Worlds, predictive power and isolation
+
+- **`rankTasteWorlds`** delegates wholesale to `groupRoster` (`cloud-layout.ts`), which runs the
+  first two steps of the map's layout without any geometry: genre scenes, then those agglomerated
+  into ~√k families of related sound. Reused rather than reinvented so the 📊 dialog and the ☁️ map
+  cannot disagree about the shape of one collection — a second clustering here would drift from the
+  one the user can actually see. Descriptive, so ungated: which artists group together is a fact
+  about their tags, with the tiers playing no part. On the shipped roster it yields 6 worlds over 38
+  scenes, covering 233 of 239 artists; the 6 unclaimed are reported rather than forced into a
+  family. Worlds are named by listing their own scenes — an invented label like "synth pop and
+  friends" would be a guess dressed as a finding.
+
+- **`measurePredictivePower`** predicts each artist's position from the mean of its qualifying
+  tags' **leave-one-out** means — each tag's mean recomputed without the artist itself, so its own
+  placement cannot vote for itself (qualification is `MIN_SUPPORT`; era tags never qualify) — then
+  returns the Pearson correlation against the real placements, and its square.
+
+  It is the **replacement for two removed sections** (`rankOutliers`, "More than the sum of their
+  parts" / "Worth another listen") which ranked artists by their distance from that prediction. On
+  the shipped roster those lists were simply the S tier and the E tier: averaging nine tag means
+  regresses so hard to the roster mean that predictions span 0.18 tiers against an actual spread of
+  1.28, leaving (position − prediction) a straight restatement of the tier — mean raw delta by tier
+  ran S +3.20, A +2.24, B +1.21, C +0.25, D −0.76, E −1.70, a near-perfect line. A nearest-neighbour
+  model over `pairwiseSimilarities` was tried as a rescue and reached r² ≈ 3.9%, still nothing.
+  Reporting the measurement is the honest form of the same finding, and `stats.test.ts` pins
+  r² < 0.1 on the real roster so that a data change making the tags genuinely predictive fails
+  loudly rather than passing unnoticed.
+- **`rankIsolation`** ranks both ends by `kin` — how many other ranked artists carry at least
+  `KIN_SHARE` (½) of this artist's tags. A fraction rather than a fixed count, since artists carry
+  5–10 tags and a flat threshold would make the sparsely-tagged look lonely. On the shipped roster
+  it scores 40–68 at the crowded end and 0–2 at the lonely one, so it separates the lists as sharply
+  as a similarity measure would **while meaning something a reader can check** — which is why it,
+  and not the similarity, is the displayed figure.
+  `kinship` — the mean of an artist's `ISOLATION_NEIGHBOURS` (3) closest similarities from the ☁️
+  map's `pairwiseSimilarities` (`cloud-layout.ts`, reused rather than reinvented) — survives as the
+  **tie-break**, which is load-bearing at the lonely end where many artists score 0 `kin` and only
+  the finer measure can order them. It is never displayed: over a coherent roster it compresses into
+  a narrow band near the top (0.83–0.99 on the shipped data), where a bare "0.84" would read as a
+  strong match. `rarestTag` (the least-shared tag, eras excluded) is carried for both ends but
+  rendered only on `distinctive`.
+
+### 8.4 Eras, and tuning
+
+**Eras stand apart.** `computeStats` partitions the aggregates on `isEraTag` (exported by
+`tag-groups.ts`, the same decade-shape test the filter panel's grouping uses): era tags fill their
+own chronological section (canonical tag order is already chronological for decade-shaped names) and
+are withheld from every other list, the composition breakdown, the predictive-power measure, and the
+rarest-tag annotation — being numerous, well-supported, and internally uniform, they would otherwise crowd out the
+rest of the vocabulary.
+
+The list lengths (`TAG_LIST_LIMIT` 10, `PREDICTOR_LIST_LIMIT` 6, `ARTIST_LIST_LIMIT` 6,
+`COMPOSITION_PER_CATEGORY` 5) and the `MIN_SUPPORT`, `SPREAD_MIN_SUPPORT`, `MIN_CAMP_SIZE`,
+`PRIOR_STRENGTH`, `ISOLATION_NEIGHBOURS`, `KIN_SHARE` and `FAVOURITE_SHARE` thresholds are exported constants in
+`stats.ts` — **tunable, not contractual** (PRD §10 leaves them unspecified). `NULL_SAMPLES` and
+`FALSE_DISCOVERY_RATE` are the exception — they set what the dialog is willing to call a finding,
+and §8.2a explains why neither can be lowered casually.
+
+### 8.5 Rendering
+
+`stats-view.ts` groups the sections under thematic `<h3 class="stats-group-heading">` banners, since
+a flat stack of sections is not navigable. Every row keeps the shared three-column grid
+(`.stat-rows`, each row `display: contents`): a **lead cell**, the name with its parenthesised
+annotation, and an optional gauge. The lead is either a `.stat-tier` pastel chip — reserved for rows
+naming a real artist, tier, or span of tiers, per PRD §10.2 — or a `.stat-value` number holding
+that list's sort key.
+
+The signature section divides its rows by vocabulary category with a `.stat-subheading` spanning
+every column (`grid-column: 1 / -1`), so all three categories share one set of column widths and
+read as a single aligned table rather than three.
+
+The **decades** section is not a row list at all (`.stat-rows.as-block` cancels the grid): `eraChart`
+builds a column-per-decade volume panel and a ratio curve over one shared axis. Three encodings were
+tried and discarded before it — a single bar coloured by the ratio (four of the eight decades are 1%
+slivers with no room to show a colour), the same bar with a marker along its length (a second scale
+on one axis), and two bars stacked in a row (`.stat-pair`, since removed: the reader had to rebuild
+the curve from eight pairs by eye). Drawn left to right, the step across the ×1.00 baseline between
+the 1990s and the 2000s becomes the finding rather than something to be inferred.
+
+It is built from **HTML boxes, not one SVG**: labels then keep real CSS type sizes and the chart
+reflows with the dialog, where a viewBox-scaled SVG would shrink its text to nothing on a phone. Only
+the connecting polyline is SVG — stretched with `preserveAspectRatio="none"`, so its stroke needs
+`vector-effect: non-scaling-stroke` to keep an even width. A `max-width: 640px` query steps the axis
+labels down, since eight full decade names fill a phone-width dialog edge to edge.
+
+The isolation sections take `.stat-rows.with-kin`, the same four columns
+with the width moved from the bar into the name track (artist names are longer than tag names).
+
+The predictor sections take a **four-column** variant (`.stat-rows.with-tier-range`): the spread
+leads, since both lists are ordered by it, then a `.stat-tier-range` (one narrowed chip per end of
+the span its carriers occupy, joined by a dash; a single chip when both ends agree) keeps its own
+track so the chips stay aligned rather than drifting with the tag names. The spread is printed to
+two decimals — at one, adjacent rows rounded to equal values and the ordering looked arbitrary.
+Gauges are
+`.stat-bar` (a 0-anchored fill, optionally with a `.stat-bar-tick` reference mark),
+`.stat-diverge` (a fill growing from a centre line at ×1.00), `.stat-range` (a band plus dot), or
+none.
+
+**Every group of bars scales to its own largest member**, never to a theoretical maximum — see the
+convention in `CLAUDE.md`. `shareBar` takes the true quantity plus an `of` (the group's largest) and
+divides internally, so the label and tooltip are always drawn from the real value and a caller
+cannot print the scaled fraction by mistake; a `tick` is scaled by the same factor so it stays in
+place relative to the bars. `.stat-diverge` follows the same rule about its centre line via
+`halfWidth`, and the decade columns and tier histogram compute their own maxima. The one gauge that
+is *not* group-scaled is `.stat-range`, which is positioned by `positionFraction` over the tiers the
+roster occupies — a shared yardstick is the point there, since the bands are read against each
+other and against the board.
 
 ## 9. Image-enrichment tooling (`scripts/enrich-images.ts`)
 

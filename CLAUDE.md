@@ -58,6 +58,67 @@ When asked to add an artist (optionally at a given tier):
    `npm run typecheck`, and `npm run format` (the tests derive expectations from the loaded
    roster, so they adapt to the new row).
 
+## The 📊 statistics: what this data can and cannot support
+
+This panel has been rebuilt several times because the same mistake keeps reappearing in new
+clothes. Read this before adding, ranking, or "improving" any statistic. The mechanics are in
+ARCHITECTURE §8; what follows is the reasoning, which the code cannot express on its own.
+
+**The premise.** The roster contains only artists the maintainer likes. S means "favourite", the
+bottom tier means "still good, just less so". **An artist's presence is already the positive
+signal** — having collected 36 pop punk artists *is* the preference; where those 36 sit is a
+second-order refinement among things already liked. No statistic may treat a low placement as a
+negative verdict, and no copy may call a tag unloved or an artist a mistake.
+
+**Every statistic is one of two kinds, and the difference decides everything:**
+
+| | Descriptive | Inferential |
+| --- | --- | --- |
+| Claims | what the collection is made of | that a tag says something about the *ranking* |
+| Counted by | plain headcount (`prevalence`) | tier weights (`ratio`, `favouriteIndex`, spread) |
+| Must beat chance? | **no** — there is no hypothesis to reject | **yes**, corrected for multiplicity |
+| When there is nothing to show | cannot happen | the section is omitted, and says why |
+
+Before writing a statistic, decide which column it is in. Getting this wrong is the trap: an
+earlier version ranked tags by a tier-derived "surplus" and required it to beat chance, which made
+a descriptive count inferential *and* smuggled tier position back in as the measure of preference.
+
+**Three findings are settled. Do not re-derive them, and do not build features that assume
+otherwise:**
+
+1. **The tags barely predict the tiers** — r² ≈ 1% over 239 artists (`measurePredictivePower`).
+   Any statistic ranking artists by distance from a tag-based prediction therefore collapses into
+   "what tier is it", because the prediction is nearly constant. Two sections died this way; the
+   dialog now reports the measurement instead.
+2. **No tag's elevation survives correction.** Every list picks the best of ~130 tags, and over that
+   many tries the best of anything looks striking — shuffling the tiers at random beats the real
+   roster's top tag about four times in five. The strongest real tag reaches p = 0.0033 against a
+   Benjamini–Hochberg threshold of 0.0004. Nine tags clear p < 0.05 uncorrected, where 127 × 0.05 =
+   6.4 is what chance alone produces.
+3. **Prevalence cannot separate taste from base rate.** A tag's frequency carries both how much
+   the maintainer likes the trait and how common the trait is in the music that exists, and nothing
+   computable from this file can tell them apart — there is no outside population to compare
+   against. Report prevalence as a fact about the collection, say so plainly, and **do not try to
+   correct it with tier elevation**: that is cancelling one measurement error with another. Resist
+   illustrating the point with a claim about music in general ("most acts have a male singer") —
+   the app has no basis for such a claim, and any example drawn from today's roster goes stale.
+
+**Rules that follow:**
+
+- **An empty section is a correct outcome**, not a bug to fix by loosening a threshold. Sections
+  that vanish must say why (`nothingStandsOut`) rather than silently disappearing.
+- **Lead every list with the figure it is sorted by.** A ranking whose key is not on screen reads
+  as unsorted, however principled it is.
+- **Small samples dominate any extremum.** Tightest spread, highest average and best rate are all
+  found among the fewest carriers unless shrunk (`PRIOR_STRENGTH`) or floored (`SPREAD_MIN_SUPPORT`).
+- **Check that a chosen threshold is reachable.** `NULL_SAMPLES` at 2 000 made *every* tag fail by
+  arithmetic, because the smallest observable p-value was above the correction's cut — a
+  measurement artefact that looked exactly like a finding.
+- **Reuse the ☁️ map's grouping** (`groupRoster`) for anything about which artists resemble which.
+  Two features describing one collection must not disagree about its shape.
+- **Prefer a null result to a decorative one.** "Your tags explain 1% of your ranking" is a better
+  line than a ranked list of noise.
+
 ## Commands
 
 ```sh
@@ -67,7 +128,7 @@ npm run build          # production build → dist/
 npm run preview        # serve the production build locally
 npm run enrich         # run scripts/enrich-images.ts (Apple Music → MusicBrainz → YouTube → Wikipedia)
 npm run add-artist -- "<name>"   # append an unranked artist to the CSV and enrich just them
-npm test               # unit tests (CSV round-trip, store diff, weighting, name sort, ☁️ map layout, 📊 tag stats)
+npm test               # unit tests (CSV round-trip, store diff, weighting, name sort, ☁️ map layout, 📊 statistics)
 npm run typecheck      # tsc --noEmit
 npm run format         # Prettier
 ```
@@ -81,6 +142,13 @@ full suite. Verify user-facing changes against the PRD.
 ## Conventions
 
 - British English spelling in docs and UI copy.
+- **A group of bars scales to the largest bar in that group**, never to a theoretical maximum. Every
+  bar list compares its rows only with each other, and against a notional 100% most of them are
+  stubs — the biggest world is 41% of the roster, the biggest genre 15% — so the differences the
+  reader is being asked to judge get squeezed into the first fraction of the track. The **printed
+  value must stay the true one**: `shareBar` takes the real quantity and an `of` (the group's
+  largest) precisely so a caller cannot label a bar with its scaled fraction by accident. Any
+  reference tick scales with it. Diverging bars follow the same rule about their own centre line.
 - Comment liberally to explain non-obvious sequences; avoid restating what the next line already says.
 - Prefer descriptive placeholder names over `foo`/`bar`.
 - Keep the app dependency-light and the output purely static (no backend, no runtime image fetching).

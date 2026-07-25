@@ -359,6 +359,21 @@ function packDiscs(radii: readonly number[], affinity: number[][], gap: number) 
   return centres;
 }
 
+/** Affinity between two clusters: the mean similarity across their members. */
+function clusterAffinity(
+  clusters: readonly PartitionedCluster[],
+  similarities: number[][],
+): number[][] {
+  return clusters.map((a) =>
+    clusters.map((b) => {
+      if (a === b) return 0;
+      let sum = 0;
+      for (const i of a.members) for (const j of b.members) sum += similarities[i]![j]!;
+      return sum / (a.members.length * b.members.length);
+    }),
+  );
+}
+
 /**
  * Group the clusters into ~√k families of related sound by average-linkage
  * agglomeration: start with every cluster alone, repeatedly merge the two
@@ -390,6 +405,58 @@ function groupClusters(affinity: number[][], clusterCount: number): number[][] {
   return groups;
 }
 
+/** One genre scene: the tag that founded it and the artists it claimed. */
+export interface Scene {
+  tag: string;
+  members: string[];
+}
+
+/** A family of related scenes — one neighbourhood of the map. */
+export interface TasteGroup {
+  /** The scenes it gathers, largest first. */
+  scenes: Scene[];
+  /** Every artist across those scenes, in no particular order. */
+  members: string[];
+}
+
+/**
+ * The roster's structure without any of the geometry: genre scenes, then those
+ * agglomerated into families of related sound. These are the first two steps of
+ * computeCloudLayout, and therefore exactly the neighbourhoods a viewer sees on
+ * the ☁️ map — the 📊 dialog describes the same grouping rather than inventing a
+ * second, differently-drawn one (ARCHITECTURE §7).
+ *
+ * Families come out largest first, and the scenes within each likewise. Artists
+ * no scene claimed are returned separately rather than forced into one.
+ */
+export function groupRoster(artists: readonly Artist[]): {
+  groups: TasteGroup[];
+  loners: string[];
+} {
+  if (artists.length === 0) return { groups: [], loners: [] };
+  const similarities = pairwiseSimilarities(artists);
+  const { clusters, loners } = partitionIntoClusters(artists, similarities);
+  const stray = loners.map((i) => artists[i]!.name);
+  if (clusters.length === 0) return { groups: [], loners: stray };
+
+  const families = groupClusters(clusterAffinity(clusters, similarities), clusters.length);
+  const groups = families.map((memberClusters) => {
+    const scenes = memberClusters
+      .map((c) => ({
+        tag: clusters[c]!.tag,
+        members: clusters[c]!.members.map((m) => artists[m]!.name),
+      }))
+      .sort((a, b) => b.members.length - a.members.length || a.tag.localeCompare(b.tag));
+    return { scenes, members: scenes.flatMap((scene) => scene.members) };
+  });
+  groups.sort(
+    (a, b) =>
+      b.members.length - a.members.length ||
+      (a.scenes[0]?.tag ?? "").localeCompare(b.scenes[0]?.tag ?? ""),
+  );
+  return { groups, loners: stray };
+}
+
 /**
  * Lay the artists out in the unit square: genre-cluster discs (with their
  * rings) packed together, related clusters adjacent, leftover artists on an
@@ -411,14 +478,7 @@ export function computeCloudLayout(artists: readonly Artist[]): CloudLayout {
 
   // Affinity between clusters: mean cross-member similarity. Drives which
   // already-placed discs each new disc snuggles up to.
-  const affinity = clusters.map((a) =>
-    clusters.map((b) => {
-      if (a === b) return 0;
-      let sum = 0;
-      for (const i of a.members) for (const j of b.members) sum += similarities[i]![j]!;
-      return sum / (a.members.length * b.members.length);
-    }),
-  );
+  const affinity = clusterAffinity(clusters, similarities);
 
   // Two-tier placement: agglomerate the clusters into families of related
   // sound, pack each family's rings tightly, then pack the families (with a

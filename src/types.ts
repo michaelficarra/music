@@ -4,6 +4,19 @@
 export const TIERS = ["S", "A", "B", "C", "D", "E", "F"] as const;
 export type Tier = (typeof TIERS)[number];
 
+/**
+ * How much a ranked artist counts when aggregating affection, on the Fibonacci
+ * / planning-poker scale: F = 1 … S = 13. Every value is positive — the roster
+ * is a list of artists the user likes, so a placement never subtracts — and the
+ * gaps widen towards the top, matching how a tier list is actually used: the
+ * distance from A to S means far more than the distance from E to D.
+ *
+ * Shared deliberately by the 🎲 picker (ARCHITECTURE §6) and the 📊 statistics
+ * (§8) so the two features value a tier identically. Distinct from a tier's
+ * ordinal *position* in TIERS, which is what statements about placement use.
+ */
+export const TIER_WEIGHT: Record<Tier, number> = { S: 13, A: 8, B: 5, C: 3, D: 2, E: 1, F: 1 };
+
 /** Sentinel for artists that have not been placed into a ranked tier. */
 export const UNRANKED = "unranked";
 

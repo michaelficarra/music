@@ -257,7 +257,7 @@ clusters** drawn from the artists' tags (§2).
 - A **close control (✕) in the top-right corner** exits the map, as do the platform's standard
   dismissal actions (e.g. the Esc key). Closing returns to the board exactly as it was.
 
-## 10. Tag statistics (📊)
+## 10. Statistics (📊)
 
 A **📊** button opens a **read-only dialog of statistics** about the tier list, derived from the
 artists' tags (§2) crossed with their tier placements. The statistics describe the **static
@@ -265,54 +265,124 @@ arrangement** (the data shipped with the app, §7): they are computed from that 
 hand-curated — so they automatically follow every artist, tier, or tag change shipped in the
 source data. Local rearrangements (§6) do **not** affect them until exported (§7) and shipped.
 
-Ground rules, applying throughout:
+### 10.1 The premise
+
+The roster is a list of artists the user **likes**. The tiers rank that liking — S is a favourite,
+the bottom tier is still good, merely less so — so **no statistic may present a placement as a
+criticism**. Two rules follow, and everything below obeys them:
+
+- **Presence is always positive.** Being in the list, at any tier, only ever adds to a tag's
+  standing. There is no "least favourite" anything.
+- **Comparisons are to the user's own average**, never to an absolute idea of quality. A tag whose
+  artists sit below that average is **typical of the collection**, not disliked.
+
+### 10.2 Ground rules
 
 - **Unranked artists are excluded** from every statistic.
 - A tag features only when **at least three ranked artists** carry it, so one or two placements
-  cannot masquerade as a trend; rarer tags are ignored entirely.
-- A tag's **average** is the mean of its ranked carriers' tiers (tiers being evenly spaced for
-  this purpose). Each tag entry shows its average as the nearest tier's letter with **+ or −**
-  marking a lean towards the neighbouring tier (e.g. `A−`), alongside a **bar** sized by the
-  average and the **number of artists** counted. The favourite/least-favourite lists stretch
-  their bars between the lowest and highest entries they show, keeping small differences
-  visible; hovering a bar reveals its fill percentage. (Category-favourite entries carry no
-  bar; predictor and outlier entries replace it with the spread displays described below;
-  outlier entries' grades are exact placements rather than averages.)
+  cannot masquerade as a trend; rarer tags are ignored entirely. Statistics that rest on a
+  proportion rather than an average demand more carriers still.
+- Statistics that rank tags by how highly their artists sit are **weighted by how much evidence
+  stands behind them**, so a tag carried by a handful of artists must be far more striking than a
+  widely-carried one to outrank it.
+- Two quantities recur, and every entry shows one of them in place of a grade:
+  - a **share of the list** (a percentage), counting each artist by its tier, so a tag's standing
+    reflects **how many artists carrying it the user collected** as well as where they sit;
+  - a **ratio against a typical artist** (e.g. `×1.24`), shown on a bar growing left or right of a
+    centre line at `×1.00`.
+- **Prevalence is a description, not a claim, and is never tested.** How much of the list carries a
+  tag is a fact in the same class as how many artists there are; it is counted **by head, not
+  weighted by tier**, because on a list of music the user likes an artist's presence is already the
+  positive signal — having collected 36 pop punk artists *is* the preference, and where those 36 sit
+  is a second-order refinement among things already liked.
 
-The dialog presents, in order:
+  What prevalence **cannot** do is separate "the user likes this" from "this is simply common in
+  music at large". A tag's frequency carries both, and nothing computable from this data can tell
+  them apart, since there is no outside population to compare against. The dialog says so where it
+  reports prevalence, and never dresses a count as a discovered preference.
+- **A statistic that claims a tag reveals a preference must first beat chance.** Every tag is
+  weighed against what a group of its size would do if the tiers were shuffled at random, and the
+  test accounts for the fact that each list picks a winner out of the whole vocabulary. **A section
+  shows only tags that clear it, and is omitted entirely when none do** — with a short note saying
+  so, since a section that silently vanishes reads as a fault rather than as the finding it is.
+  Sections that merely *describe* the collection — the roster summary, the two typicality lists,
+  and how much of the list each decade accounts for — make no such claim and are always shown.
+- **Tier letters appear only where a real tier is named** — an artist's placement, a tier in the
+  histogram, or the ends of a span of tiers. Wherever they appear they carry that tier's colour, as
+  on the board. A tag is never given a grade of its own.
+- Every bar's exact value is available on hover.
 
-- **Category favourites** — the best-rated tag in each tag category (genre, musical quality,
-  notable aspect). A category with no qualifying tags is omitted.
-- **Favourite and least favourite tags** — the tags with the highest and the lowest averages, as
-  two ranked lists. The lists never overlap: when few tags qualify, the least-favourite list
-  comes up short (or empty) rather than mirroring the favourites.
-- **Best predictors** — the tags whose carriers cluster most tightly around the tag's
-  average, so carrying the tag all but pins an artist's tier. Instead of a bar, each entry
-  shows the full range its artists occupy with a marker for the average, annotated with the
-  typical deviation; a stricter minimum carrier count applies to both predictor lists.
-- **Worst predictors** — the mirror: the tags that least predict where their carriers sit,
-  splitting them into **two camps**: artists at least a full tier above the tag's average,
-  and artists at least a full tier below it. Ranked by how far apart the carriers sit and how
-  evenly the two camps are matched — a lone dissenter does not divide a fanbase. Each entry
-  shows the camp sizes alongside the same range display.
-- **Guilty pleasures and black sheep** — the artists placed **furthest above** (guilty
-  pleasures) and **furthest below** (black sheep) where their tags suggest they would sit;
-  whether an artist sits above or below that suggestion decides which side it can appear on.
-  An artist's suggested placement averages its qualifying tags' averages, each computed **as if
-  that artist were not on the board**, so its own placement cannot vote for itself. Each entry
-  shows the artist's actual tier and the predicted one, with a marker for each on a track and a
-  line joining them — drawing the very gap the list is ranked by. Artists with no qualifying
-  tags are not judged. When no artist sits above (or below) its
-  prediction at all, the section says so — agreement between the tags and the tiers is itself a
-  finding.
-- **Decades** — every qualifying era/decade tag with its average, ordered **oldest to newest**: a
-  preference curve over the decades rather than a ranking. Era tags appear **only here** — they
-  are left out of every other statistic, so a strong decade preference cannot crowd out the
-  rest of the vocabulary.
+### 10.3 What the dialog presents
 
-The exact list lengths, banding boundaries, and spread measure are implementation details. The
-dialog is dismissed with its **✕ close button**, the Esc key, or a **click outside it**, and
-viewing it changes nothing about tiers, the picker, or filters.
+Sections are gathered under headings that say what question the next few answer.
+
+**Your list in numbers** — the opening summary: how many artists are ranked, how many tags describe
+them, and a **histogram of the tiers** (including any tier nobody occupies, so the board's shape is
+honest). Bars scale to the fullest tier, which is what makes the shape legible. It also names the tiers counted as
+**favourites**, which several later statistics are measured against. The most-collected tag and the
+dominant decade are deliberately *not* repeated here — each heads a section of its own below.
+
+**What you like**
+
+- **What lifts an artist** — the tags whose artists are worth most against a typical artist,
+  as ratios.
+- **The surest signs of a favourite** — the tags that most raise an artist's chances of reaching the
+  favourite tiers. Each entry's bar is the share of that tag's artists that are favourites, with a
+  **tick marking the whole list's own rate**, so over-representation is visible rather than merely
+  asserted; the multiplier comparing the two is damped where few artists stand behind it, and the
+  section says so, since it therefore will not equal the bar divided by the tick.
+
+**What a tag tells you**
+
+- **Reliable signals** — the tags whose artists cluster most tightly, so carrying one all but pins
+  an artist's tier. Each entry leads with **how far a typical carrier sits from the tag's average**,
+  which is what the list is ordered by, then names the span of tiers its artists occupy and draws
+  it as a band with a marker for the average.
+- **Depends on the artist** — the exact mirror, ordered by the same figure in the opposite
+  direction: tags **reaching right across the list**, turning up at every level of the ranking, so
+  which artist carries one matters more than the trait does. Each entry counts its artists a full
+  tier above and below **that tag's own average** — a position within the tag's own range, never a
+  verdict on the artist — and both ends must hold more than one, which is a condition of appearing
+  rather than something the ordering trades off. A stricter minimum carrier count applies to both
+  of these lists.
+
+- **How far the tags go** — closing the group, a plain statement of **how much of a placement the
+  whole vocabulary actually accounts for**, measured by predicting every artist's tier from its tags
+  alone and comparing that against where the artists really sit. On a roster where the answer is
+  near zero, the dialog says so and tells the reader to treat the lists above as descriptions of the
+  collection rather than explanations of the ranking. This replaced two sections that ranked artists
+  by their distance from that prediction; both were reprinting the top and bottom tiers, because a
+  prediction that barely varies makes the distance from it a restatement of the tier.
+
+**The shape of the collection**
+
+- **What your list is made of** — the most common tags in each vocabulary category (genre, musical
+  quality, notable aspect), by plain prevalence. Broken down per category because one flat list is
+  dominated by vocal-style and production tags, burying the question "what genres is this made of"
+  under the answer to a different one.
+- **The worlds it splits into** — the collection above the level of any single tag: artists gather
+  into genre scenes, and those scenes into a handful of broader worlds, each named by the scenes it
+  contains rather than by an invented label. These are **the same neighbourhoods the ☁️ map draws**,
+  so the two features agree about the shape of the collection. Artists belonging to no scene are
+  counted out and said so.
+- **Your core sound** and **One of a kind** — the two ends of one ranking: the artists with the most
+  company in the list, and those least like anything else in it. Both lead with the figure they are
+  ordered by — **how many other artists carry at least half of this one's tags** — so the ordering
+  is checkable, and share one bar scale so the lonely end reads as short beside the crowded one.
+  Being an outlier is explicitly not a demerit; those are the corners the taste reaches into, and
+  only that list carries the extra note of the artist's **least-shared tag**, since "what makes this
+  one different?" is the question only it raises.
+- **Decades** — the one section drawn as a **chart** rather than a list, because its order is
+  chronological rather than a ranking. Two panels sit over a single **oldest-to-newest** axis: a
+  column per decade for how many artists it holds, and beneath it a curve for how much those
+  artists are worth against a typical one, read against a marked baseline. Presenting it this way —
+  rather than as two numbers per row — is what makes the shape of a listening history legible at a
+  glance. Era tags appear **only here**; they are left out of every other statistic, so a strong
+  decade preference cannot crowd out the rest of the vocabulary.
+
+The exact list lengths, carrier minimums, weighting strength, and spread measure are implementation
+details. The dialog is dismissed with its **✕ close button**, the Esc key, or a **click outside
+it**, and viewing it changes nothing about tiers, the picker, or filters.
 
 ## 11. Empty / edge states
 
@@ -324,7 +394,9 @@ viewing it changes nothing about tiers, the picker, or filters.
 - **No eligible artists for a pick:** handled as in §8.
 - **Statistics with too little data:** when nothing is ranked — or no tag is carried by enough
   ranked artists — the statistics dialog (§10) explains that there is not enough data, instead of
-  presenting empty sections.
+  presenting empty sections. Individual sections with nothing to report are omitted, except the two
+  in §10.3's "where the tags and the tiers disagree", where having nothing to report is a finding
+  and is stated.
 
 ## 12. Out of scope (explicitly)
 

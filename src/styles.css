@@ -904,13 +904,41 @@ body:has(#cloud-dialog[open]) {
   color: var(--muted);
 }
 
+/* A thematic banner over a run of sections — the signposts that keep a long
+   scroll navigable. Louder than a section heading (full-strength text, a rule
+   above) so the hierarchy reads at a glance. */
+.stats-group-heading {
+  margin: 1.6rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid #ffffff1f;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+
+/* The first group follows the intro paragraph, which is separation enough. */
+.stats-group:first-of-type .stats-group-heading {
+  margin-top: 0.6rem;
+  padding-top: 0;
+  border-top: none;
+}
+
 /* A section's own paragraphs — the one-line explainer under each heading and
    any "none to report" line: quiet, and snug against the rows below. Matches
    `.modal p`'s specificity (and sits later), overriding its 1rem gap. */
 .stats-section p {
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.5rem;
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+/* A paragraph *after* a section's rows — the summary's closing line about the
+   favourite tiers — needs the gap on its top edge, which the rule above only
+   ever puts below. Without this it sits flush against the last row. */
+.stat-rows + p {
+  margin-top: 0.6rem;
 }
 
 /* A section's rows share one grid (each row is display:contents) so the three
@@ -933,6 +961,21 @@ body:has(#cloud-dialog[open]) {
   display: contents;
 }
 
+/* The predictor sections carry a fourth column: the spread leads (it is what
+   both lists are sorted by), then the tier span keeps its own track so the
+   chips stay aligned down the list rather than drifting with the tag names.
+   The name column gives up the width the new track takes. */
+.stat-rows.with-tier-range {
+  grid-template-columns: auto auto fit-content(19rem) minmax(2.5rem, 1fr);
+}
+
+/* The isolation sections use the same four columns, but their names are artists
+   rather than tags — longer, and carrying a note — so the name track takes the
+   width back from the bar, which only has to show one count against another. */
+.stat-rows.with-kin {
+  grid-template-columns: auto auto fit-content(22rem) minmax(2.5rem, 1fr);
+}
+
 .stat-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -947,28 +990,221 @@ body:has(#cloud-dialog[open]) {
 }
 
 /* The bar: a dark track whose accent fill is sized by the row's --fraction
-   custom property (set inline by stats-view from the score). */
+   custom property (set inline by stats-view). Not overflow:hidden — the
+   baseline tick stands proud of the track on purpose. */
 .stat-bar {
+  position: relative;
   height: 0.5rem;
   border-radius: 3px;
   background: #00000059;
-  overflow: hidden;
 }
 
 .stat-fill {
   display: block; /* spans don't take height; the track's height must */
   height: 100%;
+  border-radius: inherit;
   background: var(--accent);
   width: calc(var(--fraction) * 100%);
 }
 
-/* The spread gauges (predictor and outlier rows): the same track as
-   .stat-bar. The worst/best-predictor rows carry a band over their artists'
-   full range with a dot at the average; outlier rows carry a prediction
-   ring joined to the actual-placement dot by a thin connector. Positions
-   come in as 0..1 fractions of the tier scale (--lo / --hi / --at), set
-   inline by stats-view. No overflow:hidden — the markers stand slightly
-   taller than the track on purpose. */
+/* A reference mark on a share bar — the rate the roster as a whole shows, so a
+   bar reaching past it is visibly over-represented rather than merely stated
+   to be. Pale, to read as a scale marking rather than as data. */
+.stat-bar-tick {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: calc(var(--at) * 100%);
+  width: 2px;
+  border-radius: 1px;
+  background: var(--text);
+  opacity: 0.55;
+}
+
+/* A section whose content is one block rather than a table of rows — the
+   decades chart. Cancels the rows grid it would otherwise be laid into. */
+.stat-rows.as-block {
+  display: block;
+}
+
+/* ——— The decades chart ———
+
+   Two panels over one shared left-to-right decade axis: a column per decade for
+   how many artists it holds, then a curve for how much those artists are worth
+   against a typical one. The left gutter carries the ×1.00 label, and both
+   panels are inset by it so their columns and dots line up with the axis labels.
+
+   Deliberately built from boxes rather than as one SVG: the labels then keep
+   real CSS type sizes and the chart reflows with the dialog at any width, which
+   a viewBox-scaled SVG cannot do without shrinking its text to nothing. */
+.era-chart {
+  --gutter: 2.6rem;
+  margin-top: 0.35rem;
+}
+
+/* Columns grow from a shared floor, so their heights are comparable. */
+.era-volume {
+  display: flex;
+  align-items: flex-end;
+  height: 4.5rem;
+  padding-left: var(--gutter);
+  border-bottom: 1px solid #ffffff26;
+}
+
+.era-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  gap: 2px;
+}
+
+.era-count {
+  font-size: 0.65rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A floor of 2px so the sparsest decade is still a visible mark rather than
+   nothing at all; its count is printed above it either way. */
+.era-bar {
+  width: 60%;
+  max-width: 1.6rem;
+  height: max(2px, var(--height));
+  border-radius: 3px 3px 0 0;
+  background: var(--accent);
+}
+
+.era-ratio {
+  position: relative;
+  height: 3.6rem;
+  margin-top: 0.5rem;
+  padding-left: var(--gutter);
+}
+
+/* The ×1.00 reference the curve is read against: dashed, so it reads as a
+   scale marking rather than as data. */
+.era-baseline {
+  position: absolute;
+  left: var(--gutter);
+  right: 0;
+  top: calc(var(--at) * 100%);
+  border-top: 1px dashed var(--text);
+  opacity: 0.35;
+}
+
+.era-baseline-label {
+  position: absolute;
+  left: 0;
+  top: calc(var(--at) * 100%);
+  transform: translateY(-50%);
+  width: calc(var(--gutter) - 0.4rem);
+  text-align: right;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+/* The one part CSS cannot draw. Stretched to the panel with
+   preserveAspectRatio="none", so the stroke needs vector-effect to keep an even
+   width under that non-uniform scale. */
+.era-line {
+  position: absolute;
+  left: var(--gutter);
+  top: 0;
+  width: calc(100% - var(--gutter));
+  height: 100%;
+}
+
+.era-line polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Positioned against the panel's padding box, so --x is a fraction of the same
+   axis the columns and labels divide. The panel ring keeps a dot legible where
+   the curve passes behind it. */
+.era-dot {
+  position: absolute;
+  left: calc(var(--gutter) + var(--x) * (100% - var(--gutter)));
+  top: calc(var(--y) * 100%);
+  transform: translate(-50%, -50%);
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+.era-axis {
+  display: flex;
+  padding-left: var(--gutter);
+  margin-top: 0.3rem;
+}
+
+.era-axis span {
+  flex: 1;
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+/* Eight decade labels across a phone-width dialog leaves each about 34px, which
+   the full "1950s" fills edge to edge; a step down in size restores the gaps
+   that make them read as separate ticks. The dialog is sized from the viewport
+   (92vw), so a viewport query stands in for the container one. */
+@media (max-width: 640px) {
+  .era-chart {
+    --gutter: 2.2rem;
+  }
+
+  .era-axis span {
+    font-size: 0.58rem;
+  }
+}
+
+/* The ratio track: a bar growing out of a centre line at ×1.00 — a typical
+   artist in the list. Right of centre the tag's artists are worth more than
+   usual; left of it they are simply typical, which is not a fault on a roster
+   of music the user likes. */
+.stat-diverge {
+  position: relative;
+  height: 0.5rem;
+  border-radius: 3px;
+  background: #00000059;
+}
+
+/* The centre line, standing slightly proud of the track like the tick above. */
+.stat-diverge::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 50%;
+  width: 1px;
+  background: var(--text);
+  opacity: 0.45;
+}
+
+.stat-diverge-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--lo) * 100%);
+  width: calc((var(--hi) - var(--lo)) * 100%);
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+/* The predictor rows' spread gauge: the same track as .stat-bar, carrying a
+   band over its artists' full range with a dot at the average. Positions come
+   in as 0..1 fractions of the occupied tier scale (--lo / --hi / --at), set
+   inline by stats-view. No overflow:hidden — the dot stands slightly taller
+   than the track on purpose. */
 .stat-range {
   position: relative;
   height: 0.5rem;
@@ -986,22 +1222,10 @@ body:has(#cloud-dialog[open]) {
   background: #4c8dff59; /* the accent, quietened to read as a region */
 }
 
-/* The outlier rows' connector: a thin line from the prediction ring to the
-   actual-placement dot, drawing the very delta the list is ranked by. */
-.stat-range-link {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 2px;
-  left: calc(var(--lo) * 100%);
-  width: calc((var(--hi) - var(--lo)) * 100%);
-  background: var(--accent);
-}
-
-/* A solid accent dot — the predictor rows' average, the outlier rows' actual
-   placement — the visual counterpart of a bar's end. Its centre is clamped
-   half a marker in from the track's ends, so an extreme score can't
-   overhang the track and widen the dialog. */
+/* A solid accent dot marking the predictor rows' average — the visual
+   counterpart of a bar's end. Its centre is clamped half a marker in from the
+   track's ends, so an extreme position cannot overhang the track and widen the
+   dialog. */
 .stat-range-dot {
   position: absolute;
   top: 50%;
@@ -1013,21 +1237,56 @@ body:has(#cloud-dialog[open]) {
   background: var(--accent);
 }
 
-/* A hollow ring — where the outlier rows' tags predicted the artist would
-   sit — end-clamped like the dot above. */
-.stat-range-ring {
-  position: absolute;
-  top: 50%;
-  left: clamp(0.325rem, var(--at) * 100%, 100% - 0.325rem);
-  transform: translate(-50%, -50%);
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 50%;
-  border: 2px solid var(--accent);
-  background: var(--panel);
+/* A tag row's lead cell: the statistic itself, occupying the column the tier
+   chip takes on artist rows. Tabular figures keep the decimal points of a
+   column of "×1.24"s in line. */
+.stat-value {
+  justify-self: end;
+  min-width: 2.2rem;
+  text-align: right;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
-/* The grade chip ("A−"): the matching board tier's pastel with dark text. */
+/* A span of tiers leading a predictor row: a chip per end, joined by a dash.
+   The chips are narrower than a standalone one so the pair still fits the lead
+   column without pushing the gauges over. */
+.stat-tier-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  justify-self: end;
+}
+
+.stat-tier-range .stat-tier {
+  min-width: 1.15rem;
+  padding: 0.05rem 0.2rem;
+}
+
+.stat-tier-range-dash {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* A sub-heading inside a rows grid — the vocabulary categories dividing the
+   signature list. It spans every column so the rows above and below it keep
+   one set of column widths and read as a single aligned table. */
+.stat-subheading {
+  grid-column: 1 / -1;
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* …except the first, which sits directly under the section's explainer. */
+.stat-subheading:first-child {
+  margin-top: 0;
+}
+
+/* The tier chip ("B"): the matching board tier's pastel with dark text. Only
+   rows describing a real artist (or a tier itself) carry one. */
 .stat-tier {
   justify-self: center;
   min-width: 2.2rem;
