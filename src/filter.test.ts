@@ -7,6 +7,7 @@ const artistWithTags = (tags: string[]): Artist => ({
   baselineSlot: "B",
   imageURL: "",
   imageSource: "",
+  ownTags: tags,
   tags,
 });
 

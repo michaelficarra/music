@@ -27,10 +27,25 @@ the PRD; if it's about how the code achieves it, it's ARCHITECTURE.
 
 - `data/artists.csv` is the **source of truth** for the artist roster, tiers, images, and tags.
   Its schema (`Artist, Tier, ImageURL, ImageSource, Tags`) and RFC-4180 quoting rules are defined
-  in ARCHITECTURE §3. Tags are semicolon-delimited descriptors from a shared controlled
-  vocabulary (5–10 per artist; naturally cased — capitals only for proper nouns/acronyms; reuse
-  existing tags rather than minting near-synonyms). When a brand-new tag is unavoidable, also add
-  it to its category in `src/tag-groups.ts` so the 🎲 filter panel groups it correctly.
+  in ARCHITECTURE §3. Tags are semicolon-delimited descriptors, naturally cased — capitals only
+  for proper nouns/acronyms.
+- **`data/tags.csv` is the tag vocabulary** (`Tag, Category, Derived` — ARCHITECTURE
+  §3a): every tag's category and the tags derived from it. Two rules follow, and they are the
+  ones easiest to get wrong:
+  - **Rows in `artists.csv` carry only the most specific tag in each direction.** Never write a
+    tag that another one on the same row derives — no `punk rock` beside `pop punk`, no `European`
+    beside `Swedish`. The rest are derived at load time.
+  - **There is no target number of tags.** Four is fine, thirty is fine; accuracy is the only
+    criterion. (Do not restore the old 5–10 rule, or the old "every tag shared by ≥2 artists"
+    rule — both were dropped deliberately.)
+- Minting a tag means adding a row to `data/tags.csv`, **not** editing
+  `src/tag-groups.ts` (which no longer lists tags). Give it a category and the tags it derives
+  directly. `npm test` fails if a roster tag is unregistered, if a derived tag does not resolve,
+  if a genre derives a region, or if the rows are out of canonical order.
+- **Tag from evidence, not recall.** `npm run tag-research -- "<name>"` (ARCHITECTURE §9a) prints
+  what MusicBrainz and Wikipedia say (origin city, country, group-vs-person, active years, genres)
+  alongside the crowd tag votes. Region and era tags should follow it; musical-quality tags are
+  not published anywhere and remain a listening judgement.
 - The app embeds this CSV at **build time**; changing the data requires a rebuild/redeploy to
   affect the shipped default.
 - The in-app **Save** button exports the current arrangement as CSV to the clipboard; updating the
@@ -49,11 +64,12 @@ When asked to add an artist (optionally at a given tier):
    keys). If enrichment fails, retry with `npm run enrich -- --artist "<name>"`; a blank image is
    acceptable — report it rather than hand-crafting a URL.
 2. The script leaves `Tier` and `Tags` blank — edit the new row by hand. Set the tier if one was
-   requested, and pick 5–10 tags per the conventions above: read the rows of the most similar
-   existing artists and reuse their tags; check candidates exist in `src/tag-groups.ts`. A
-   brand-new tag is fine **if** it would not be unique to this artist: suggest at least one
-   existing artist that should also get it, and get the user's confirmation before adding the tag
-   (to the new artist's row, the suggested artists' rows, and `src/tag-groups.ts`).
+   requested, then run `npm run tag-research -- "<name>"` and tag from what it reports, per the
+   conventions above: as many tags as are accurate, most specific only, and read the rows of the
+   most similar existing artists so the wording matches theirs. A brand-new tag is fine — add its
+   row to `data/tags.csv` in the same edit. Get the user's confirmation before
+   minting a tag that would be **unique to this artist**, since it groups nothing; prefer the
+   nearest existing tag, or suggest the other artists that should also carry the new one.
 3. A pure data row needs **no** PRD/ARCHITECTURE updates. Validate with `npm test`,
    `npm run typecheck`, and `npm run format` (the tests derive expectations from the loaded
    roster, so they adapt to the new row).
@@ -86,15 +102,16 @@ a descriptive count inferential *and* smuggled tier position back in as the meas
 **Three findings are settled. Do not re-derive them, and do not build features that assume
 otherwise:**
 
-1. **The tags barely predict the tiers** — r² ≈ 1% over 239 artists (`measurePredictivePower`).
+1. **The tags barely predict the tiers** — r² ≈ 1.6% over 239 artists (`measurePredictivePower`).
    Any statistic ranking artists by distance from a tag-based prediction therefore collapses into
    "what tier is it", because the prediction is nearly constant. Two sections died this way; the
-   dialog now reports the measurement instead.
-2. **No tag's elevation survives correction.** Every list picks the best of ~130 tags, and over that
-   many tries the best of anything looks striking — shuffling the tiers at random beats the real
-   roster's top tag about four times in five. The strongest real tag reaches p = 0.0033 against a
-   Benjamini–Hochberg threshold of 0.0004. Nine tags clear p < 0.05 uncorrected, where 127 × 0.05 =
-   6.4 is what chance alone produces.
+   dialog now reports the measurement instead. (Richer tagging did not rescue it: tripling the
+   vocabulary moved r² from ~1% to ~1.6%.)
+2. **No tag's elevation survives correction.** Every list picks the best of ~170 tags, and over that
+   many tries the best of anything looks striking. The strongest real tag reaches p = 0.0028
+   (`synthpop`, 20 carriers) against a Benjamini–Hochberg threshold of 0.00029. Sixteen tags clear
+   p < 0.05 uncorrected, where 173 × 0.05 ≈ 8.7 is what chance alone produces. Re-measure rather
+   than trusting these numbers after a retag — every tag's uncorrected p is on `TagStat.elevationP`.
 3. **Prevalence cannot separate taste from base rate.** A tag's frequency carries both how much
    the maintainer likes the trait and how common the trait is in the music that exists, and nothing
    computable from this file can tell them apart — there is no outside population to compare
@@ -113,7 +130,12 @@ otherwise:**
   found among the fewest carriers unless shrunk (`PRIOR_STRENGTH`) or floored (`SPREAD_MIN_SUPPORT`).
 - **Check that a chosen threshold is reachable.** `NULL_SAMPLES` at 2 000 made *every* tag fail by
   arithmetic, because the smallest observable p-value was above the correction's cut — a
-  measurement artefact that looked exactly like a finding.
+  measurement artefact that looked exactly like a finding. At 10 000 the margin is now only ~3×;
+  growing the vocabulary further eats it.
+- **Count the tags an artist was given, not the ones derived from them** (`countedTags`). Counting
+  derived tags too, every prevalence list is topped by umbrellas — `rock, pop, alternative rock`
+  — which describes the vocabulary rather than the collection. The exceptions are the two figures
+  that *are* the ☁️ map (`rankTasteWorlds`, `kinship`), which must match it.
 - **Reuse the ☁️ map's grouping** (`groupRoster`) for anything about which artists resemble which.
   Two features describing one collection must not disagree about its shape.
 - **Prefer a null result to a decorative one.** "Your tags explain 1% of your ranking" is a better
@@ -128,7 +150,8 @@ npm run build          # production build → dist/
 npm run preview        # serve the production build locally
 npm run enrich         # run scripts/enrich-images.ts (Apple Music → MusicBrainz → YouTube → Wikipedia)
 npm run add-artist -- "<name>"   # append an unranked artist to the CSV and enrich just them
-npm test               # unit tests (CSV round-trip, store diff, weighting, name sort, ☁️ map layout, 📊 statistics)
+npm run tag-research -- "<name>" # what MusicBrainz/Wikipedia/crowd tags say, to tag from (--all)
+npm test               # unit tests (CSV round-trip, tag vocabulary, store diff, weighting, name sort, ☁️ map layout, 📊 statistics)
 npm run typecheck      # tsc --noEmit
 npm run format         # Prettier
 ```

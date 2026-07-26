@@ -77,8 +77,9 @@ export const PRIOR_STRENGTH = 10;
 export const ISOLATION_NEIGHBOURS = 3;
 /**
  * How much of an artist's tag list another artist must share to count as kin.
- * A fraction rather than a fixed number of tags, since artists carry 5–10 of
- * them and a flat threshold would make the sparsely-tagged look lonely.
+ * A fraction rather than a fixed number of tags, since tag counts vary widely
+ * from artist to artist (ARCHITECTURE §3 sets no bound) and a flat threshold
+ * would make the sparsely-tagged look lonely for no reason but their sparseness.
  */
 export const KIN_SHARE = 0.5;
 /**
@@ -92,22 +93,44 @@ export const FAVOURITE_SHARE = 0.25;
  *
  * The floor matters: with S shuffles the smallest p-value observable is
  * 1/(S+1), and the correction below asks the strongest tag to clear
- * FALSE_DISCOVERY_RATE / (number of tags) — about 0.0004 over this vocabulary.
- * Too few shuffles and nothing can pass however real it is, which would look
- * like a finding rather than the measurement artefact it is. Ten thousand keeps
- * the resolution an order of magnitude clear of that threshold.
+ * FALSE_DISCOVERY_RATE / (number of tags) — 0.00029 over this vocabulary's 173
+ * tested tags. Too few shuffles and nothing can pass however real it is, which
+ * would look like a finding rather than the measurement artefact it is. Ten
+ * thousand keeps the smallest observable p (0.0001) clear of that threshold —
+ * but only by a factor of ~3, so re-check this if the vocabulary grows much
+ * further. Counting only each artist's own tags is what keeps the margin (see
+ * countedTags); including derived tags tests 215 and halves it.
  */
 export const NULL_SAMPLES = 10000;
 /**
  * The share of surviving findings allowed to be flukes (Benjamini–Hochberg).
  *
- * A correction is not optional here. Every tag list picks the best of ~130
+ * A correction is not optional here. Every tag list picks the best of ~170
  * candidates, and over that many tries the best of *anything* looks striking:
- * shuffling this roster's tiers at random produces a top tag stronger than the
- * real one about four times in five. Controlling the false-discovery rate is
- * what makes "this tag is a real preference" mean something.
+ * 16 tags clear p < 0.05 uncorrected on this roster, where chance alone would
+ * produce 173 × 0.05 ≈ 8.7. Controlling the false-discovery rate is what makes
+ * "this tag is a real preference" mean something.
  */
 export const FALSE_DISCOVERY_RATE = 0.05;
+
+/**
+ * The tags a statistic counts: what an artist's own row says, **not** the tags
+ * derived from those (ARCHITECTURE §3a).
+ *
+ * This was measured rather than assumed. Counting derived tags too, every
+ * prevalence list is topped by umbrellas — `rock, pop, alternative rock, punk
+ * rock, pop rock` for genres, `North American, American, European` for regions —
+ * which describes the shape of the *vocabulary*, not of the collection. Own tags
+ * answer the question actually being asked (`pop punk, power pop, emo pop…`).
+ * Derived tags also push 42 more tags past MIN_SUPPORT for no gain, tightening
+ * the Benjamini–Hochberg threshold toward the resolution floor NULL_SAMPLES can
+ * observe (§8.2a).
+ *
+ * The two figures that *are* the ☁️ map — the taste worlds, and an artist's
+ * `kinship` — do count derived tags, because the map does. CLAUDE.md requires
+ * the two features to agree about the collection's shape.
+ */
+const countedTags = (artist: Artist): readonly string[] => artist.ownTags;
 
 // --- Placement: where an artist sits ---
 
@@ -226,7 +249,7 @@ function computeBaseline(artists: readonly Artist[]): Baseline {
       tier: artist.baselineSlot,
       weight: TIER_WEIGHT[artist.baselineSlot],
       position: tierPosition(artist.baselineSlot),
-      tags: artist.tags,
+      tags: countedTags(artist),
     });
   }
   const totalWeight = ranked.reduce((sum, artist) => sum + artist.weight, 0);
@@ -322,6 +345,15 @@ export interface TagStat {
   /** The same question asked of how tightly the carriers cluster — what the
       predictor lists rank by. */
   clusteringIsReal: boolean;
+  /**
+   * The uncorrected p behind `elevationIsReal`, kept so the correction can be
+   * *re-measured* rather than remembered. The doctrine in CLAUDE.md rests on
+   * concrete figures — how close the strongest tag gets, and whether the
+   * Benjamini–Hochberg threshold is even reachable given NULL_SAMPLES — and
+   * those go stale silently every time the roster is retagged. Nothing renders
+   * it; `1` until markSignificant runs.
+   */
+  elevationP: number;
 }
 
 /**
@@ -373,6 +405,7 @@ function aggregateTags(baseline: Baseline): TagStat[] {
       below: positions.filter((position) => position <= mean - 1).length,
       // Filled in below, once every tag's p-values can be corrected together.
       elevationIsReal: false,
+      elevationP: 1,
       clusteringIsReal: false,
     });
   }
@@ -512,6 +545,7 @@ function markSignificant(baseline: Baseline, stats: TagStat[]): void {
   const elevationCutoff = falseDiscoveryCutoff(elevation);
   const clusteringCutoff = falseDiscoveryCutoff(clustering);
   stats.forEach((stat, i) => {
+    stat.elevationP = elevation[i]!;
     stat.elevationIsReal = elevation[i]! <= elevationCutoff;
     stat.clusteringIsReal = clustering[i]! <= clusteringCutoff;
   });
@@ -719,6 +753,7 @@ export function measurePredictivePower(artists: readonly Artist[]): PredictivePo
   const baseline = computeBaseline(artists);
   // Per-tag position totals over the ranked roster, for the leave-one-out means.
   const totals = new Map<string, { sum: number; count: number }>();
+  // baseline.ranked already carries the counted tags (computeBaseline).
   for (const artist of baseline.ranked) {
     for (const tag of artist.tags) {
       if (isEraTag(tag)) continue;
@@ -822,28 +857,31 @@ export function rankIsolation(
   // How many ranked artists carry each tag, for the rarest-tag annotation.
   const carriers = new Map<string, number>();
   for (const artist of ranked) {
-    for (const tag of artist.tags) {
+    for (const tag of countedTags(artist)) {
       if (isEraTag(tag)) continue;
       carriers.set(tag, (carriers.get(tag) ?? 0) + 1);
     }
   }
 
+  // `kinship` counts derived tags too, because it *is* the ☁️ map's similarity;
+  // `kin` and `rarestTag` below count only what each row says, like every other
+  // statistic (see countedTags).
   const similarities = pairwiseSimilarities(ranked);
-  const tagSets = ranked.map((artist) => new Set(artist.tags));
+  const tagSets = ranked.map((artist) => new Set(countedTags(artist)));
   const scored: ArtistIsolation[] = ranked.map((artist, i) => {
     const neighbours = similarities[i]!.filter((_, j) => j !== i).sort((a, b) => b - a);
     const nearest = neighbours.slice(0, ISOLATION_NEIGHBOURS);
-    const rarest = artist.tags
+    const rarest = countedTags(artist)
       .filter((tag) => !isEraTag(tag))
       .sort((a, b) => carriers.get(a)! - carriers.get(b)! || compareArtistNames(a, b))[0];
     // Kin: others carrying at least half of this artist's own tags.
-    const needed = Math.ceil(artist.tags.length * KIN_SHARE);
+    const needed = Math.ceil(countedTags(artist).length * KIN_SHARE);
     let kin = 0;
     if (needed > 0) {
       for (let j = 0; j < ranked.length; j++) {
         if (j === i) continue;
         let shared = 0;
-        for (const tag of ranked[j]!.tags) if (tagSets[i]!.has(tag)) shared += 1;
+        for (const tag of countedTags(ranked[j]!)) if (tagSets[i]!.has(tag)) shared += 1;
         if (shared >= needed) kin += 1;
       }
     }
@@ -931,7 +969,7 @@ export function computeStats(artists: readonly Artist[]): TierStats {
     summary: {
       artistCount: artists.length,
       rankedCount: baseline.ranked.length,
-      vocabularySize: new Set(artists.flatMap((artist) => artist.tags)).size,
+      vocabularySize: new Set(artists.flatMap(countedTags)).size,
       supportedTagCount: stats.length,
       tierCounts: TIERS.map((tier) => ({
         tier,

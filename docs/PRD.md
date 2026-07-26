@@ -24,9 +24,18 @@ Each **artist** has:
 - a **tier** — one of the ranked tiers, or *unranked*,
 - a **representative image** — shown on the artist's card; an artist may have none (and an image
   that fails to load is treated the same as none — see §11),
-- a set of **tags** — descriptive labels (genres, musical qualities, eras, notable aspects) used
-  by the random picker's tag filter (§8) and to lay out the artist map (§9); an artist may have
-  none.
+- a set of **tags** — descriptive labels (genres, musical qualities, regions, eras, notable
+  aspects) used by the random picker's tag filter (§8) and to lay out the artist map (§9); an
+  artist may have none. How many an artist carries varies: a tag is present when it is accurate,
+  and there is no target number.
+
+**Tags form a hierarchy: a specific tag always carries with it the more general tags containing
+it, and those are called its *derived tags*.** An artist described as *pop punk* also derives punk
+rock, pop rock and rock; one from *Stockholm* derives Swedish, Scandinavian, Nordic and European.
+The card tooltip, the tag filter and the ☁️ map all show derived tags alongside the specific ones,
+so an artist tagged only *Swedish* is found by someone looking for European artists. (The 📊
+statistics deliberately count only the tags an artist was given — §10.2.) The hierarchy is part of
+the curated source data, not something users edit.
 
 The set of artists is fixed at load time (curated in the source data). Users sort artists; they
 do not add, rename, or delete artists, and do not edit images or tags, from within the app.
@@ -183,11 +192,14 @@ cutoff**, then the **filter**, then the **weighting intensity**:
 - **Tag filter** — restricts eligibility by the artists' tags (see §2). The control sits between
   the cutoff and intensity dropdowns and reads **`no filters`** when nothing is selected, else the
   selection size (e.g. **`5 filters`**). Clicking it opens a **panel listing every tag** present in
-  the roster, each with a **checkbox**, **grouped by kind** (genres, musical qualities, eras,
-  notable aspects), plus a control that **clears** the whole selection; the panel closes on a
+  the roster, each with a **checkbox**, **grouped by kind** (genres, musical qualities, regions,
+  eras, notable aspects), plus a control that **clears** the whole selection; the panel closes on a
   click elsewhere or Esc. An **all / any toggle** in the panel sets how multiple tags combine: an
   artist **matches** the selection by carrying **every** selected tag (`all`) or **at least one**
-  of them (`any`, the default). While one or more tags are selected:
+  of them (`any`, the default). Because a specific tag carries its derived tags (§2), ticking a
+  general tag selects everything beneath it: `punk rock` matches the pop punk, ska punk and
+  skate punk artists, and `European` matches the Swedes and the Scots. While one or more tags are
+  selected:
   - 🎲 draws only from **matching** artists (combined with the tier cutoff and weighting as
     usual), and
   - every **non-matching** artist is **dimmed** on the board — across all tiers, regardless of the
@@ -290,6 +302,10 @@ criticism**. Two rules follow, and everything below obeys them:
     reflects **how many artists carrying it the user collected** as well as where they sit;
   - a **ratio against a typical artist** (e.g. `×1.24`), shown on a bar growing left or right of a
     centre line at `×1.00`.
+- **Statistics count the tags an artist was given, not its derived tags (§2).** Counting derived
+  tags too, every list of common tags is headed by the widest ones in the vocabulary — *rock*,
+  *pop*, *North American* — which describes how the tags are organised rather than what was
+  collected. The 🎲 filter and the ☁️ map still use derived tags; only the statistics do not.
 - **Prevalence is a description, not a claim, and is never tested.** How much of the list carries a
   tag is a fact in the same class as how many artists there are; it is counted **by head, not
   weighted by tier**, because on a list of music the user likes an artist's presence is already the
@@ -357,7 +373,7 @@ dominant decade are deliberately *not* repeated here — each heads a section of
 **The shape of the collection**
 
 - **What your list is made of** — the most common tags in each vocabulary category (genre, musical
-  quality, notable aspect), by plain prevalence. Broken down per category because one flat list is
+  quality, region, notable aspect), by plain prevalence. Broken down per category because one flat list is
   dominated by vocal-style and production tags, burying the question "what genres is this made of"
   under the answer to a different one.
 - **The worlds it splits into** — the collection above the level of any single tag: artists gather
@@ -394,9 +410,9 @@ it**, and viewing it changes nothing about tiers, the picker, or filters.
 - **No eligible artists for a pick:** handled as in §8.
 - **Statistics with too little data:** when nothing is ranked — or no tag is carried by enough
   ranked artists — the statistics dialog (§10) explains that there is not enough data, instead of
-  presenting empty sections. Individual sections with nothing to report are omitted, except the two
-  in §10.3's "where the tags and the tiers disagree", where having nothing to report is a finding
-  and is stated.
+  presenting empty sections. Individual sections with nothing to report are omitted, except the
+  significance-gated ones in §10.3, where having nothing to report is itself the finding and is
+  stated rather than hidden.
 
 ## 12. Out of scope (explicitly)
 

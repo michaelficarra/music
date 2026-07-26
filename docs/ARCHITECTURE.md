@@ -22,10 +22,12 @@ static bundle plus a build-time-embedded copy of the artist data.
 ```
 .
 ├── data/
-│   └── artists.csv          # Source of truth for the artist roster, tiers, and images
+│   ├── artists.csv          # Source of truth for the artist roster, tiers, and images
+│   └── tags.csv             # The tag vocabulary: every tag, its category, what it derives (§3a)
 ├── scripts/
 │   ├── enrich-images.ts     # Dev-time tool that fills in image URLs (see §9)
 │   ├── add-artist.ts        # Append an unranked artist to the CSV, then enrich them
+│   ├── tag-research.ts      # Dev-time tool: outside evidence for tagging an artist (see §9a)
 │   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §9)
 ├── src/                     # Application source
 │   ├── main.ts              # Entry point: populate dropdowns, build board, wire events
@@ -36,7 +38,8 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   ├── board.ts             # Renders tiers + unranked area, wires SortableJS
 │   ├── thumb.ts             # createThumb(): artist thumbnail/placeholder, shared by board + map
 │   ├── random.ts            # Weighting schemes + weighted random pick (see §6)
-│   ├── filter.ts            # matchesAllTags(): the 🎲 tag filter's matching rule (see §6)
+│   ├── filter.ts            # matchesTags(): the 🎲 tag filter's matching rule (see §6)
+│   ├── tag-registry.ts      # Embeds data/tags.csv; withDerivedTags() (see §3a)
 │   ├── tag-groups.ts        # groupTags(): vocabulary categories for the filter panel (see §6)
 │   ├── cloud-layout.ts      # Tag similarity, scene/world grouping + layout for ☁️ (see §7)
 │   ├── cloud.ts             # The ☁️ map dialog: renders the layout, pan/zoom (see §7)
@@ -72,19 +75,73 @@ Columns, in order:
 - **Quoting:** standard RFC-4180. Fields containing a comma, double-quote, or newline are wrapped
   in double quotes, with embedded double-quotes doubled. This matters for names such as
   `Dan le Sac vs. Scroobius Pip` (safe) and any future name containing a comma.
-- **Tags:** descriptors drawn from a shared controlled vocabulary, joined with `;` (no
-  surrounding spaces), e.g. `pop punk;anthemic choruses;male vocals;2000s;side project`. Casing
-  is natural: proper nouns and acronyms keep their capitals (`Warped Tour`, `EDM`, `J-pop`),
-  everything else is lowercase. Each artist carries 5–10 tags spanning genre(s), Pandora-style
-  musical qualities (vocal style, instrumentation, mood, lyrics), the peak decade(s)
-  (`1950s`…`2020s`, typically 1–2), and notable aspects (e.g. `side project`, `comedy`,
-  `British`). Conventions: no commas/semicolons/quotes inside a tag (keeps the field unquoted),
-  no duplicates within an artist, and every tag should be shared by **at least two** artists —
-  reuse an existing tag rather than minting a near-synonym. The app parses the field into
-  `Artist.tags` (blank → `[]`) for the 🎲 tag filter (§6); tag matching is **case-sensitive**, so
-  keep each tag's spelling identical everywhere it appears.
+- **Tags:** descriptors drawn from the vocabulary registered in `data/tags.csv`
+  (below), joined with `;` (no surrounding spaces), e.g.
+  `pop punk;skate punk;anthemic choruses;male vocals;San Diego;2000s;Warped Tour`. Casing is
+  natural: proper nouns and acronyms keep their capitals (`Warped Tour`, `EDM`, `J-pop`),
+  everything else is lowercase. A row spans genre(s), Pandora-style musical qualities (vocal
+  style, instrumentation, mood, lyrics), region, the peak decade(s) (`1950s`…`2020s`), and
+  notable aspects (`side project`, `comedy`, `girl group`).
+
+  Two rules govern how many tags a row carries and which ones:
+
+  - **There is no upper or lower bound — accuracy is the only criterion.** An artist warranting
+    four tags gets four; one warranting thirty gets thirty. (Today the roster runs about 13–24.)
+  - **Rows carry only the most specific tag in each direction — never one that another implies.**
+    A row saying `pop punk` does not also say `punk rock`, `pop rock` or `rock`; a row saying
+    `Swedish` does not also say `Scandinavian` or `European`. The rest are derived at
+    load time from the registry, so writing them out too would be redundant and could contradict it.
+
+  Conventions: no commas/semicolons/quotes inside a tag (keeps the field unquoted), no duplicates
+  within an artist. Tag matching is **case-sensitive**, so keep each tag's spelling identical
+  everywhere it appears. `src/data.ts` parses the field into `Artist.ownTags` (blank → `[]`) and
+  those plus everything derived from them into `Artist.tags` (§4).
 - The file holds the full artist roster (a few hundred rows). It may be edited by hand or by the
-  enrichment script (§9).
+  enrichment script (§9); `scripts/tag-research.ts` (§9a) gathers the outside evidence tagging
+  should rest on.
+
+### 3a. Tag vocabulary (`data/tags.csv`)
+
+This file **declares the whole vocabulary**: one row per tag, whether or not that tag derives
+anything. About a third of the rows derive nothing at all — every era and every notable aspect, and
+most musical qualities (`male vocals` has no more general form) — and they are here to give the tag
+its category, which is what the 🎲 panel groups by (§6). A tag used in `artists.csv` with no row
+here is a test failure, not a shrug.
+
+Where tags *do* relate, they form a **directed acyclic graph** rather than a flat list: a tag names
+the more general tags derived from it, and the app derives them transitively. That is what lets the
+🎲 panel's `European` find the Swedes and `punk rock` find the ska-punk and skate-punk bands,
+without any of it being written on 253 artist rows by hand.
+
+| Column     | Meaning |
+| ---------- | --- |
+| `Tag`      | The tag, spelled exactly as it appears in `artists.csv`. **Unique.** |
+| `Category` | One of `genre`, `quality`, `region`, `era`, `aspect` — drives the 🎲 grouping (§6). |
+| `Derived`  | Semicolon-delimited tags derived **directly** from it, or blank for a root. |
+
+- **Deriving more than one tag is normal**, which is why this is a graph and not a tree: `pop punk`
+  derives `pop rock;punk rock`, `metalcore` derives `hardcore;metal`, `avant-funk` derives
+  `experimental;funk`.
+- **Crossing categories is allowed where the implication is real.** `Christian rock` is a genre
+  whose carriers genuinely are `Christian` (an aspect), and each tag still files under its own
+  heading, so the artist appears in both. Two crossings are rejected: a non-region may not imply a
+  **region** (`J-pop` → `Japanese` would assert an origin for everyone else who plays it), and
+  nothing may involve an **era** on either side.
+- **Eras are flat.** They are recognised by shape (`/^\d{4}s$/`) rather than by category, because
+  the 📊 statistics use that same test to confine them to their own section (§8.4); an umbrella
+  like `21st century` would not match it.
+- Rows are sorted by category (in the §6 display order) then by tag, so one category's hierarchy
+  reads together and diffs stay small.
+- **Region granularity: recognised scenes, then countries.** A city is tagged when the artist is
+  genuinely identified with that scene (`New York`, `Glasgow`, `Stockholm`, `Tokyo`), and the
+  country otherwise. States and provinces exist in the registry as the connective tissue between
+  a city and its country (`New York` → `New York State` → `American`) but are not written on
+  rows. The alternative — tagging every birthplace MusicBrainz records — produces around 150
+  cities carried by one artist each, which inflates the 🎲 panel without grouping anything.
+- `src/tag-registry.ts` embeds this file at build time and exposes `withDerivedTags`; the invariants
+  above are enforced by `validateRegistry` and asserted against the real data in
+  `src/tag-registry.test.ts`. A tag used in `artists.csv` but absent here still reaches the 🎲
+  panel, in a trailing **Other** group — a soft failure, and a test failure.
 
 ## 4. Data flow & the "static baseline"
 
@@ -225,14 +282,16 @@ filter *upstream*, building the picker's slot map from only the matching artists
 `hasEligible` see a pre-filtered pool (and 🎲 disables when the filter and cutoff together leave
 no candidates). The panel itself is a native **popover** (`popover` + `popovertarget` in
 `index.html` — the browser supplies top-layer stacking, Esc, and light-dismiss); `main.ts` fills
-it with one checkbox per tag from `data.ts`'s `allTags` (the sorted distinct tags in the roster),
-anchors it under the toolbar's `#filter` button on each open (popovers are fixed in the top layer,
-so the UA default would centre it), keeps the button's `no filters` / `N filters` label current,
-and persists the selection (§5). The checkboxes are **grouped by vocabulary category** via
-`src/tag-groups.ts` (`groupTags`): genres, musical qualities, eras (matched by the `/^\d{4}s$/`
-shape rather than a list), and notable aspects. The CSV stores tags flat, so the category lists
-live in that module; a tag missing from them lands in a trailing **Other** group rather than
-disappearing — when minting a brand-new tag in the CSV, add it to its category there too. Dimming
+it with one checkbox per tag from `data.ts`'s `allTags` (the sorted distinct tags in the roster,
+**including the ones derived from the registry** — that is what makes ticking `European`
+or `punk rock` useful), anchors it under the toolbar's `#filter` button on each open (popovers are
+fixed in the top layer, so the UA default would centre it), keeps the button's `no filters` /
+`N filters` label current, and persists the selection (§5). The checkboxes are **grouped by
+vocabulary category** via `src/tag-groups.ts` (`groupTags`): genres, musical qualities, regions,
+eras (matched by the `/^\d{4}s$/` shape rather than a category), and notable aspects. Which
+category a tag belongs to is data, not code — `tag-groups.ts` reads it from `tag-registry.ts`
+(§3a) and only decides the headings and their order; a tag absent from the registry lands in a
+trailing **Other** group rather than disappearing. Dimming
 of non-matching cards is `Board.setTagFilter`, which toggles a `filtered-out` class per card —
 visual only, the cards stay interactive.
 
@@ -259,7 +318,18 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
   1. **Partition.** Each genre tag (per `tag-groups.ts`) claims its carriers, **most specific
      (rarest) genre first**, so a niche scene (`third-wave ska`) forms before an umbrella genre
      (`pop rock`) sweeps up the leftovers; a genre founds a cluster only if it can claim at
-     least 4 artists. Artists left unclaimed may be **adopted** — but only on genre evidence
+     least 4 artists. Two details matter here:
+     - Specificity is inferred from **rarity**, not read off the registry's hierarchy (§3a). The
+       two largely agree — a derived umbrella is by construction carried by everything beneath it —
+       and rarity additionally ranks genres the hierarchy leaves unrelated.
+     - Scenes are founded on **`ownTags`**, the genres artists were actually given, while the
+       similarity model above counts derived tags too. A shared umbrella is real evidence two
+       artists are related, but it cannot *define* a scene: every rock band derives `rock`, so
+       umbrellas found huge meaningless rings and make the adoption test below unanimous. Founding
+       on derived tags gave 46 scenes with **every** artist adopted; on own tags it gives 42 scenes
+       with 17 loners, the same shape the pre-hierarchy roster produced (41 scenes, 6 loners).
+
+     Artists left unclaimed may be **adopted** — but only on genre evidence
      (sharing a genre tag with members; mean ≥ 0.5), since counting ubiquitous quality/era tags
      adopted everyone however poor the fit; artists clearing the bar nowhere stay unclustered,
      on the rim (PRD §9: membership is never forced). Within a cluster, members are ordered by
@@ -320,6 +390,22 @@ light-dismiss and the `main.ts` click-outside fallback (§5); its only form cont
   no part (PRD §10), so the content is fixed per build — `stats-view.ts` computes and renders it
   lazily on the first 📊 press and keeps the DOM for the session, like the map's plane. Nothing
   is hand-curated: a data change reshapes the statistics on the next build.
+
+### 8.0 Which tags a statistic counts
+
+`countedTags` reads an artist's **`ownTags`** — what its CSV row says — and not the tags derived
+from those (§3a). This was a measurement, not a preference. Counting derived tags too, every
+prevalence list is topped by umbrellas: `rock, pop, alternative rock, punk rock, pop rock` for
+genres and `North American, American, European` for regions. That describes the shape of the
+*vocabulary*, not of the collection, and it is the exact failure PRD §10.2 forbids — a list whose
+ordering is an artefact of how the data is stored. On own tags the same list reads `pop punk, power
+pop, emo pop, alternative rock, electropop`, which is the question the reader asked. Derived tags
+also push 42 extra tags past `MIN_SUPPORT` for no gain, tightening the correction (§8.2a).
+
+Two figures do count derived tags, because they **are** the ☁️ map: `rankTasteWorlds`, which
+delegates wholesale to `groupRoster`, and an artist's `kinship`, which is `pairwiseSimilarities`.
+Derived tags genuinely help the similarity model — two artists sharing an umbrella are related
+evidence — and the map and the dialog must not disagree about the collection's shape.
 
 ### 8.1 Two tier valuations, deliberately
 
@@ -410,15 +496,19 @@ tail. The resulting p-values are corrected with **Benjamini–Hochberg** at `FAL
 `rankReliable` and `rankVariable` on `clusteringIsReal`.
 
 `NULL_SAMPLES` is load-bearing, not a tuning knob: with S shuffles the smallest observable p-value
-is 1/(S+1), and BH's rank-1 threshold here is 0.05/127 ≈ 0.0004. At 2 000 shuffles **no tag could
+is 1/(S+1), and BH's rank-1 threshold here is 0.05/173 ≈ 0.00029. At 2 000 shuffles **no tag could
 pass however real it was**, which would look like a finding rather than the measurement artefact it
-is.
+is. At 10 000 the floor (0.0001) clears the threshold by a factor of only ~3, so a much larger
+vocabulary would need more shuffles — counting only each artist's own tags (§8.0) is part of what
+keeps the margin, since including derived tags tests 215 and halves it.
 
 On the shipped roster **nothing clears the gate**, and the dialog says so rather than showing a
-heading over nothing. The strongest tag is `male vocals` at p = 0.0033 against a rank-1 threshold of
-0.0004; nine tags clear p < 0.05 uncorrected, where 127 × 0.05 = 6.4 is what chance alone produces.
-That result is pinned in `stats.test.ts` so a data change that produces real preferences fails
-loudly and gets looked at.
+heading over nothing. The strongest tag is `synthpop` at p = 0.0028 (20 carriers) against that
+0.00029 threshold, then `indietronica` at 0.0040 and `queer themes` at 0.0085; 16 tags clear
+p < 0.05 uncorrected, where 173 × 0.05 ≈ 8.7 is what chance alone produces. That result is pinned in
+`stats.test.ts` so a data change that produces real preferences fails loudly and gets looked at.
+Each tag's uncorrected p survives on `TagStat.elevationP` precisely so these figures can be
+re-measured after a retag rather than remembered.
 
 ### 8.3 Worlds, predictive power and isolation
 
@@ -448,9 +538,10 @@ loudly and gets looked at.
   r² < 0.1 on the real roster so that a data change making the tags genuinely predictive fails
   loudly rather than passing unnoticed.
 - **`rankIsolation`** ranks both ends by `kin` — how many other ranked artists carry at least
-  `KIN_SHARE` (½) of this artist's tags. A fraction rather than a fixed count, since artists carry
-  5–10 tags and a flat threshold would make the sparsely-tagged look lonely. On the shipped roster
-  it scores 40–68 at the crowded end and 0–2 at the lonely one, so it separates the lists as sharply
+  `KIN_SHARE` (½) of this artist's tags. A fraction rather than a fixed count, since tag counts
+  vary widely from artist to artist (§3 sets no bound) and a flat threshold would make the
+  sparsely-tagged look lonely for no reason but their sparseness. On the shipped roster
+  it scores 53–55 at the crowded end and 0 at the lonely one, so it separates the lists as sharply
   as a similarity measure would **while meaning something a reader can check** — which is why it,
   and not the similarity, is the displayed figure.
   `kinship` — the mean of an artist's `ISOLATION_NEIGHBOURS` (3) closest similarities from the ☁️
@@ -561,7 +652,42 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   (blank Tier/ImageURL/ImageSource/Tags) in sorted position (`compareArtistNames`, keeping the CSV
   sorted by name), then invokes the enrichment above for just that artist. Refuses a duplicate
   name. Tags are **not** auto-populated — fill the `Tags` column by hand afterwards, following the
-  conventions in §3 (prefer existing tags from the file over new ones).
+  conventions in §3 and the evidence from §9a.
+
+## 9a. Tag research (`scripts/tag-research.ts`)
+
+`npm run tag-research -- "<artist>"` (or `--all`, optionally `--json`) prints what outside sources
+say about an artist, so tagging rests on evidence rather than recollection. It **writes nothing** —
+the tags are still a judgement, made from what it shows.
+
+The sources are deliberately of two kinds, because they fail differently:
+
+| Source | Kind | Supplies |
+| --- | --- | --- |
+| MusicBrainz artist record | authoritative, structured | `country`, `begin-area` (the city), `type` (person/group), `life-span` — this settles the region and era tags |
+| Wikipedia infobox | authoritative, edited and cited | `origin`, `genre`, `years_active`, members |
+| MusicBrainz tag votes | crowd folksonomy | scene and genre names with vote counts — richer and noisier |
+| Last.fm tag page | crowd folksonomy | the same, from listeners |
+
+Nothing published supplies the Pandora-style **musical quality** tags (vocal style, mood, lyrical
+bent), so those remain a listening judgement informed by the rest.
+
+Details worth knowing before changing it:
+
+- **MusicBrainz throttles to one request per second**, so requests are spaced
+  (`TAG_RESEARCH_DELAY_MS`, default 1100) and a whole-roster run takes a few minutes.
+- **Wikipedia is queried by exact title first**, then `"<name> (band)"`, and only then by search.
+  A plain search for a band reliably lands on a band *member* — "Talking Heads" scored David
+  Byrne. A candidate page with neither a `genre` nor an `origin` infobox field is rejected as the
+  wrong kind of article rather than reported as an artist with no genres.
+- **The infobox is located by brace matching**, and citations are stripped *self-closing first*.
+  Both guard the same failure: reading fields off the whole article with one regex let First Aid
+  Kit's `genre` run to the end of the page and return 200 chart positions, because
+  `<ref name="x"/>` also matches the opening tag of the paired-`<ref>` pattern and deleting pairs
+  first swallowed the infobox's closing braces.
+- **Last.fm has no key-free API** and begins answering `406` partway through a bulk run whatever
+  User-Agent is sent, so it is a bonus leg: after three consecutive refusals the run stops asking.
+  The crowd evidence that matters is MusicBrainz's, which is reliable.
 
 ## 10. Build, CI & deploy
 
@@ -586,6 +712,12 @@ A **dev-time** Node/TS script, run manually by the maintainer — **not** part o
   and as a smoke test over the real one), and the 📊 statistics aggregation in
   `src/stats.test.ts` (scoring/banding, minimum support, ranking ties, leave-one-out outliers —
   likewise on synthetic rosters and the real one).
+- **The tag vocabulary is tested as data** (`src/tag-registry.test.ts`): parsing and derivation on
+  synthetic registries, then the §3a invariants asserted against the shipped files — every roster
+  tag is registered, every `Derived` value resolves, no cycles, no genre deriving a region,
+  rows canonically sorted. These are what stop `data/artists.csv` and `data/tags.csv`
+  drifting apart as the roster is retagged; the "Other" group being empty is asserted rather than
+  assumed.
 - Type-checking via `tsc --noEmit`; formatting via Prettier; all enforced in CI (§10). The
-  enrichment and add-artist scripts run under **tsx**. Exact commands are listed in
+  enrichment, add-artist and tag-research scripts run under **tsx**. Exact commands are listed in
   [CLAUDE.md](../CLAUDE.md).

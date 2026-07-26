@@ -191,12 +191,19 @@ function partitionIntoClusters(
   // Candidate genres, most specific (fewest carriers) first so niche scenes
   // form before umbrella genres sweep up everything; ties by name for
   // determinism. Vocabulary categories live in tag-groups.ts.
-  const distinctTags = [...new Set(artists.flatMap((artist) => artist.tags))];
+  //
+  // Scenes are founded on the genres artists were actually *given* (`ownTags`),
+  // never on tags derived from those (§3a). Derived tags are right for the
+  // similarity model above — a shared umbrella is real evidence two artists are
+  // related — but they cannot *define* a scene: every rock band derives `rock`,
+  // so umbrellas found enormous meaningless clusters and, worse, make the
+  // adoption test below unanimous, leaving nobody on the rim.
+  const distinctTags = [...new Set(artists.flatMap((artist) => artist.ownTags))];
   const genreTags = groupTags(distinctTags).find((group) => group.label === "Genres")?.tags ?? [];
   const carriers = new Map(
     genreTags.map((tag) => [
       tag,
-      artists.flatMap((artist, i) => (artist.tags.includes(tag) ? [i] : [])),
+      artists.flatMap((artist, i) => (artist.ownTags.includes(tag) ? [i] : [])),
     ]),
   );
   const orderedGenres = [...carriers.keys()].sort(
@@ -221,13 +228,13 @@ function partitionIntoClusters(
   const loners: number[] = [];
   for (let i = 0; i < artists.length; i++) {
     if (clusterOf.has(i)) continue;
-    const ownGenres = artists[i]!.tags.filter((tag) => genreSet.has(tag));
+    const ownGenres = artists[i]!.ownTags.filter((tag) => genreSet.has(tag));
     let bestCluster: PartitionedCluster | null = null;
     let bestScore = 0;
     for (const cluster of clusters) {
       let sharedTotal = 0;
       for (const m of cluster.members) {
-        sharedTotal += ownGenres.filter((tag) => artists[m]!.tags.includes(tag)).length;
+        sharedTotal += ownGenres.filter((tag) => artists[m]!.ownTags.includes(tag)).length;
       }
       const score = sharedTotal / cluster.members.length;
       if (score > bestScore) {

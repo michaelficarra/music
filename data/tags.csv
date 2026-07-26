@@ -1,0 +1,380 @@
+Tag,Category,Derived
+acid jazz,genre,funk;jazz
+adult contemporary,genre,soft rock
+alternative country,genre,country
+alternative dance,genre,alternative rock;electronic
+alternative hip hop,genre,hip hop
+alternative metal,genre,alternative rock;metal
+alternative R&B,genre,R&B
+alternative rock,genre,rock
+ambient,genre,electronic
+Americana,genre,country;folk
+anarcho-punk,genre,punk rock
+anti-folk,genre,folk
+art pop,genre,experimental;pop
+art punk,genre,experimental;punk rock
+art rock,genre,experimental;rock
+atmospheric folk,genre,folk
+avant-funk,genre,experimental;funk
+baroque pop,genre,chamber pop
+beatdown hardcore,genre,hardcore
+bedroom pop,genre,indie pop
+big band,genre,jazz
+blues,genre,
+blues rock,genre,blues;rock
+bounce,genre,hip hop
+calypso,genre,
+cello rock,genre,rock
+Celtic folk,genre,folk
+Celtic punk,genre,folk punk
+chamber pop,genre,pop
+Christian hip hop,genre,hip hop;Christian
+Christian rock,genre,rock;Christian
+classic rock,genre,rock
+comedy metal,genre,comedy rock;metal
+comedy rock,genre,rock
+complextro,genre,electro house
+country,genre,
+country pop,genre,country;pop
+crunkcore,genre,hip hop;post-hardcore
+dance-pop,genre,electronic;pop
+dance-punk,genre,electronic;punk rock
+dark cabaret,genre,
+dark wave,genre,gothic rock;new wave
+death metal,genre,metal
+deathcore,genre,death metal;metalcore
+deathgrind,genre,death metal;grindcore
+deathrock,genre,gothic rock;punk rock
+deconstructed club,genre,electronic
+digital hardcore,genre,electronic;hardcore
+disco,genre,funk
+djent,genre,progressive metal
+dream pop,genre,indie pop
+dub,genre,reggae
+dubstep,genre,EDM
+easy listening,genre,traditional pop
+easycore,genre,hardcore;pop punk
+EDM,genre,electronic
+electro,genre,electronic
+electro house,genre,house
+electro-funk,genre,electro;funk
+electroclash,genre,electronic;new wave
+electronic,genre,
+electropop,genre,electronic;pop
+electropunk,genre,electronic;punk rock
+emo,genre,alternative rock;punk rock
+emo pop,genre,emo;pop punk
+Eurodance,genre,EDM
+Europop,genre,pop
+experimental,genre,
+experimental metal,genre,experimental;metal
+experimental pop,genre,experimental;pop
+experimental rock,genre,experimental;rock
+folk,genre,
+folk metal,genre,folk;metal
+folk pop,genre,folk;pop
+folk punk,genre,folk;punk rock
+folk rock,genre,folk;rock
+folktronica,genre,electronic;folk
+funk,genre,
+funk metal,genre,funk;metal
+funk rock,genre,funk;rock
+future bass,genre,EDM
+futurepop,genre,synthpop
+garage punk,genre,garage rock;punk rock
+garage rock,genre,rock
+geek rock,genre,alternative rock
+glam pop,genre,glam rock;pop
+glam rock,genre,rock
+goregrind,genre,deathgrind
+gothic metal,genre,gothic rock;metal
+gothic rock,genre,rock
+grindcore,genre,hardcore;metal
+groove metal,genre,metal
+gypsy punk,genre,folk punk
+hands up,genre,Eurodance
+happy hardcore,genre,EDM
+hard rock,genre,rock
+hardcore,genre,punk rock
+hardcore hip hop,genre,hip hop
+heartland rock,genre,rock
+hip hop,genre,
+hip house,genre,hip hop;house
+house,genre,electronic
+hyperpop,genre,electronic;pop
+indie folk,genre,folk
+indie pop,genre,pop
+indie rock,genre,alternative rock
+indietronica,genre,electronic;indie pop
+industrial,genre,electronic
+industrial metal,genre,industrial;metal
+industrial rock,genre,industrial;rock
+J-pop,genre,pop
+jangle pop,genre,indie pop
+jazz,genre,
+jazz fusion,genre,jazz
+kawaii metal,genre,J-pop;metal
+Latin rock,genre,rock
+love metal,genre,gothic metal
+mashup,genre,plunderphonics
+math rock,genre,experimental;rock
+melodic death metal,genre,death metal
+melodic hardcore,genre,hardcore
+melodic metalcore,genre,metalcore
+mento,genre,calypso
+merseybeat,genre,rock and roll
+metal,genre,rock
+metalcore,genre,hardcore;metal
+midwest emo,genre,emo
+neo soul,genre,R&B
+neo-psychedelia,genre,alternative rock;psychedelic rock
+neoclassical metal,genre,symphonic metal
+neofolk,genre,folk
+neon pop punk,genre,pop punk
+new age,genre,
+new wave,genre,rock
+no wave,genre,experimental;punk rock
+noise pop,genre,indie pop;noise rock
+noise rock,genre,alternative rock;experimental
+nu metal,genre,alternative metal
+nu-disco,genre,disco
+pagan folk,genre,neofolk
+piano rock,genre,rock
+plunderphonics,genre,electronic;experimental
+polka,genre,folk
+pop,genre,
+pop punk,genre,pop rock;punk rock
+pop rap,genre,hip hop;pop
+pop rock,genre,pop;rock
+post-grunge,genre,alternative rock
+post-hardcore,genre,hardcore
+post-metal,genre,metal;post-rock
+post-punk,genre,punk rock
+post-punk revival,genre,post-punk
+post-rock,genre,experimental;rock
+power metal,genre,metal
+power pop,genre,pop rock
+prog rock,genre,art rock
+progressive house,genre,house
+progressive metal,genre,metal;prog rock
+progressive metalcore,genre,metalcore;progressive metal
+psychedelic pop,genre,pop;psychedelic rock
+psychedelic rock,genre,rock
+punk cabaret,genre,dark cabaret;punk rock
+punk rock,genre,rock
+R&B,genre,
+rap metal,genre,metal;rap rock
+rap rock,genre,hip hop;rock
+rapcore,genre,hardcore;rap rock
+rave,genre,electronic
+reggae,genre,
+reggae rock,genre,reggae;rock
+riot grrrl,genre,punk rock
+rock,genre,
+rock and roll,genre,rock
+rock opera,genre,prog rock
+sasscore,genre,post-hardcore
+screamo,genre,emo;post-hardcore
+shibuya-kei,genre,J-pop
+shock rock,genre,rock
+shoegaze,genre,alternative rock
+singer-songwriter,genre,
+ska,genre,
+ska punk,genre,punk rock;ska
+skacore,genre,hardcore;ska punk
+skate punk,genre,punk rock
+soft rock,genre,rock
+Southern hip hop,genre,hip hop
+space rock,genre,psychedelic rock
+speed metal,genre,metal
+street punk,genre,punk rock
+swing,genre,big band
+symphonic metal,genre,metal
+symphonic power metal,genre,power metal;symphonic metal
+synthpop,genre,electronic;new wave;pop
+technical death metal,genre,death metal
+techno,genre,electronic
+teen pop,genre,pop
+third-wave ska,genre,ska
+thrash metal,genre,metal
+traditional pop,genre,pop
+trap,genre,hip hop
+trip hop,genre,electronic;hip hop
+twee pop,genre,indie pop
+vocal jazz,genre,jazz
+witch house,genre,electronic
+acoustic textures,quality,
+Afrobeat influences,quality,
+angsty lyrics,quality,
+angular guitars,quality,guitar-driven
+anthemic choruses,quality,
+atmospheric textures,quality,
+breakdowns,quality,heavy riffs
+breakneck tempos,quality,
+breathy vocals,quality,
+camp and flamboyant,quality,
+catchy hooks,quality,
+choral vocals,quality,
+cinematic scope,quality,
+classical influences,quality,
+concept albums,quality,
+confessional lyrics,quality,
+crooning vocals,quality,
+danceable grooves,quality,
+disco grooves,quality,danceable grooves
+distorted guitars,quality,guitar-driven
+dual vocals,quality,
+electronic beats,quality,
+ethereal vocals,quality,
+explicit lyrics,quality,
+falsetto vocals,quality,
+female vocals,quality,
+folk instrumentation,quality,
+four-on-the-floor beats,quality,danceable grooves
+gang vocals,quality,
+genre-blending,quality,
+guitar-driven,quality,
+heartbreak lyrics,quality,
+heavy riffs,quality,distorted guitars
+high energy,quality,
+historical themes,quality,
+horn section,quality,
+instrumental,quality,
+jangly guitars,quality,guitar-driven
+kawaii aesthetic,quality,
+lo-fi production,quality,
+male vocals,quality,
+melancholy mood,quality,
+microtonal,quality,
+noisy textures,quality,
+non-English lyrics,quality,
+odd time signatures,quality,
+operatic vocals,quality,
+orchestral arrangements,quality,string arrangements
+party anthems,quality,
+piano-driven,quality,
+polished production,quality,
+political lyrics,quality,
+polyrhythms,quality,
+powerhouse vocals,quality,
+prominent bass,quality,
+psychedelic touches,quality,
+queer themes,quality,
+quirky and playful,quality,
+rapped verses,quality,
+retro influences,quality,
+sample-based production,quality,
+sardonic humour,quality,
+screamed vocals,quality,
+soulful vocals,quality,
+spoken word,quality,
+storytelling lyrics,quality,
+string arrangements,quality,
+synth-driven,quality,
+theatrical delivery,quality,
+throat singing,quality,
+ukulele,quality,acoustic textures
+virtuosic playing,quality,
+vocal harmonies,quality,
+witty wordplay,quality,
+American,region,North American
+Asian,region,
+Atlanta,region,Georgia
+Australian,region,Oceanian
+Belgian,region,Western European
+Boston,region,Massachusetts
+British,region,Western European
+California,region,American
+Canadian,region,North American
+Chicago,region,Illinois
+Danish,region,Scandinavian
+Detroit,region,Michigan
+Dutch,region,Western European
+East Asian,region,Asian
+Eastern European,region,European
+English,region,British
+European,region,
+Finnish,region,Nordic
+French,region,Western European
+Georgia,region,American
+German,region,Western European
+Glasgow,region,Scottish
+Icelandic,region,Nordic
+Illinois,region,American
+Irish,region,Western European
+Japanese,region,East Asian
+Las Vegas,region,Nevada
+Lebanese,region,Western Asian
+Liverpool,region,English
+London,region,English
+Long Beach,region,California
+Long Island,region,New York State
+Los Angeles,region,California
+Louisiana,region,American
+Manchester,region,English
+Massachusetts,region,American
+Michigan,region,American
+Minneapolis,region,Minnesota
+Minnesota,region,American
+Montreal,region,Quebec
+Nashville,region,Tennessee
+Nebraska,region,American
+Nevada,region,American
+New Jersey,region,American
+New Orleans,region,Louisiana
+New York,region,New York State
+New York State,region,American
+New Zealand,region,Oceanian
+Nordic,region,European
+North American,region,
+Northern Irish,region,British
+Norwegian,region,Scandinavian
+Oceanian,region,
+Omaha,region,Nebraska
+Ontario,region,Canadian
+Orange County,region,California
+Oregon,region,American
+Pennsylvania,region,American
+Philadelphia,region,Pennsylvania
+Portland,region,Oregon
+Quebec,region,Canadian
+Russian,region,Eastern European
+San Diego,region,California
+San Francisco,region,California
+Scandinavian,region,Nordic
+Scottish,region,British
+Seattle,region,Washington State
+Stockholm,region,Swedish
+Swedish,region,Scandinavian
+Tennessee,region,American
+Tokyo,region,Japanese
+Toronto,region,Ontario
+Washington State,region,American
+Welsh,region,British
+Western Asian,region,Asian
+Western European,region,European
+1950s,era,
+1960s,era,
+1970s,era,
+1980s,era,
+1990s,era,
+2000s,era,
+2010s,era,
+2020s,era,
+choreographed dance,aspect,
+Christian,aspect,
+comedy,aspect,
+composer,aspect,
+duo,aspect,
+girl group,aspect,
+masked or costumed,aspect,
+sibling act,aspect,
+side project,aspect,
+solo act,aspect,
+soundtrack work,aspect,
+supergroup,aspect,
+theatrical live shows,aspect,
+video game ties,aspect,
+viral breakout,aspect,
+visual kei,aspect,
+Warped Tour,aspect,

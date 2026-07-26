@@ -44,6 +44,15 @@ export interface Artist {
   baselineSlot: Slot;
   imageURL: string;
   imageSource: string;
-  /** Descriptive tags (genres, musical qualities, eras, notable aspects). */
+  /**
+   * The tags written on the artist's own CSV row: the most specific descriptor
+   * in each direction, with nothing derivable from another left in.
+   */
+  ownTags: readonly string[];
+  /**
+   * Every tag the artist carries: `ownTags` plus the tags derived from those
+   * (data/tags.csv). This is what the 🎲 filter, the ☁️ map and the card
+   * tooltips read, so selecting `European` finds the Swedes.
+   */
   tags: readonly string[];
 }

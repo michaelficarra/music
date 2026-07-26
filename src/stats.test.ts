@@ -29,6 +29,7 @@ const artist = (name: string, slot: Slot, tags: string[]): Artist => ({
   baselineSlot: slot,
   imageURL: "",
   imageSource: "",
+  ownTags: tags,
   tags,
 });
 
@@ -55,6 +56,7 @@ const stat = (tag: string, over: Partial<TagStat> = {}): TagStat => ({
   below: 0,
   elevationIsReal: true,
   clusteringIsReal: true,
+  elevationP: 0,
   ...over,
 });
 
@@ -307,12 +309,14 @@ describe("categoryComposition", () => {
       stat("pop punk", { prevalence: 0.3 }),
       stat("emo", { prevalence: 0.5 }),
       stat("catchy hooks", { prevalence: 0.2 }),
-      stat("British", { prevalence: 0.1 }),
+      stat("British", { prevalence: 0.15 }),
+      stat("side project", { prevalence: 0.1 }),
     ]);
     expect(composition.map((c) => [c.category, c.stats.map((t) => t.tag)])).toEqual([
       ["Genres", ["emo", "pop punk"]],
       ["Musical qualities", ["catchy hooks"]],
-      ["Notable aspects", ["British"]],
+      ["Regions", ["British"]],
+      ["Notable aspects", ["side project"]],
     ]);
   });
 

@@ -8,6 +8,7 @@ const artist = (name: string, tags: string[]): Artist => ({
   baselineSlot: "B",
   imageURL: "",
   imageSource: "",
+  ownTags: tags,
   tags,
 });
 

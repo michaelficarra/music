@@ -3,10 +3,11 @@ import { groupTags } from "./tag-groups";
 
 describe("groupTags", () => {
   it("partitions tags into labelled groups in display order", () => {
-    const groups = groupTags(["2000s", "emo", "duo", "male vocals", "1990s"]);
+    const groups = groupTags(["2000s", "emo", "duo", "male vocals", "1990s", "Swedish"]);
     expect(groups).toEqual([
       { label: "Genres", tags: ["emo"] },
       { label: "Musical qualities", tags: ["male vocals"] },
+      { label: "Regions", tags: ["Swedish"] },
       { label: "Eras", tags: ["2000s", "1990s"] },
       { label: "Notable aspects", tags: ["duo"] },
     ]);

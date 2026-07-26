@@ -4,6 +4,7 @@
 import csvText from "../data/artists.csv?raw";
 import { parseCsv } from "./csv";
 import { compareArtistNames } from "./sort";
+import { withDerivedTags } from "./tag-registry";
 import { UNRANKED, isTier, type Artist, type Slot } from "./types";
 
 /** Column order in data/artists.csv (see ARCHITECTURE §3). */
@@ -30,16 +31,20 @@ const bodyRows = rows.slice(1).filter((r) => (r[COLUMN.artist] ?? "").length > 0
 export const artists: readonly Artist[] = bodyRows.map((r) => {
   const tierRaw = (r[COLUMN.tier] ?? "").trim();
   const baselineSlot: Slot = isTier(tierRaw) ? tierRaw : UNRANKED;
+  // Semicolon-delimited in the CSV; blank (e.g. a freshly added artist) → [].
+  const ownTags = (r[COLUMN.tags] ?? "")
+    .split(";")
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
   return {
     name: r[COLUMN.artist] ?? "",
     baselineSlot,
     imageURL: r[COLUMN.imageURL] ?? "",
     imageSource: r[COLUMN.imageSource] ?? "",
-    // Semicolon-delimited in the CSV; blank (e.g. a freshly added artist) → [].
-    tags: (r[COLUMN.tags] ?? "")
-      .split(";")
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0),
+    ownTags,
+    // The row lists only the most specific tags; the rest are derived from those
+    // via data/tags.csv (see tag-registry.ts).
+    tags: withDerivedTags(ownTags),
   };
 });
 
