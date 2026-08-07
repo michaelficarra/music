@@ -252,17 +252,25 @@ single `cutoff:intensity` id (§5):
   the cutoff inclusive (`eligibleTiers`); the special `unranked` cutoff ("unranked only") instead
   draws from the unranked pool alone, ignoring intensity; the `ALL` cutoff ("unrestricted") draws
   from the **whole roster** — ranked artists keep their tier weight and unranked artists are weighted
-  as the lowest ranked tier (F), so intensity still applies.
+  as the **lowest tier anyone currently occupies** (`lowestOccupiedTier`, not a hard-coded F, which
+  is usually empty and weighs a quarter of an E), so intensity still applies.
 - **Intensity** — how a candidate's selection weight is derived from its tier:
-  - Each ranked tier has a base **Fibonacci / planning-poker weight** (`TIER_WEIGHT`, exported from
-    `types.ts`): `S 13, A 8, B 5, C 3, D 2, E 1, F 1`. The 📊 statistics (§8) share it, so the two
-    features value a tier identically.
+  - Weights come from the **power law** `tierWeightScale(exponent)` (`types.ts`), which raises a
+    tier's *position* (S 7 … F 1) to a fixed exponent. Its proportional steps therefore narrow
+    towards the top — the S/A distinction is the finest the tier list draws, the E/F one the
+    coarsest — while its absolute steps still widen.
   - `unweighted` → every eligible artist has weight 1 (uniform).
-  - `weighted` → weight is `TIER_WEIGHT[tier]`.
-  - `heavily` → weight is `2 × TIER_WEIGHT[tier]` (widening the gap between tiers).
+  - `weighted` → `TIER_WEIGHT`, i.e. `position²`: `S 49, A 36, B 25, C 16, D 9, E 4, F 1`. The 📊
+    statistics (§8) share it, so the two features value a tier identically.
+  - `heavily` → `HEAVY_TIER_WEIGHT` (`random.ts`), i.e. `position³`: `S 343, A 216, B 125, C 64,
+    D 27, E 8, F 1`.
 
-  These multipliers are the concrete realisation of the "probability curve" PRD §8 leaves
-  unspecified; treat the exact numbers as tunable, not contractual.
+  The intensities differ by **exponent, never by a multiplier**: roulette normalises by the pool
+  total, so scaling every tier by a constant leaves the odds untouched. An earlier `heavily` was
+  `2 × TIER_WEIGHT` and consequently drew identically to `weighted`.
+
+  These curves are the concrete realisation of the "probability curve" PRD §8 leaves unspecified;
+  treat the exact numbers as tunable, not contractual.
 
 For accessibility, each successful pick also writes `Picked <name>` into a visually-hidden
 `aria-live` region (`#pick-announcer` in `index.html`, set in `main.ts`'s roll handler), so screen
@@ -413,14 +421,23 @@ PRD §10.1's premise — presence is positive, comparisons are to the user's own
 implemented by keeping two *different* questions on two different scales. They are not a
 duplication to be tidied away:
 
-- **`TIER_WEIGHT` (`types.ts`) — how much an artist counts.** The Fibonacci weights shared with the
-  🎲 picker (§6). Every value is positive, so no placement can subtract, and the gaps widen towards
-  the top, matching how a tier list is used. Drives `share` and `ratio`.
-- **`tierPosition` (`stats.ts`) — where an artist sits.** The ordinal index, S 7 down to F 1. Used
+- **`TIER_WEIGHT` (`types.ts`) — how much an artist counts.** The `position²` weights shared with
+  the 🎲 picker (§6). Every value is positive, so no placement can subtract. Its gaps run both ways
+  on purpose: *absolutely* they widen towards the top (S − A = 13 against E − F = 3), so a favourite
+  counts for far more than a promotion at the bottom; *proportionally* they narrow (A → S is 1.36×
+  where F → E is 4×), because the S/A distinction is the finest the list draws. Drives `share` and
+  `ratio`.
+- **`tierPosition` (`types.ts`) — where an artist sits.** The ordinal index, S 7 down to F 1. Used
   *only* for statements about placement: the predictor range gauges, the outlier prediction model,
   and `tierBand`/`tierLabel`, which band a mean position onto a letter (each tier owns the unit of
   the scale centred on its own position, split into thirds — middle third the bare letter, outer
   thirds leaning `+`/`−`; 6.5 → `S−`, and clamping makes `S+`/`F−` impossible).
+
+`TIER_WEIGHT` is *derived* from `tierPosition` (it is the square), which is what keeps the picker
+and the statistics honest about being one ranking. The two remain separate questions all the same:
+squaring is not order-preserving arithmetic on the differences, so "counts twice as much" and "sits
+two tiers higher" are not interchangeable statements, and mixing them is the mistake §8's doctrine
+exists to prevent.
 
 `computeBaseline` derives the roster-wide denominators once: `totalWeight`, `meanWeight`, the
 occupied `positions` range, and the **favourite tiers** — the top tiers covering at least
@@ -489,23 +506,23 @@ yields the null for every carrier count at once; the RNG is seeded, so the dialo
 function of the roster. Cost is ~45 ms on the shipped data, inside the existing lazy first-open
 build.
 
-Shuffling rather than a normal approximation, because `TIER_WEIGHT` is badly skewed (S counts 13,
-E counts 1) and a handful of carriers has a lumpy null that a bell curve misjudges precisely in the
+Shuffling rather than a normal approximation, because `TIER_WEIGHT` is badly skewed (S counts 49,
+E counts 4) and a handful of carriers has a lumpy null that a bell curve misjudges precisely in the
 tail. The resulting p-values are corrected with **Benjamini–Hochberg** at `FALSE_DISCOVERY_RATE`
 (0.05); `rankByRatio` and `rankByFavouriteIndex` gate on `elevationIsReal`,
 `rankReliable` and `rankVariable` on `clusteringIsReal`.
 
 `NULL_SAMPLES` is load-bearing, not a tuning knob: with S shuffles the smallest observable p-value
-is 1/(S+1), and BH's rank-1 threshold here is 0.05/173 ≈ 0.00029. At 2 000 shuffles **no tag could
+is 1/(S+1), and BH's rank-1 threshold here is 0.05/183 ≈ 0.00027. At 2 000 shuffles **no tag could
 pass however real it was**, which would look like a finding rather than the measurement artefact it
-is. At 10 000 the floor (0.0001) clears the threshold by a factor of only ~3, so a much larger
+is. At 10 000 the floor (0.0001) clears the threshold by a factor of only ~2.7, so a much larger
 vocabulary would need more shuffles — counting only each artist's own tags (§8.0) is part of what
-keeps the margin, since including derived tags tests 215 and halves it.
+keeps the margin, since including derived tags tests 225 and cuts it to ~2.2.
 
 On the shipped roster **nothing clears the gate**, and the dialog says so rather than showing a
-heading over nothing. The strongest tag is `synthpop` at p = 0.0028 (20 carriers) against that
-0.00029 threshold, then `indietronica` at 0.0040 and `queer themes` at 0.0085; 16 tags clear
-p < 0.05 uncorrected, where 173 × 0.05 ≈ 8.7 is what chance alone produces. That result is pinned in
+heading over nothing. The strongest tag is `indietronica` at p = 0.0029 (12 carriers) against that
+0.00027 threshold, then `synthpop` at 0.0034 (20 carriers) and `2020s` at 0.0074; 22 tags clear
+p < 0.05 uncorrected, where 183 × 0.05 ≈ 9.2 is what chance alone produces. That result is pinned in
 `stats.test.ts` so a data change that produces real preferences fails loudly and gets looked at.
 Each tag's uncorrected p survives on `TagStat.elevationP` precisely so these figures can be
 re-measured after a retag rather than remembered.

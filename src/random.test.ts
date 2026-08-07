@@ -8,7 +8,7 @@ import {
   parseSchemeId,
   cutoffLabel,
 } from "./random";
-import type { Slot } from "./types";
+import { TIERS, type Slot } from "./types";
 
 describe("random", () => {
   it("eligibleTiers respects the cutoff", () => {
@@ -21,16 +21,38 @@ describe("random", () => {
   it("tierWeight matches the intensity curves", () => {
     expect(tierWeight("S", "unweighted")).toBe(1);
     expect(tierWeight("E", "unweighted")).toBe(1);
-    // weighted = Fibonacci scale (F=1, E=1, D=2, C=3, B=5, A=8, S=13)
-    expect(tierWeight("S", "weighted")).toBe(13);
-    expect(tierWeight("B", "weighted")).toBe(5);
-    expect(tierWeight("E", "weighted")).toBe(1);
+    // weighted = position² (F=1, E=4, D=9, C=16, B=25, A=36, S=49)
+    expect(tierWeight("S", "weighted")).toBe(49);
+    expect(tierWeight("B", "weighted")).toBe(25);
+    expect(tierWeight("E", "weighted")).toBe(4);
     expect(tierWeight("F", "weighted")).toBe(1);
-    // heavily = double Fibonacci
-    expect(tierWeight("S", "heavily")).toBe(26);
-    expect(tierWeight("B", "heavily")).toBe(10);
-    expect(tierWeight("E", "heavily")).toBe(2);
-    expect(tierWeight("F", "heavily")).toBe(2);
+    // heavily = position³
+    expect(tierWeight("S", "heavily")).toBe(343);
+    expect(tierWeight("B", "heavily")).toBe(125);
+    expect(tierWeight("E", "heavily")).toBe(8);
+    expect(tierWeight("F", "heavily")).toBe(1);
+  });
+
+  it("narrows the gap between tiers towards the top under both weightings", () => {
+    // The shape the curve exists for: an artist's presence anywhere is already
+    // the positive signal, so choosing between the top two tiers is the finest
+    // distinction the list draws and the one at the bottom the coarsest.
+    for (const intensity of ["weighted", "heavily"] as const) {
+      const steps = TIERS.slice(0, -1).map(
+        (tier, i) => tierWeight(tier, intensity) / tierWeight(TIERS[i + 1]!, intensity),
+      );
+      for (const step of steps) expect(step).toBeGreaterThan(1);
+      // steps run S/A first down to E/F last, each wider than the one above it.
+      for (let i = 1; i < steps.length; i++) expect(steps[i]!).toBeGreaterThan(steps[i - 1]!);
+    }
+  });
+
+  it("makes 'heavily' a steeper curve, not a rescaling of 'weighted'", () => {
+    // Selection normalises by the pool total, so a scalar multiple of the whole
+    // table would leave every probability untouched. Only the spread matters.
+    const spread = (intensity: "weighted" | "heavily") =>
+      tierWeight("S", intensity) / tierWeight("E", intensity);
+    expect(spread("heavily")).toBeGreaterThan(spread("weighted"));
   });
 
   it("never picks unranked and honours the cutoff", () => {
@@ -49,14 +71,22 @@ describe("random", () => {
     expect(pick(new Map(), { cutoff: "E", intensity: "unweighted" })).toBeNull();
   });
 
+  // S owns [0, S/total) of the draw and E the remainder; midE lands halfway
+  // through E's slice, wherever the curve happens to put the boundary.
+  const sOverE = () => {
+    const s = tierWeight("S", "weighted");
+    const e = tierWeight("E", "weighted");
+    return { total: s + e, midE: (s + e / 2) / (s + e) };
+  };
+
   it("selects deterministically from cumulative weights with an injected rng", () => {
     const slots = new Map<string, Slot>([
       ["top", "S"],
       ["bottom", "E"],
     ]);
-    const scheme = { cutoff: "E", intensity: "weighted" } as const; // Fibonacci: S=13, E=1, total 14
+    const scheme = { cutoff: "E", intensity: "weighted" } as const;
     expect(pick(slots, scheme, () => 0)).toBe("top");
-    expect(pick(slots, scheme, () => 13.5 / 14)).toBe("bottom");
+    expect(pick(slots, scheme, () => sOverE().midE)).toBe("bottom");
   });
 
   it("never picks the excluded (previous) artist when an alternative exists", () => {
@@ -64,11 +94,11 @@ describe("random", () => {
       ["top", "S"],
       ["bottom", "E"],
     ]);
-    const scheme = { cutoff: "E", intensity: "weighted" } as const; // S=13, E=1, total 14
+    const scheme = { cutoff: "E", intensity: "weighted" } as const;
     // rng=0 would normally land on "top", but excluding it leaves only "bottom".
     expect(pick(slots, scheme, () => 0, "top")).toBe("bottom");
     // Excluding "bottom" leaves only "top", regardless of where rng lands.
-    expect(pick(slots, scheme, () => 13.5 / 14, "bottom")).toBe("top");
+    expect(pick(slots, scheme, () => sOverE().midE, "bottom")).toBe("top");
   });
 
   it("allows a repeat when the excluded artist is the only eligible one", () => {
@@ -132,28 +162,43 @@ describe("random", () => {
     expect(pick(slots, scheme, () => 0.75)).toBe("loose");
   });
 
-  it("the 'all' cutoff weights unranked artists as the lowest tier (F)", () => {
+  it("the 'all' cutoff weights unranked artists as the lowest occupied tier", () => {
     const slots = new Map<string, Slot>([
       ["effie", "F"],
       ["uma", "unranked"],
     ]);
-    // Heavily weighted: F weighs 2, and an unranked artist weighs the same (F=2),
-    // so the two split the draw 50/50 — the boundary sits exactly at rng 0.5.
-    // (Were unranked fixed at weight 1, the total would be 3 and rng 0.5 → "effie".)
+    // F is occupied here, so it is the floor and an unranked artist matches it:
+    // the two split the draw 50/50 and the boundary sits exactly at rng 0.5.
     const scheme = { cutoff: "all", intensity: "heavily" } as const;
     expect(pick(slots, scheme, () => 0.49)).toBe("effie");
+    expect(pick(slots, scheme, () => 0.5)).toBe("uma");
+  });
+
+  it("the 'all' cutoff floors unranked artists at the bottom of the ranking, not at F", () => {
+    const slots = new Map<string, Slot>([
+      ["ethel", "E"],
+      ["uma", "unranked"],
+    ]);
+    // Nobody occupies F, so the bottom of the ranking is E and an unranked artist
+    // weighs what an E does — a 50/50 split. Were the floor fixed at F they would
+    // weigh a quarter as much (1 against 4) and rng 0.5 would land on "ethel".
+    const scheme = { cutoff: "all", intensity: "weighted" } as const;
+    expect(pick(slots, scheme, () => 0.49)).toBe("ethel");
     expect(pick(slots, scheme, () => 0.5)).toBe("uma");
   });
 
   it("the 'all' cutoff still favours higher tiers under weighting", () => {
     const slots = new Map<string, Slot>([
       ["star", "S"],
+      ["plain", "E"],
       ["loose", "unranked"],
     ]);
-    // Weighted: S weighs 13, unranked weighs 1 (F) — S owns [0,13) of the total 14.
+    // Weighted: S weighs 49 and both the E and the unranked artist (floored at E)
+    // weigh 4, so S owns [0, 49) of the total 57.
     const scheme = { cutoff: "all", intensity: "weighted" } as const;
-    expect(pick(slots, scheme, () => 13.5 / 14)).toBe("loose");
-    expect(pick(slots, scheme, () => 12.5 / 14)).toBe("star");
+    expect(pick(slots, scheme, () => 48.5 / 57)).toBe("star");
+    expect(pick(slots, scheme, () => 49.5 / 57)).toBe("plain");
+    expect(pick(slots, scheme, () => 53.5 / 57)).toBe("loose");
   });
 
   it("round-trips an 'all' scheme id", () => {

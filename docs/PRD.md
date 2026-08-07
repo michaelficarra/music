@@ -181,8 +181,9 @@ cutoff**, then the **filter**, then the **weighting intensity**:
   - `heavily weighted` — strongly favours higher tiers.
 
   Under the `unrestricted` cutoff, ranked artists are weighted by their tier as usual and the
-  unranked artists are weighted **as if they were the lowest ranked tier**, so they surface about
-  as often as the bottom of the ranking.
+  unranked artists are weighted **as if they sat in the lowest tier anyone currently occupies**, so
+  they surface about as often as the artists at the bottom of the ranking. Empty tiers below that
+  one are ignored, so clearing out a bottom tier does not quietly make the unranked rarer.
 
   The `unranked only` and `S only` cutoffs each draw from a single pool — the unranked artists, or
   the one top tier — with no tiers to weight against each other, so their artists are picked

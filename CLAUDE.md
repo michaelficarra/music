@@ -102,16 +102,18 @@ a descriptive count inferential *and* smuggled tier position back in as the meas
 **Three findings are settled. Do not re-derive them, and do not build features that assume
 otherwise:**
 
-1. **The tags barely predict the tiers** — r² ≈ 1.6% over 239 artists (`measurePredictivePower`).
+1. **The tags barely predict the tiers** — r² ≈ 2.0% over 240 artists (`measurePredictivePower`).
    Any statistic ranking artists by distance from a tag-based prediction therefore collapses into
    "what tier is it", because the prediction is nearly constant. Two sections died this way; the
    dialog now reports the measurement instead. (Richer tagging did not rescue it: tripling the
-   vocabulary moved r² from ~1% to ~1.6%.)
-2. **No tag's elevation survives correction.** Every list picks the best of ~170 tags, and over that
-   many tries the best of anything looks striking. The strongest real tag reaches p = 0.0028
-   (`synthpop`, 20 carriers) against a Benjamini–Hochberg threshold of 0.00029. Sixteen tags clear
-   p < 0.05 uncorrected, where 173 × 0.05 ≈ 8.7 is what chance alone produces. Re-measure rather
-   than trusting these numbers after a retag — every tag's uncorrected p is on `TagStat.elevationP`.
+   vocabulary moved r² from ~1% to ~2%.) This one reads `tierPosition`, so retuning `TIER_WEIGHT`
+   leaves it untouched — only the roster and the tagging move it.
+2. **No tag's elevation survives correction.** Every list picks the best of ~180 tags, and over that
+   many tries the best of anything looks striking. The strongest real tag reaches p = 0.0029
+   (`indietronica`, 12 carriers) against a Benjamini–Hochberg threshold of 0.00027. Twenty-two tags
+   clear p < 0.05 uncorrected, where 183 × 0.05 ≈ 9.2 is what chance alone produces. Re-measure
+   rather than trusting these numbers after a retag **or after retuning `TIER_WEIGHT`** — both move
+   them, and every tag's uncorrected p is on `TagStat.elevationP`.
 3. **Prevalence cannot separate taste from base rate.** A tag's frequency carries both how much
    the maintainer likes the trait and how common the trait is in the music that exists, and nothing
    computable from this file can tell them apart — there is no outside population to compare

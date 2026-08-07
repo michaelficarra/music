@@ -32,14 +32,15 @@
 //
 // Two tier valuations coexist on purpose, answering different questions:
 //   * TIER_WEIGHT (types.ts) — how much an artist *counts*, shared with the 🎲
-//     picker. Feeds the inferential half only.
-//   * tierPosition — where an artist *sits*. Used only for statements about
-//     placement: the predictor range gauges and the predictive-power measure.
+//     picker. Feeds the inferential half only. It is the square of the position,
+//     which relates the two scales without making either redundant.
+//   * tierPosition (types.ts) — where an artist *sits*. Used only for statements
+//     about placement: the predictor range gauges and the predictive-power measure.
 
 import { groupRoster, pairwiseSimilarities } from "./cloud-layout";
 import { compareArtistNames } from "./sort";
 import { groupTags, isEraTag } from "./tag-groups";
-import { TIERS, TIER_WEIGHT, UNRANKED, type Artist, type Tier } from "./types";
+import { TIERS, TIER_WEIGHT, UNRANKED, tierPosition, type Artist, type Tier } from "./types";
 
 // --- Tuning (judgement calls, see ARCHITECTURE §8) ---
 
@@ -93,22 +94,22 @@ export const FAVOURITE_SHARE = 0.25;
  *
  * The floor matters: with S shuffles the smallest p-value observable is
  * 1/(S+1), and the correction below asks the strongest tag to clear
- * FALSE_DISCOVERY_RATE / (number of tags) — 0.00029 over this vocabulary's 173
+ * FALSE_DISCOVERY_RATE / (number of tags) — 0.00027 over this vocabulary's 183
  * tested tags. Too few shuffles and nothing can pass however real it is, which
  * would look like a finding rather than the measurement artefact it is. Ten
  * thousand keeps the smallest observable p (0.0001) clear of that threshold —
- * but only by a factor of ~3, so re-check this if the vocabulary grows much
+ * but only by a factor of ~2.7, so re-check this if the vocabulary grows much
  * further. Counting only each artist's own tags is what keeps the margin (see
- * countedTags); including derived tags tests 215 and halves it.
+ * countedTags); including derived tags tests 225 and shrinks it to ~2.2.
  */
 export const NULL_SAMPLES = 10000;
 /**
  * The share of surviving findings allowed to be flukes (Benjamini–Hochberg).
  *
- * A correction is not optional here. Every tag list picks the best of ~170
+ * A correction is not optional here. Every tag list picks the best of ~180
  * candidates, and over that many tries the best of *anything* looks striking:
- * 16 tags clear p < 0.05 uncorrected on this roster, where chance alone would
- * produce 173 × 0.05 ≈ 8.7. Controlling the false-discovery rate is what makes
+ * 22 tags clear p < 0.05 uncorrected on this roster, where chance alone would
+ * produce 183 × 0.05 ≈ 9.2. Controlling the false-discovery rate is what makes
  * "this tag is a real preference" mean something.
  */
 export const FALSE_DISCOVERY_RATE = 0.05;
@@ -133,13 +134,6 @@ export const FALSE_DISCOVERY_RATE = 0.05;
 const countedTags = (artist: Artist): readonly string[] => artist.ownTags;
 
 // --- Placement: where an artist sits ---
-
-/** A tier's ordinal position in the ranking: S = 7 down to F = 1. This is the
-    scale for statements about *placement*; see TIER_WEIGHT for the separate
-    question of how much an artist counts. */
-export function tierPosition(tier: Tier): number {
-  return TIERS.length - TIERS.indexOf(tier);
-}
 
 /** A mean position expressed as the nearest tier plus a leaning: "A−" reads as
     "an A, leaning toward B". */
@@ -424,7 +418,7 @@ function aggregateTags(baseline: Baseline): TagStat[] {
  * group of that size lands somewhere as extreme by luck alone.
  *
  * Shuffling is used rather than a normal approximation because the weights are
- * badly skewed (an S counts 13, an E counts 1), so a handful of carriers has a
+ * badly skewed (an S counts 49, an E counts 4), so a handful of carriers has a
  * lumpy null distribution that a bell curve would misjudge exactly where it
  * matters — in the tail. A prefix of a shuffle *is* a uniform random subset, so
  * one pass down each shuffle yields the null for every carrier count at once.

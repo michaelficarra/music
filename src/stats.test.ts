@@ -18,11 +18,10 @@ import {
   rankReliable,
   rankVariable,
   tierLabel,
-  tierPosition,
   type TagStat,
 } from "./stats";
 import { isEraTag } from "./tag-groups";
-import { TIERS, TIER_WEIGHT, type Artist, type Slot } from "./types";
+import { TIERS, TIER_WEIGHT, tierPosition, type Artist, type Slot } from "./types";
 
 const artist = (name: string, slot: Slot, tags: string[]): Artist => ({
   name,
@@ -74,11 +73,18 @@ describe("the two tier valuations", () => {
   it("weights the tiers in ranking order, with widening gaps towards the top", () => {
     const weights = TIERS.map((tier) => TIER_WEIGHT[tier]);
     for (let i = 1; i < weights.length; i++) {
-      expect(weights[i - 1]!).toBeGreaterThanOrEqual(weights[i]!);
+      expect(weights[i - 1]!).toBeGreaterThan(weights[i]!);
     }
     // The S→A step dwarfs the E→F one: a favourite counts for far more than a
     // one-tier promotion at the bottom does.
     expect(TIER_WEIGHT.S - TIER_WEIGHT.A).toBeGreaterThan(TIER_WEIGHT.E - TIER_WEIGHT.F);
+  });
+
+  it("narrows the gaps proportionally towards the top, the reverse of the absolute ones", () => {
+    // Both readings are deliberate: an S counts far more than an E in absolute
+    // terms, yet the S/A distinction is the finest the tier list draws.
+    const ratio = (better: number, worse: number) => better / worse;
+    expect(ratio(TIER_WEIGHT.S, TIER_WEIGHT.A)).toBeLessThan(ratio(TIER_WEIGHT.E, TIER_WEIGHT.F));
   });
 });
 
@@ -132,9 +138,9 @@ describe("positionFraction", () => {
 describe("computeTagStats", () => {
   it("computes prevalence, placement and spread over a tag's ranked carriers", () => {
     const stats = computeTagStats([
-      artist("a", "S", ["punk"]), // position 7, weight 13
-      artist("b", "A", ["punk"]), // position 6, weight 8
-      artist("c", "B", ["punk"]), // position 5, weight 5
+      artist("a", "S", ["punk"]), // position 7, weight 49
+      artist("b", "A", ["punk"]), // position 6, weight 36
+      artist("c", "B", ["punk"]), // position 5, weight 25
     ]);
     expect(stats).toHaveLength(1);
     expect(stats[0]!.tag).toBe("punk");

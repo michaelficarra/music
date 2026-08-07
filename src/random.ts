@@ -13,6 +13,7 @@ import {
   TIER_WEIGHT,
   UNRANKED,
   isTier,
+  tierWeightScale,
   type Cutoff,
   type Slot,
   type Tier,
@@ -40,15 +41,25 @@ export function eligibleTiers(cutoff: Tier): Tier[] {
   return TIERS.slice(0, TIERS.indexOf(cutoff) + 1);
 }
 
+/**
+ * The steeper of the two weighted curves (`position³`: F=1 … S=343), against
+ * `TIER_WEIGHT`'s `position²` (F=1 … S=49).
+ *
+ * Intensities differ by *exponent*, never by a multiplier: selection normalises
+ * by the pool's total weight, so multiplying every tier by a constant leaves the
+ * odds exactly as they were. Raising the exponent is what actually widens them.
+ */
+const HEAVY_TIER_WEIGHT = tierWeightScale(3);
+
 /** Per-artist selection weight for an artist in `tier` under `intensity`. */
 export function tierWeight(tier: Tier, intensity: Intensity): number {
   switch (intensity) {
     case "unweighted":
       return 1;
     case "weighted":
-      return TIER_WEIGHT[tier]; // the shared Fibonacci scale (F=1 … S=13)
+      return TIER_WEIGHT[tier]; // the scale shared with the 📊 statistics
     case "heavily":
-      return 2 * TIER_WEIGHT[tier]; // double Fibonacci (F=2 … S=26)
+      return HEAVY_TIER_WEIGHT[tier];
   }
 }
 
@@ -87,6 +98,21 @@ interface Candidate {
   weight: number;
 }
 
+/**
+ * The furthest-down ranked tier anyone currently sits in, or null if nothing is
+ * ranked. This is "the bottom of the ranking" the unrestricted cutoff weights
+ * unranked artists at — the *occupied* floor rather than F, which is often empty
+ * and, on a curve where F weighs a quarter of an E, would bury them.
+ */
+function lowestOccupiedTier(slotByName: ReadonlyMap<string, Slot>): Tier | null {
+  let lowest: Tier | null = null;
+  for (const slot of slotByName.values()) {
+    if (slot === UNRANKED) continue;
+    if (lowest === null || TIERS.indexOf(slot) > TIERS.indexOf(lowest)) lowest = slot;
+  }
+  return lowest;
+}
+
 function candidates(slotByName: ReadonlyMap<string, Slot>, scheme: Scheme): Candidate[] {
   const result: Candidate[] = [];
   if (scheme.cutoff === UNRANKED) {
@@ -99,11 +125,13 @@ function candidates(slotByName: ReadonlyMap<string, Slot>, scheme: Scheme): Cand
   }
   if (scheme.cutoff === ALL) {
     // The "unrestricted" (ALL) cutoff draws from the whole roster. Ranked artists
-    // keep their tier weight; unranked artists are weighted as the lowest tier (F)
-    // so they surface about as often as the bottom of the ranking under any intensity.
-    const lowestTier = TIERS[TIERS.length - 1]!;
+    // keep their tier weight; unranked artists are weighted as the lowest occupied
+    // tier so they surface about as often as the bottom of the ranking under any
+    // intensity. With nothing ranked at all the fallback is arbitrary: every
+    // candidate is then unranked, so they share one weight whatever it is.
+    const floor = lowestOccupiedTier(slotByName) ?? TIERS[TIERS.length - 1]!;
     for (const [name, slot] of slotByName) {
-      const tier = slot === UNRANKED ? lowestTier : slot;
+      const tier = slot === UNRANKED ? floor : slot;
       result.push({ name, weight: tierWeight(tier, scheme.intensity) });
     }
     return result;
