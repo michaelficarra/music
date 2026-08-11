@@ -31,15 +31,31 @@ const MIN_SCALE_FACTOR = 0.5;
 // the map can't be flung entirely out of view.
 const PAN_MARGIN = 64;
 
-// The cluster glows are drawn half again larger than the cluster's geometric
-// radius, so the light spills past the outermost members and feathers into
-// the gulf around the cluster instead of stopping dead at its boundary.
-const GLOW_SCALE = 1.5;
+// One hue per family of related sound, taken in turn from the largest family
+// down (`CloudCluster.family` is that rank). These are the eight accent colours
+// of Ethan Schoonover's Solarized palette — chosen rather than mixed by hand
+// because they were picked for equal weight against a dark ground, which is
+// exactly the job here; the CSS dilutes each with white, so what reaches the map
+// is a lean, not a colour cast. The order alternates warm and cool so that
+// families of adjacent rank, which are nothing to do with each other, never come
+// out in neighbouring hues. Eight covers the ~√k families the layout makes (7 on
+// the current roster) with one to spare; beyond that it cycles.
+const FAMILY_TINTS = [
+  "#268bd2", // blue
+  "#cb4b16", // orange
+  "#859900", // green
+  "#d33682", // magenta
+  "#2aa198", // cyan
+  "#b58900", // yellow
+  "#6c71c4", // violet
+  "#dc322f", // red
+];
 
-// An unclustered artist's halo: the geometric radius of a one-artist ring
-// (matching the layout's ring padding around an outermost member), so loners
-// glow on the same scale as the clusters beside them.
-const LONER_GLOW_RADIUS = 0.75 * NODE_SPACING;
+// An unclustered artist's core: half a spacing unit, matching the layout's
+// LONER_CLEARANCE. A loner's centre is at least that far outside every ring and
+// a full unit from every other loner, so its core is tangent to its neighbours
+// at worst — the same disjointness the cluster cores get from the packing.
+const LONER_CORE_RADIUS = 0.5 * NODE_SPACING;
 
 // How much clear space a revealed spotlight keeps from the viewport's edges,
 // and how long the move to it takes (kept in step with the .gliding transition
@@ -135,15 +151,23 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
     layout = built;
     searchIndex = buildSearchIndex(artists, allSoundTags);
     world = NODE_SPACING / built.spacing;
-    // Rings go onto the plane first, so the artist nodes paint over them.
+    // Rings go onto the plane first, so the artist nodes paint over them. Each
+    // is drawn at the cluster's exact geometric radius: the wider haze that
+    // makes the map look like a cloud is the ring's own backdrop, supplied in
+    // CSS and deaf to the pointer, so only these disjoint circles are hoverable
+    // (the layout guarantees they never overlap) and a cluster can never take a
+    // neighbour's tooltip.
     for (const cluster of built.clusters) {
       const ring = document.createElement("div");
       ring.className = "cloud-ring";
       ring.style.left = `${cluster.x * world}px`;
       ring.style.top = `${cluster.y * world}px`;
-      const diameter = 2 * cluster.radius * world * GLOW_SCALE;
+      const diameter = 2 * cluster.radius * world;
       ring.style.width = `${diameter}px`;
       ring.style.height = `${diameter}px`;
+      // Both layers of light read this; a loner's halo leaves it unset and keeps
+      // the neutral white, since a loner is in no family.
+      ring.style.setProperty("--family", FAMILY_TINTS[cluster.family % FAMILY_TINTS.length]!);
       // Hovering the space inside a ring explains the cluster — handy at the
       // fitted overview, where the member names are too small to read.
       ring.title = ringTooltip(cluster);
@@ -151,8 +175,10 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
       plane.appendChild(ring);
     }
     // Unclustered artists get a halo of their own — a node-sized pool of the
-    // same light, so a loner reads as deliberately alone, not forgotten. Its
-    // tooltip is the artist's own, mirroring the cluster glows' explanations.
+    // same light (core and haze both), so a loner reads as deliberately alone,
+    // not forgotten. Its tooltip is the artist's own, mirroring the cluster
+    // glows' explanations; the node above it carries the same text, so nothing
+    // is lost where the two overlap.
     const clustered = new Set(built.clusters.flatMap((cluster) => cluster.members));
     artists.forEach((artist, i) => {
       if (clustered.has(artist.name)) return;
@@ -160,7 +186,7 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
       halo.className = "cloud-ring";
       halo.style.left = `${built.points[i]!.x * world}px`;
       halo.style.top = `${built.points[i]!.y * world}px`;
-      const diameter = 2 * LONER_GLOW_RADIUS * GLOW_SCALE;
+      const diameter = 2 * LONER_CORE_RADIUS;
       halo.style.width = `${diameter}px`;
       halo.style.height = `${diameter}px`;
       halo.title = artistTooltip(artist);

@@ -268,17 +268,27 @@ is saying where the artist belongs, not everything true about it.
   defining genre alone would state something untrue of everyone taken in afterwards: a composer of
   orchestral game music sits among progressive metal bands because they all share *prog rock*, and
   *progressive metal* is not a description of him.
-- Each cluster is marked by a **soft, faint glow** behind its artists — brightest at the heart,
-  spilling a little past the cluster's boundary before fading out. **All of a cluster's members
-  lie inside its circle, tightly and evenly packed**, and clusters never overlap one another.
+- Each cluster is marked by a **soft, faint glow** behind its artists, in two parts: a **wide haze**
+  that reaches well past the cluster and **mingles with its neighbours'**, so the map reads as one
+  cloud rather than a field of separate discs, and a **brighter pool** over the cluster's own
+  artists — brightest at the heart, fading out at the boundary. **All of a cluster's members lie
+  inside its circle, tightly and evenly packed**, and clusters never overlap one another.
   **Hovering the space inside a cluster** explains it in a tooltip: its name, and the artists it
   contains **grouped by the tags each of them joined on** (useful zoomed out, when names are too
-  small to read).
+  small to read). Hovering explains **the cluster whose circle the pointer is inside, and only
+  that one**: a cluster's neighbours are always reachable, however far its light spills over them,
+  and the gulfs between families explain nothing.
 - The grouping is **two-tiered**: clusters of related sound form **families** (the punk scenes
   in one neighbourhood, electronic pop in another). Within a family the circles pack **snugly,
   edge to edge**; between families lie **wide gulfs** — so both which artists belong together
   and which clusters belong together are readable at a glance. Within a cluster, the most
   representative members sit at the **centre**, with looser fits towards the edge.
+- **Each family's light carries a slight tint of its own**, one hue per family, so a
+  neighbourhood is recognisable as one thing even where its clusters' haloes merge. The tints are
+  handed out **largest family first** and repeat only if the families outnumber the hues. They
+  identify a family and say nothing else: no hue ranks above another, and an artist in no family
+  keeps the neutral light. Families are numbered in the same order the statistics (§10.3) list
+  them, so the same neighbourhood is the same one in both.
 - The map shows **every artist**, regardless of tier placement, picker cutoff, or active tag
   filter; artists are **spaced apart — never stacked on top of one another** — so every artist
   stays individually visible.

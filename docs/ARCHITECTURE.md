@@ -462,7 +462,10 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
      of its already-placed kin (affinity squared, favouring the closest) to the first clear
      position — and packs the families themselves the same way with a **wide gap**. Rings never
      overlap, related clusters touch, and the gulfs between families carry the visual
-     separation (PRD §9).
+     separation (PRD §9). The families are ranked **largest first** (`rankFamilies`, ties by the
+     leading scene's tag) and each cluster carries its family's rank as `CloudCluster.family`;
+     `groupRoster` ranks through the same function, so the map's *n*th family and 📊's *n*th
+     world are the same neighbourhood, and the renderer can tint by rank alone.
   4. **The loners.** Unclustered artists are placed by the same spiral search: each walks out
      from the cluster it most resembles to the first spot clear of every ring and every other
      loner, nestling into the notches beside its nearest kin rather than orbiting the map.
@@ -475,11 +478,22 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
   shared thumbnail from `src/thumb.ts` plus a name caption) on a `.cloud-plane` in **world px**,
   where the world's size maps the layout's spacing unit onto the node footprint
   (`NODE_SPACING`) exactly — density is by construction, not tuning. The cluster markers are
-  circles appended **before** the nodes (so they paint behind), filled with a soft white
-  radial gradient rather than an outline and drawn half again larger than the cluster's
-  geometric radius (`GLOW_SCALE`) so the light spills past the boundary; each carries a
-  `title` tooltip naming its genre and members. Loners get a node-sized halo of the same
-  gradient (tooltip: the artist's own). Pan and zoom never touch the nodes: both are a single
+  circles appended **before** the nodes (so they paint behind), filled with a soft
+  radial gradient rather than an outline, in **two layers**: the `.cloud-ring` element is the
+  **core**, drawn at the cluster's exact geometric radius and carrying a `title` tooltip naming its
+  genre and members, and its `::before` is the **haze**, three times the diameter (`inset: -100%`), with
+  `pointer-events: none` and `z-index: -1` inside the plane's isolated stacking context
+  (`isolation: isolate`). The haze is the layer that makes the map read as a cloud — neighbouring
+  clusters' haloes mingle in it — so it is drawn *heavier* than the core (peak 15% against 12%),
+  which then thickens the light towards each heart. Only the cores take the pointer, and step 3's packing
+  makes them **disjoint**, so overlapping light can never mean an overlapping hit region: a hover
+  always answers with the cluster it is inside. Loners get a halo of the same two layers, its core
+  half a spacing unit to match the layout's `LONER_CLEARANCE` (tooltip: the artist's own, as on the
+  node above it). Both layers are drawn in the ring's own `--family` colour, which `cloud.ts` sets
+  from `FAMILY_TINTS` — the eight **Solarized** accent hues, indexed by `CloudCluster.family` and
+  ordered warm/cool alternately so adjacent ranks are never adjacent hues — and which the CSS
+  dilutes to `--glow` (60% hue, 40% white) before mixing each gradient stop down to its alpha with
+  `color-mix`. A loner's halo leaves `--family` at its white default, having no family to name. Pan and zoom never touch the nodes: both are a single
   `translate(…) scale(…)` transform on the plane. Wheel events zoom **anchored on the cursor**
   (exponential in deltaY, normalised for line-mode deltas; trackpad pinches arrive as
   ctrl+wheel and work unchanged), clamped between half the fitted overview and a 4× close-up.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   computeCloudLayout,
+  groupRoster,
   pairwiseSimilarities,
   sceneName,
   type CloudCluster,
@@ -252,6 +253,37 @@ describe("computeCloudLayout", () => {
         for (let b = a + 1; b < clusters.length; b++) {
           expect(distance(clusters[a]!, clusters[b]!)).toBeGreaterThanOrEqual(
             clusters[a]!.radius + clusters[b]!.radius - 1e-9,
+          );
+        }
+      }
+    });
+
+    it("numbers the families exactly as groupRoster ranks them", () => {
+      // The map tints a family by this rank, and 📊 lists the same families in
+      // the same order, so the two must not disagree about which is which.
+      const { groups } = groupRoster(roster);
+      const members = new Map<number, string[]>();
+      for (const cluster of layout.clusters) {
+        members.set(cluster.family, [...(members.get(cluster.family) ?? []), ...cluster.members]);
+      }
+      expect(members.size).toBe(groups.length);
+      for (const [rank, names] of members) {
+        expect([...names].sort()).toEqual([...groups[rank]!.members].sort());
+      }
+    });
+
+    it("leaves every loner half a spacing unit clear of every ring", () => {
+      // The renderer draws a loner's own glow at that half unit, so it stays
+      // disjoint from the cluster circles beside it (and, via the pairwise
+      // spacing above, from the other loners') and no glow can answer a hover
+      // meant for its neighbour.
+      const { points, clusters, spacing } = layout;
+      const clustered = new Set(clusters.flatMap((cluster) => cluster.members));
+      for (const point of points) {
+        if (clustered.has(point.name)) continue;
+        for (const cluster of clusters) {
+          expect(distance(point, cluster)).toBeGreaterThanOrEqual(
+            cluster.radius + spacing / 2 - 1e-9,
           );
         }
       }

@@ -819,36 +819,79 @@ body:has(#cloud-dialog[open]) {
 
 /* The plane all artist nodes sit on, in fixed "world" pixel coordinates;
    panning and zooming is a single translate+scale of this element (set by
-   cloud.ts), so nodes scale with the map like map markers. */
+   cloud.ts), so nodes scale with the map like map markers. `isolation` makes it
+   a stacking context of its own, so the cluster haze below (z-index: -1) is
+   trapped behind the rings rather than sliding behind the dialog's opaque
+   background, where it would be invisible. (The inline transform happens to
+   create one already; this does not rely on that.) */
 .cloud-plane {
   position: absolute;
   top: 0;
   left: 0;
   transform-origin: 0 0;
+  isolation: isolate;
 }
 
-/* A genre cluster's marker: a soft white radial glow behind the artist nodes
-   (appended to the plane before them), centred on the cluster (left/top/size
-   set by cloud.ts), brightest at the heart and spilling past the cluster's
-   boundary before feathering out — a pool of light rather than a drawn
-   outline. Quiet by design: a hint of grouping, not a chart element. It
-   stays hoverable (no pointer-events:none): hovering the space inside a
-   cluster surfaces its explanatory title tooltip, while the artist nodes,
-   painted above, keep their own. */
+/* A genre cluster's marker: soft light in two layers behind the artist
+   nodes (appended to the plane before them), centred on the cluster and quiet by
+   design — a pool of light rather than a drawn outline, a hint of grouping
+   rather than a chart element.
+
+   The element itself is the *core*: a circle at the cluster's exact geometric
+   radius (sized by cloud.ts), covering its own artists and nothing else. It
+   stays hoverable (no pointer-events:none): hovering the space inside a cluster
+   surfaces its explanatory title tooltip, while the artist nodes, painted above,
+   keep their own. Because the layout packs the rings edge to edge but never
+   overlapping, these circles are disjoint — so the tooltip a viewer gets is
+   always the cluster they are actually inside. */
 .cloud-ring {
   position: absolute;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  /* The stops sample a smoothstep falloff from 12% white to transparent, so
-     the glow eases out — a gentle plateau at the heart and a soft tail at the
-     edge, with no visible knee partway. */
+  /* The family's hue (set per ring by cloud.ts, one per family of related
+     sound), and the light actually drawn with it: mostly white, leaning that
+     way — enough to tell one neighbourhood from the next, not enough to turn the
+     map into a chart of coloured regions. Unset on a loner's halo, which belongs
+     to no family and so stays neutral. */
+  --family: #ffffff;
+  --glow: color-mix(in srgb, var(--family) 60%, #ffffff);
+  /* The stops sample a smoothstep falloff from 12% of that light to
+     transparent, so the glow eases out — a gentle plateau at the heart and a
+     soft tail at the edge, with no visible knee partway. */
   background: radial-gradient(
     circle closest-side,
-    #ffffff1f 0%,
-    #ffffff1a 25%,
-    #ffffff0f 50%,
-    #ffffff05 75%,
-    #ffffff00 100%
+    color-mix(in srgb, var(--glow) 12%, transparent) 0%,
+    color-mix(in srgb, var(--glow) 10%, transparent) 25%,
+    color-mix(in srgb, var(--glow) 6%, transparent) 50%,
+    color-mix(in srgb, var(--glow) 2%, transparent) 75%,
+    transparent 100%
+  );
+}
+
+/* …and its *haze*: the same falloff over three times the diameter (inset: -100%
+   grows the box by its own size on every side), painted behind every core in the
+   plane's own stacking layer. This is the layer that carries the cloud —
+   neighbouring clusters' haloes mingle freely here, so it is drawn heavier than
+   the core rather than fainter, and the core's own light is what then thickens
+   towards each heart.
+   pointer-events is load-bearing rather than tidiness: a pseudo-element outside
+   its parent's box is hit-tested as though it were a child and would answer with
+   the parent's tooltip, which is exactly the overlap the two layers exist to
+   undo. */
+.cloud-ring::before {
+  content: "";
+  position: absolute;
+  inset: -100%;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle closest-side,
+    color-mix(in srgb, var(--glow) 15%, transparent) 0%,
+    color-mix(in srgb, var(--glow) 12.6%, transparent) 25%,
+    color-mix(in srgb, var(--glow) 7%, transparent) 50%,
+    color-mix(in srgb, var(--glow) 2.4%, transparent) 75%,
+    transparent 100%
   );
 }
 
@@ -1058,12 +1101,31 @@ body:has(#cloud-dialog[open]) {
   );
 }
 
+/* The haze warms with its core — the family's own tint gives way to the accent
+   across both layers while the light is lent out, so the whole pool
+   of light reads as chosen rather than just its middle. (An unlit ring needs no
+   rule of its own: the opacity above dims the pseudo-element with its parent.) */
+.cloud-plane.spotlit .cloud-ring.spotlit::before {
+  background: radial-gradient(
+    circle closest-side,
+    #4c8dff2e 0%,
+    #4c8dff25 25%,
+    #4c8dff17 50%,
+    #4c8dff08 75%,
+    #4c8dff00 100%
+  );
+}
+
 /* The dim and the glow fade in and out rather than snapping. */
 .cloud-node,
 .cloud-ring {
   transition:
     opacity 0.3s ease,
     background 0.3s ease;
+}
+
+.cloud-ring::before {
+  transition: background 0.3s ease;
 }
 
 .cloud-node .thumb {
@@ -1079,6 +1141,7 @@ body:has(#cloud-dialog[open]) {
 @media (prefers-reduced-motion: reduce) {
   .cloud-node,
   .cloud-ring,
+  .cloud-ring::before,
   .cloud-node .thumb,
   .cloud-plane.gliding {
     transition: none;

@@ -60,6 +60,14 @@ export interface CloudCluster {
   members: string[];
   /** The tags that put each member here, by name (see `PartitionedCluster`). */
   joinedBy: ReadonlyMap<string, readonly string[]>;
+  /**
+   * The family of related sound this cluster was packed into, ranked **largest
+   * family first** — the same order, with the same tie-break, that `groupRoster`
+   * returns its groups in. A rank therefore means one thing across the app: the
+   * renderer tints a family by it (PRD §9), and anything else describing the
+   * same neighbourhood can use it without inventing a second ordering.
+   */
+  family: number;
   x: number;
   y: number;
   radius: number;
@@ -185,10 +193,12 @@ const RING_PADDING = 0.75;
 const RING_GAP = 0;
 /** Placement-spiral resolution: radius grows this much per radian walked. */
 const PLACEMENT_SPIRAL_STEP = 0.05;
-/** Clear space between two cluster *families*: noticeably wider than the
-    (zero) ring gap, so the family structure reads at a glance, but no wider —
-    the gulfs should separate, not strand. */
-const FAMILY_GAP = 1.5;
+/** Clear space between two cluster *families*: wider than the (zero) ring gap,
+    so the family structure reads at a glance, but no wider — the gulfs should
+    separate, not strand. Since each family's light now carries its own tint and
+    spreads far past its rings (PRD §9), the boundary is legible from the colour
+    change alone and the gap no longer has to do that work by itself. */
+const FAMILY_GAP = 1;
 /** How far a loner's centre must stay from any ring's edge. Half a footprint
     keeps it a full spacing unit from the ring's outermost member (with the
     ring padding), while letting it nestle right up against the circle. */
@@ -514,6 +524,25 @@ function groupClusters(affinity: number[][], clusterCount: number): number[][] {
   return groups;
 }
 
+/**
+ * The families in display order: **largest first**, ties broken by the tag of
+ * the largest scene in each. Both callers below rank them through this one
+ * function, so a family's position is the same fact whether it is being drawn on
+ * the map or listed in 📊 — the map tints by that position (PRD §9).
+ *
+ * `clusters` arrives from the partition already sorted largest-first with ties
+ * by tag, so a family's leading scene is simply its lowest cluster index.
+ */
+function rankFamilies(
+  families: readonly number[][],
+  clusters: readonly PartitionedCluster[],
+): number[][] {
+  const size = (family: readonly number[]): number =>
+    family.reduce((sum, c) => sum + clusters[c]!.members.length, 0);
+  const leadTag = (family: readonly number[]): string => clusters[Math.min(...family)]!.tag;
+  return [...families].sort((a, b) => size(b) - size(a) || leadTag(a).localeCompare(leadTag(b)));
+}
+
 /** One genre scene: the tag that founded it and the artists it claimed. */
 export interface Scene {
   tag: string;
@@ -559,7 +588,10 @@ export function groupRoster(artists: readonly Artist[]): {
   const stray = loners.map((i) => artists[i]!.name);
   if (clusters.length === 0) return { groups: [], loners: stray };
 
-  const families = groupClusters(clusterAffinity(clusters, similarities), clusters.length);
+  const families = rankFamilies(
+    groupClusters(clusterAffinity(clusters, similarities), clusters.length),
+    clusters,
+  );
   const groups = families.map((memberClusters) => {
     const scenes = memberClusters
       .map((c) => ({
@@ -570,11 +602,6 @@ export function groupRoster(artists: readonly Artist[]): {
       .sort((a, b) => b.members.length - a.members.length || a.tag.localeCompare(b.tag));
     return { scenes, members: scenes.flatMap((scene) => scene.members) };
   });
-  groups.sort(
-    (a, b) =>
-      b.members.length - a.members.length ||
-      (a.scenes[0]?.tag ?? "").localeCompare(b.scenes[0]?.tag ?? ""),
-  );
   return { groups, loners: stray };
 }
 
@@ -606,7 +633,9 @@ export function computeCloudLayout(artists: readonly Artist[]): CloudLayout {
   // wider gap), so related characteristics render side by side — the punk
   // scenes in one neighbourhood, electronic pop in another — and the family
   // structure is readable from the gulfs between them.
-  const families = groupClusters(affinity, clusters.length);
+  // Ranked largest first, so a family's index here is the rank the renderer
+  // tints by and the position 📊 lists it at — one ordering, not two.
+  const families = rankFamilies(groupClusters(affinity, clusters.length), clusters);
   const familyPackings = families.map((memberClusters) => {
     const localCentres = packDiscs(
       memberClusters.map((c) => radii[c]!),
@@ -636,8 +665,10 @@ export function computeCloudLayout(artists: readonly Artist[]): CloudLayout {
     FAMILY_GAP,
   );
   const centres: { x: number; y: number }[] = clusters.map(() => ({ x: 0, y: 0 }));
+  const familyOf = new Int32Array(clusters.length);
   familyPackings.forEach((family, f) => {
     family.memberClusters.forEach((c, m) => {
+      familyOf[c] = f;
       centres[c] = {
         x: familyCentres[f]!.x + family.localCentres[m]!.x,
         y: familyCentres[f]!.y + family.localCentres[m]!.y,
@@ -735,6 +766,7 @@ export function computeCloudLayout(artists: readonly Artist[]): CloudLayout {
       joinedBy: new Map(
         cluster.members.map((m) => [artists[m]!.name, cluster.joinedBy.get(m) ?? [cluster.tag]]),
       ),
+      family: familyOf[c]!,
       ...toUnit(centres[c]!.x, centres[c]!.y),
       radius: radii[c]! / span,
     })),
