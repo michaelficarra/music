@@ -40,6 +40,7 @@
 // the world to its node size exactly.
 
 import { groupTags } from "./tag-groups";
+import { redundantTags } from "./tag-registry";
 import type { Artist } from "./types";
 
 /** An artist's position on the map, within the unit square. */
@@ -51,10 +52,14 @@ export interface CloudPoint {
 
 /** A genre cluster and its ring, in unit-square coordinates. */
 export interface CloudCluster {
-  /** The genre tag that defines the cluster. */
+  /** The genre tag that founded the cluster. */
   tag: string;
+  /** The cluster's full name: `tag`, then the tags its adoptees joined on. */
+  tags: readonly string[];
   /** Names of the member artists; all of them lie within the ring. */
   members: string[];
+  /** The tags that put each member here, by name (see `PartitionedCluster`). */
+  joinedBy: ReadonlyMap<string, readonly string[]>;
   x: number;
   y: number;
   radius: number;
@@ -192,6 +197,74 @@ const LONER_CLEARANCE = 0.5;
 interface PartitionedCluster {
   tag: string;
   members: number[]; // roster indices
+  /**
+   * Why each member is here: the founding tag for the carriers that founded the
+   * cluster, and the genres it shares with them for every artist adopted after.
+   *
+   * A cluster is named for the genre that founded it, but adoption then puts in
+   * artists who do not carry that genre — Nobuo Uematsu (`prog rock`) into
+   * `progressive metal`, because every founder derives `prog rock` from it. The
+   * name alone therefore states something false about part of the membership;
+   * keeping the evidence lets the map say what actually put each artist there
+   * (PRD §9) instead of extending the founders' label over everyone.
+   *
+   * Keyed by roster index, so it survives the cohesion sort below.
+   */
+  joinedBy: Map<number, readonly string[]>;
+}
+
+/**
+ * The tags to credit an adoption to: which of `ownGenres` the cluster's members
+ * actually hold, commonest first, keeping only the most specific.
+ *
+ * The reduction is against the *reasons themselves*, never against the founding
+ * tag. Nobuo Uematsu shares `prog rock` and `art rock` with the `progressive
+ * metal` founders, and `prog rock` derives `art rock`, so only the first is
+ * worth printing — but `progressive metal` derives `prog rock` in turn, and
+ * reducing against that too would leave nothing at all. Precisely the adoptions
+ * whose evidence is an *ancestor* of the founding tag are the ones the name fails
+ * to describe, so they are the ones that must survive.
+ */
+function sharedWith(
+  ownGenres: readonly string[],
+  cluster: PartitionedCluster,
+  artists: readonly Artist[],
+): readonly string[] {
+  const holders = new Map<string, number>();
+  for (const m of cluster.members) {
+    for (const tag of ownGenres) {
+      if (artists[m]!.soundTags.includes(tag)) holders.set(tag, (holders.get(tag) ?? 0) + 1);
+    }
+  }
+  const shared = [...holders.keys()].sort(
+    (a, b) => holders.get(b)! - holders.get(a)! || a.localeCompare(b),
+  );
+  const redundant = new Set(redundantTags(shared));
+  return shared.filter((tag) => !redundant.has(tag));
+}
+
+/**
+ * A cluster's full name: the founding tag, then the tag each adoptee chiefly
+ * joined on, commonest first. `progressive metal + prog rock` — the second half
+ * is what the four founders' label was never going to say about Nobuo Uematsu.
+ *
+ * Only each adoptee's *leading* tag, not all of them: `joinedBy` is ordered by
+ * how many members hold the tag, so the head is the one that carried the
+ * adoption, and the rest are corroboration. Naming the cluster after all of them
+ * would stretch `death metal + metalcore` to `+ beatdown hardcore` for the sake
+ * of one artist. The tooltip prints the full list per member instead.
+ */
+function clusterTags(cluster: PartitionedCluster): readonly string[] {
+  const joiners = new Map<string, number>();
+  for (const [leading] of cluster.joinedBy.values()) {
+    if (leading !== undefined && leading !== cluster.tag) {
+      joiners.set(leading, (joiners.get(leading) ?? 0) + 1);
+    }
+  }
+  return [
+    cluster.tag,
+    ...[...joiners.keys()].sort((a, b) => joiners.get(b)! - joiners.get(a)! || a.localeCompare(b)),
+  ];
 }
 
 /**
@@ -234,7 +307,12 @@ function partitionIntoClusters(
   for (const tag of orderedGenres) {
     const unclaimed = carriers.get(tag)!.filter((i) => !clusterOf.has(i));
     if (unclaimed.length < MIN_CLUSTER_SIZE) continue;
-    const cluster: PartitionedCluster = { tag, members: unclaimed };
+    const cluster: PartitionedCluster = {
+      tag,
+      members: unclaimed,
+      // Founders are here for the obvious reason: they carry the tag.
+      joinedBy: new Map(unclaimed.map((i) => [i, [tag]])),
+    };
     clusters.push(cluster);
     for (const i of unclaimed) clusterOf.set(i, cluster);
   }
@@ -261,8 +339,13 @@ function partitionIntoClusters(
         bestCluster = cluster;
       }
     }
-    if (bestCluster !== null && bestScore >= ADOPTION_THRESHOLD) bestCluster.members.push(i);
-    else loners.push(i);
+    if (bestCluster !== null && bestScore >= ADOPTION_THRESHOLD) {
+      // Attribute before joining: an artist shares every one of its genres with
+      // itself, so scanning the members afterwards would credit tags no existing
+      // member actually holds.
+      bestCluster.joinedBy.set(i, sharedWith(ownGenres, bestCluster, artists));
+      bestCluster.members.push(i);
+    } else loners.push(i);
   }
 
   // Within each cluster, order members by how connected they are to the rest
@@ -434,8 +517,19 @@ function groupClusters(affinity: number[][], clusterCount: number): number[][] {
 /** One genre scene: the tag that founded it and the artists it claimed. */
 export interface Scene {
   tag: string;
+  /** The scene's full name: `tag`, then the tags its adoptees joined on. */
+  tags: readonly string[];
   members: string[];
 }
+
+/**
+ * A scene's name for display, wherever one is shown as a single string.
+ *
+ * Joined with `+` rather than `·` because "the worlds it splits into" (§8)
+ * already separates *scenes* with `·`; nesting one inside the other would leave
+ * no way to tell a second scene from a second tag on the first.
+ */
+export const sceneName = (tags: readonly string[]): string => tags.join(" + ");
 
 /** A family of related scenes — one neighbourhood of the map. */
 export interface TasteGroup {
@@ -470,6 +564,7 @@ export function groupRoster(artists: readonly Artist[]): {
     const scenes = memberClusters
       .map((c) => ({
         tag: clusters[c]!.tag,
+        tags: clusterTags(clusters[c]!),
         members: clusters[c]!.members.map((m) => artists[m]!.name),
       }))
       .sort((a, b) => b.members.length - a.members.length || a.tag.localeCompare(b.tag));
@@ -634,7 +729,12 @@ export function computeCloudLayout(artists: readonly Artist[]): CloudLayout {
     points: artists.map((artist, i) => ({ name: artist.name, ...toUnit(x[i]!, y[i]!) })),
     clusters: clusters.map((cluster, c) => ({
       tag: cluster.tag,
+      tags: clusterTags(cluster),
       members: cluster.members.map((m) => artists[m]!.name),
+      // Re-keyed by name: the renderer never sees roster indices.
+      joinedBy: new Map(
+        cluster.members.map((m) => [artists[m]!.name, cluster.joinedBy.get(m) ?? [cluster.tag]]),
+      ),
       ...toUnit(centres[c]!.x, centres[c]!.y),
       radius: radii[c]! / span,
     })),

@@ -3,7 +3,7 @@
 // from cloud-layout.ts; this module renders it and drives the interaction.
 
 import { artists } from "./data";
-import { computeCloudLayout } from "./cloud-layout";
+import { computeCloudLayout, sceneName, type CloudCluster } from "./cloud-layout";
 import { artistTooltip, createThumb } from "./thumb";
 
 // What one of the layout's spacing units (the minimum distance between any
@@ -31,6 +31,29 @@ const GLOW_SCALE = 1.5;
 // (matching the layout's ring padding around an outermost member), so loners
 // glow on the same scale as the clusters beside them.
 const LONER_GLOW_RADIUS = 0.75 * NODE_SPACING;
+
+/**
+ * What hovering inside a ring says: the cluster's name, then who is in it.
+ *
+ * Members are grouped by the tags that put them there, because a cluster is
+ * named after the genre that *founded* it and adoption then admits artists who
+ * do not carry that genre (PRD §9) — printing the bare name over the whole list
+ * asserts something false about them. Where nobody was adopted the cluster has a
+ * single group and reads as it always did: a prefix repeating the ring's own
+ * name on every line explains nothing.
+ */
+function ringTooltip(cluster: CloudCluster): string {
+  const heading = `${sceneName(cluster.tags)} (${cluster.members.length} artists)`;
+  if (cluster.tags.length === 1) return `${heading}\n${cluster.members.join(", ")}`;
+  // Keyed on the member's whole reason, so an artist appears once with all of
+  // it; built in member order, so the groups come out most-archetypal first.
+  const groups = new Map<string, string[]>();
+  for (const name of cluster.members) {
+    const via = (cluster.joinedBy.get(name) ?? [cluster.tag]).join(", ");
+    groups.set(via, [...(groups.get(via) ?? []), name]);
+  }
+  return [heading, ...[...groups].map(([via, names]) => `${via}: ${names.join(", ")}`)].join("\n");
+}
 
 export interface Cloud {
   /** Show the map, building it on first use, fitted to the viewport. */
@@ -96,7 +119,7 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
       ring.style.height = `${diameter}px`;
       // Hovering the space inside a ring explains the cluster — handy at the
       // fitted overview, where the member names are too small to read.
-      ring.title = `${cluster.tag} (${cluster.members.length} artists)\n${cluster.members.join(", ")}`;
+      ring.title = ringTooltip(cluster);
       plane.appendChild(ring);
     }
     // Unclustered artists get a halo of their own — a node-sized pool of the

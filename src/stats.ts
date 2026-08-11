@@ -37,7 +37,7 @@
 //   * tierPosition (types.ts) — where an artist *sits*. Used only for statements
 //     about placement: the predictor range gauges and the predictive-power measure.
 
-import { groupRoster, pairwiseSimilarities } from "./cloud-layout";
+import { groupRoster, pairwiseSimilarities, sceneName } from "./cloud-layout";
 import { compareArtistNames } from "./sort";
 import { groupTags, isEraTag } from "./tag-groups";
 import { TIERS, TIER_WEIGHT, UNRANKED, tierPosition, type Artist, type Tier } from "./types";
@@ -736,7 +736,9 @@ export function categoryComposition(
 
 /** One family of related scenes, sized against the roster. */
 export interface TasteWorld {
-  /** The genre scenes it gathers, largest first. */
+  /** The genre scenes it gathers, largest first, each already named — which for
+      a scene that adopted artists from outside its founding genre means more
+      than one tag (`sceneName`, cloud-layout.ts). */
   scenes: string[];
   /** Ranked artists across those scenes. */
   count: number;
@@ -770,7 +772,7 @@ export function rankTasteWorlds(artists: readonly Artist[]): TasteWorlds {
   const { groups, loners } = groupRoster(ranked);
   return {
     worlds: groups.map((group) => ({
-      scenes: group.scenes.map((scene) => scene.tag),
+      scenes: group.scenes.map((scene) => sceneName(scene.tags)),
       count: group.members.length,
       prevalence: group.members.length / ranked.length,
     })),

@@ -262,11 +262,18 @@ is saying where the artist belongs, not everything true about it.
   (its genres overlap the members'); artists that fit nowhere well stay **unclustered**, each
   standing just outside the circle of the cluster it most resembles, with a small **glow of its
   own**. A cluster represents a real relationship, not a best-effort bucket.
+- **A cluster is named after every tag that put an artist in it**: the genre that defines it,
+  followed by the tags on which artists who do *not* carry that genre joined. Where nobody joined
+  from outside — most clusters — the defining genre is the whole name. Naming a cluster after its
+  defining genre alone would state something untrue of everyone taken in afterwards: a composer of
+  orchestral game music sits among progressive metal bands because they all share *prog rock*, and
+  *progressive metal* is not a description of him.
 - Each cluster is marked by a **soft, faint glow** behind its artists — brightest at the heart,
   spilling a little past the cluster's boundary before fading out. **All of a cluster's members
   lie inside its circle, tightly and evenly packed**, and clusters never overlap one another.
-  **Hovering the space inside a cluster** explains it in a tooltip: the genre that defines it
-  and the artists it contains (useful zoomed out, when names are too small to read).
+  **Hovering the space inside a cluster** explains it in a tooltip: its name, and the artists it
+  contains **grouped by the tags each of them joined on** (useful zoomed out, when names are too
+  small to read).
 - The grouping is **two-tiered**: clusters of related sound form **families** (the punk scenes
   in one neighbourhood, electronic pop in another). Within a family the circles pack **snugly,
   edge to edge**; between families lie **wide gulfs** — so both which artists belong together
@@ -409,7 +416,9 @@ dominant decade are deliberately *not* repeated here — each heads a section of
   is what answers the question at that level.
 - **The worlds it splits into** — the collection above the level of any single tag: artists gather
   into genre scenes, and those scenes into a handful of broader worlds, each named by the scenes it
-  contains rather than by an invented label. These are **the same neighbourhoods the ☁️ map draws**,
+  contains rather than by an invented label — and each scene by its own full name (§9), so a scene
+  that took in artists from outside its defining genre is listed under all of the tags that put
+  them there. These are **the same neighbourhoods the ☁️ map draws**,
   so the two features agree about the shape of the collection — and, like the map, they are built
   from genre and musical-quality tags alone (§2). Artists belonging to no scene are counted out and
   said so.

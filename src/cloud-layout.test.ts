@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { computeCloudLayout, pairwiseSimilarities, type CloudPoint } from "./cloud-layout";
+import {
+  computeCloudLayout,
+  pairwiseSimilarities,
+  sceneName,
+  type CloudCluster,
+  type CloudPoint,
+} from "./cloud-layout";
 import { artists as roster } from "./data";
 import type { Artist } from "./types";
 
@@ -123,6 +129,48 @@ describe("computeCloudLayout", () => {
       const expected = genreRoster.filter((a) => a.tags.includes(cluster.tag)).map((a) => a.name);
       expect([...cluster.members].sort()).toEqual([...expected].sort());
     }
+  });
+
+  it("names a cluster nobody was adopted into after its founding tag alone", () => {
+    const { clusters } = computeCloudLayout(genreRoster);
+    for (const cluster of clusters) {
+      expect(cluster.tags).toEqual([cluster.tag]);
+      // Everyone here carries the tag, so that is the whole story.
+      for (const name of cluster.members) expect(cluster.joinedBy.get(name)).toEqual([cluster.tag]);
+    }
+  });
+
+  describe("when an artist is adopted", () => {
+    // The Nobuo Uematsu case (ARCHITECTURE §7): `mascot` carries no tag that
+    // founds anything, and is taken into `pop punk` on an ancestor of the very
+    // tag the ring is named after — so the founders' name says something untrue
+    // about it. The rows spell out their derived tags, as data.ts's do.
+    const punkScene = ["pp1", "pp2", "pp3", "pp4", "pp5", "pp6"].map((n) =>
+      artist(n, ["pop punk", "punk rock", "rock", "distorted guitars"]),
+    );
+    const mascot = artist("mascot", ["punk rock", "rock"]);
+    const adoptingRoster = [...punkScene, ...emoActs, mascot];
+    const clusterNamed = (tag: string): CloudCluster =>
+      computeCloudLayout(adoptingRoster).clusters.find((c) => c.tag === tag)!;
+
+    it("takes it in, but credits the tags it actually shares", () => {
+      const cluster = clusterNamed("pop punk");
+      expect(cluster.members).toContain("mascot");
+      // `rock` is dropped: `punk rock` already derives it, so printing both
+      // says the same thing twice.
+      expect(cluster.joinedBy.get("mascot")).toEqual(["punk rock"]);
+      expect(cluster.joinedBy.get("pp1")).toEqual(["pop punk"]);
+    });
+
+    it("adds the joining tag to the cluster's name, founding tag first", () => {
+      const cluster = clusterNamed("pop punk");
+      expect(cluster.tags).toEqual(["pop punk", "punk rock"]);
+      expect(sceneName(cluster.tags)).toBe("pop punk + punk rock");
+    });
+
+    it("leaves the neighbouring cluster's name untouched", () => {
+      expect(clusterNamed("emo").tags).toEqual(["emo"]);
+    });
   });
 
   it("places related clusters nearer than unrelated ones", () => {

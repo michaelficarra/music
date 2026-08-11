@@ -424,6 +424,32 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
      adopted everyone however poor the fit; artists clearing the bar nowhere stay unclustered,
      on the rim (PRD §9: membership is never forced). Within a cluster, members are ordered by
      mean similarity to their fellows — archetypes first.
+
+     **Every member records why it is there** (`joinedBy`, keyed by roster index so it survives
+     that reordering): the founding tag for the carriers who founded the cluster, and for an
+     adoptee the genres it shares with them — commonest first, reduced to the most specific by
+     `redundantTags` (§3a). A cluster's **name** (`tags`, formatted by `sceneName`) is the
+     founding tag followed by each adoptee's *leading* shared tag: `progressive metal + prog
+     rock`. This is not decoration. Adoption admits artists who do not carry the founding tag —
+     Nobuo Uematsu into `progressive metal`, because `progressive metal` derives `prog rock`
+     derives `art rock` and those are his only two genres — so the founders' tag alone asserts
+     something false about part of the membership, on the ☁️ ring (PRD §9) and in 📊's worlds
+     (§8.3) alike. Two rules make the name work:
+     - **The reduction is against the other reason tags, never against the founding tag.**
+       `progressive metal` derives `prog rock`, so reducing against it would erase the very tag
+       that explains the adoption and leave the name unchanged. Adoptions whose evidence is an
+       *ancestor* of the founding tag are exactly the ones the name fails to describe.
+     - **The name carries each adoptee's leading tag only**, not its whole list; the tooltip
+       prints the full list per member. Otherwise one artist stretches `death metal + metalcore`
+       to `+ beatdown hardcore`.
+
+     **Rejecting ancestor-only adoptions was measured and is wrong.** The rule "an adoptee whose
+     every shared tag is one the founding tag derives is broader than the scene, not part of it"
+     sounds principled and disqualifies 3 of the roster's 11 adoptions. Re-running the partition
+     under it moves Enya from `folk punk` to **`country`**, Nobuo from `progressive metal` to
+     **`math rock`**, and strands Angels & Airwaves as the roster's only loner. Every outcome is
+     worse than the one it replaces, and Nobuo's is not fixed but relabelled. Name the cluster
+     honestly instead; do not tighten the membership rules.
   2. **Cluster packing.** A cluster's members occupy the nearest points of a **hexagonal
      lattice** (the densest packing of equal discs): every neighbour sits at exactly the
      minimum spacing and the group compactly fills its bounding circle, archetypes at the
@@ -646,7 +672,11 @@ re-measured after a retag rather than remembered.
   about their tags, with the tiers playing no part. On the shipped roster it yields 6 worlds over 41
   scenes, covering 244 of 245 ranked artists; the 1 unclaimed is reported rather than forced into a
   family. Worlds are named by listing their own scenes — an invented label like "synth pop and
-  friends" would be a guess dressed as a finding.
+  friends" would be a guess dressed as a finding — and each scene by its full name (`sceneName`,
+  §7), so a scene that adopted from outside its founding genre reads `progressive metal + prog
+  rock` here exactly as it does on the map. That is why scenes are joined with `·` and a scene's
+  own tags with `+`: nested in one line, a single separator would leave no way to tell a second
+  scene from a second tag on the first.
 
   Narrowing the grouping to `soundTags` (§3b) is what made the worlds worth listing: they had been
   36%, 34%, 14%, 12%, 2%, 2% of the roster — two blobs, two remainders, and two singletons that were
