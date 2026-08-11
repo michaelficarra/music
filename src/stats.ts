@@ -61,8 +61,8 @@ export const SPREAD_MIN_SUPPORT = 5;
     spanning the board. At 1, a single far-flung placement would qualify a tag
     whose other carriers all sit together. */
 export const MIN_CAMP_SIZE = 2;
-/** Entries in each of the two isolation lists. */
-export const ARTIST_LIST_LIMIT = 6;
+/** Entries in each of the two isolation lists (core sound, one of a kind). */
+export const ARTIST_LIST_LIMIT = 10;
 /**
  * Strength of the prior pulling every tag's ratio towards the roster average,
  * in artists: a tag with this many carriers earns half the elevation its raw
@@ -94,44 +94,48 @@ export const FAVOURITE_SHARE = 0.25;
  *
  * The floor matters: with S shuffles the smallest p-value observable is
  * 1/(S+1), and the correction below asks the strongest tag to clear
- * FALSE_DISCOVERY_RATE / (number of tags) — 0.00027 over this vocabulary's 183
- * tested tags. Too few shuffles and nothing can pass however real it is, which
- * would look like a finding rather than the measurement artefact it is. Ten
- * thousand keeps the smallest observable p (0.0001) clear of that threshold —
- * but only by a factor of ~2.7, so re-check this if the vocabulary grows much
- * further. Counting only each artist's own tags is what keeps the margin (see
- * countedTags); including derived tags tests 225 and shrinks it to ~2.2.
+ * FALSE_DISCOVERY_RATE / (number of tags) — 0.00023 over the 217 tags that
+ * counting derived tags puts past MIN_SUPPORT. Too few shuffles and nothing can
+ * pass however real it is, which would look like a finding rather than the
+ * measurement artefact it is. Twenty thousand keeps the smallest observable p
+ * (0.00005) clear of that threshold by a factor of ~4.6; at the ten thousand
+ * this ran while only own tags were counted, the switch to derived tags would
+ * have left ~2.2. Re-check if the vocabulary grows much further — every tag's
+ * `elevationP` carries what is needed to do it.
  */
-export const NULL_SAMPLES = 10000;
+export const NULL_SAMPLES = 20000;
 /**
  * The share of surviving findings allowed to be flukes (Benjamini–Hochberg).
  *
- * A correction is not optional here. Every tag list picks the best of ~180
+ * A correction is not optional here. Every tag list picks the best of ~220
  * candidates, and over that many tries the best of *anything* looks striking:
- * 22 tags clear p < 0.05 uncorrected on this roster, where chance alone would
- * produce 183 × 0.05 ≈ 9.2. Controlling the false-discovery rate is what makes
+ * 20 tags clear p < 0.05 uncorrected on this roster, where chance alone would
+ * produce 217 × 0.05 ≈ 11. Controlling the false-discovery rate is what makes
  * "this tag is a real preference" mean something.
  */
 export const FALSE_DISCOVERY_RATE = 0.05;
 
 /**
- * The tags a statistic counts: what an artist's own row says, **not** the tags
- * derived from those (ARCHITECTURE §3a).
+ * The tags a statistic counts: `specificTags` — everything the artist's row
+ * implies, derived tags included, minus those too broad to describe anything
+ * (ARCHITECTURE §3b).
  *
- * This was measured rather than assumed. Counting derived tags too, every
- * prevalence list is topped by umbrellas — `rock, pop, alternative rock, punk
- * rock, pop rock` for genres, `North American, American, European` for regions —
- * which describes the shape of the *vocabulary*, not of the collection. Own tags
- * answer the question actually being asked (`pop punk, power pop, emo pop…`).
- * Derived tags also push 42 more tags past MIN_SUPPORT for no gain, tightening
- * the Benjamini–Hochberg threshold toward the resolution floor NULL_SAMPLES can
- * observe (§8.2a).
+ * Derived tags are counted because whether a band is *written down* as pop punk
+ * is an artefact of CSV hygiene rather than a fact about the music: rows carry
+ * only their most specific tag (§3), so Paramore says `emo pop` and stops.
+ * Enforcing that rule across the roster once moved `pop punk` from 39 carriers
+ * to 30 without a single artist changing — the clearest possible sign that
+ * counting stated tags measured the wrong thing.
  *
- * The two figures that *are* the ☁️ map — the taste worlds, and an artist's
- * `kinship` — do count derived tags, because the map does. CLAUDE.md requires
- * the two features to agree about the collection's shape.
+ * The broad ones are excluded because they are the mirror-image error. `rock`
+ * covers four fifths of the roster and no row states it; leading a prevalence
+ * list with it describes the vocabulary, and averaging it into a prediction
+ * drags every artist towards the roster mean. They are dropped once, in
+ * data.ts, so every statistic here — and the ☁️ map, and the card tooltips —
+ * works from one definition of what carrying a tag means. Only the 🎲 filter
+ * keeps them, since finding artists is exactly what they are good for.
  */
-const countedTags = (artist: Artist): readonly string[] => artist.ownTags;
+const countedTags = (artist: Artist): readonly string[] => artist.specificTags;
 
 // --- Placement: where an artist sits ---
 
@@ -518,6 +522,9 @@ function falseDiscoveryCutoff(pValues: readonly number[]): number {
  */
 function markSignificant(baseline: Baseline, stats: TagStat[]): void {
   if (stats.length === 0 || baseline.ranked.length === 0) return;
+  // Too-broad tags never reach here — aggregateTags drops them — so every tag
+  // tested is one that could genuinely have landed in a tail, and the
+  // Benjamini–Hochberg cutoff below is not diluted by tags that could not.
   const nulls = nullDistributions(baseline, new Set(stats.map((stat) => stat.count)));
 
   // The roster-wide values each tag is measured against.
@@ -623,11 +630,27 @@ export function rankReliable(stats: readonly TagStat[], limit = PREDICTOR_LIST_L
 
 // --- What the collection is made of ---
 
+/**
+ * A tag and how much of the ranked roster states it.
+ *
+ * Deliberately not a `TagStat`: the composition list is descriptive, so the
+ * tier-derived fields would be not merely unused but misleading to have to
+ * hand — and it counts a different set of tags (see `categoryComposition`), so
+ * a `TagStat` for `male vocals` does not exist to be reused.
+ */
+export interface TagCount {
+  tag: string;
+  /** Ranked artists whose own row names this tag (always ≥ MIN_SUPPORT). */
+  count: number;
+  /** Those artists as a fraction of the ranked roster. */
+  prevalence: number;
+}
+
 export interface CategoryComposition {
   /** A tag-groups.ts label, e.g. "Genres". */
   category: string;
-  /** The category's most common tags, most-carried first. */
-  stats: TagStat[];
+  /** The category's most-stated tags, most-carried first. */
+  stats: TagCount[];
 }
 
 /**
@@ -646,20 +669,58 @@ export interface CategoryComposition {
  * that they would fill it entirely, burying the question "what genres is this
  * collection made of" under the answer to a different one.
  *
- * "Other" (tags the vocabulary doesn't know) is skipped, and so are categories
- * with no sufficiently-supported tags.
+ * **This is the one statistic that counts `ownTags`** — the tags actually
+ * written on each row — rather than `countedTags`, and it applies no breadth
+ * rule (§3b). It is an inventory of the descriptions used, and a description
+ * nobody wrote is not part of it. Both of the alternatives fail here, in
+ * opposite directions and for the same underlying reason:
+ *
+ *  - Counting **derived** tags leads every category with tags the vocabulary
+ *    supplied rather than the collection earned: `rock`, then `pop`.
+ *  - Counting derived tags **minus the too-broad ones** removes those but
+ *    promotes the next rank of the same thing — `California`, `Western
+ *    European`, `New York State`, the registry's connective tissue between a
+ *    city and its country, which no row states and which describes an artist no
+ *    better than the `American` just removed.
+ *
+ * Reading the rows directly settles it without a threshold to tune: nobody is
+ * described as `rock` or as `California`, so neither can appear, while
+ * `pop punk` and `male vocals` are counted exactly as often as they were
+ * claimed. The cost is that a scene split across sub-genres is reported split —
+ * `emo pop` and `pop punk` are separate rows rather than one — which is the
+ * honest answer to "what is your list made of" even where it is not the answer
+ * to "how much of it is pop punk". The ☁️ map's scenes (§8.3) answer that one.
+ *
+ * Era tags are excluded, having a section of their own. "Other" (tags the
+ * vocabulary doesn't know) is skipped, and so are categories with no
+ * sufficiently-supported tags.
  */
 export function categoryComposition(
-  stats: readonly TagStat[],
+  artists: readonly Artist[],
   limit = COMPOSITION_PER_CATEGORY,
 ): CategoryComposition[] {
-  const statByTag = new Map(stats.map((stat) => [stat.tag, stat]));
+  const ranked = artists.filter((artist) => artist.baselineSlot !== UNRANKED);
+  if (ranked.length === 0) return [];
+
+  const carriers = new Map<string, number>();
+  for (const artist of ranked) {
+    for (const tag of new Set(artist.ownTags)) {
+      if (isEraTag(tag)) continue;
+      carriers.set(tag, (carriers.get(tag) ?? 0) + 1);
+    }
+  }
+  const countByTag = new Map<string, TagCount>();
+  for (const [tag, count] of carriers) {
+    if (count < MIN_SUPPORT) continue;
+    countByTag.set(tag, { tag, count, prevalence: count / ranked.length });
+  }
+
   const result: CategoryComposition[] = [];
-  for (const group of groupTags([...statByTag.keys()])) {
+  for (const group of groupTags([...countByTag.keys()])) {
     if (group.label === "Other") continue;
     const most = group.tags
-      .map((tag) => statByTag.get(tag)!)
-      .sort(byMetricDesc((stat) => stat.prevalence))
+      .map((tag) => countByTag.get(tag)!)
+      .sort((a, b) => b.prevalence - a.prevalence || compareArtistNames(a.tag, b.tag))
       .slice(0, limit);
     if (most.length > 0) result.push({ category: group.label, stats: most });
   }
@@ -747,7 +808,10 @@ export function measurePredictivePower(artists: readonly Artist[]): PredictivePo
   const baseline = computeBaseline(artists);
   // Per-tag position totals over the ranked roster, for the leave-one-out means.
   const totals = new Map<string, { sum: number; count: number }>();
-  // baseline.ranked already carries the counted tags (computeBaseline).
+  // baseline.ranked already carries the counted tags (computeBaseline), so the
+  // too-broad ones are gone: a tag four fifths of the roster carries has a
+  // leave-one-out mean of very nearly the roster mean, and averaging it into
+  // every prediction flattens the model rather than informing it.
   for (const artist of baseline.ranked) {
     for (const tag of artist.tags) {
       if (isEraTag(tag)) continue;
@@ -857,9 +921,9 @@ export function rankIsolation(
     }
   }
 
-  // `kinship` counts derived tags too, because it *is* the ☁️ map's similarity;
-  // `kin` and `rarestTag` below count only what each row says, like every other
-  // statistic (see countedTags).
+  // `kinship` is the ☁️ map's own similarity, so it has always counted derived
+  // tags; `kin` and `rarestTag` now do too, which is what finally puts this
+  // whole section on one definition of what carrying a tag means (countedTags).
   const similarities = pairwiseSimilarities(ranked);
   const tagSets = ranked.map((artist) => new Set(countedTags(artist)));
   const scored: ArtistIsolation[] = ranked.map((artist, i) => {
@@ -976,7 +1040,7 @@ export function computeStats(artists: readonly Artist[]): TierStats {
     tagCount: stats.length,
     positions: baseline.positions,
     eras,
-    composition: categoryComposition(general),
+    composition: categoryComposition(artists),
     worlds: rankTasteWorlds(artists),
     lifts: rankByRatio(general),
     favouriteTraits: rankByFavouriteIndex(general),

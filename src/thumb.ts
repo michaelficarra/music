@@ -34,7 +34,18 @@ export function createThumb(artist: Artist): HTMLElement {
   return thumb;
 }
 
-/** Native hover tooltip text: the name, plus the artist's tags when it has any. */
+/**
+ * Native hover tooltip text: the name, plus the tags the artist's row actually
+ * names when it has any.
+ *
+ * `specificTags` rather than `tags`, because the broad ones say nothing while
+ * taking the most room: every guitar band's tooltip would trail `punk rock,
+ * rock` after its actual genres, and every Angeleno would read `California,
+ * American, North American`. Finding artists by those is what the 🎲 filter is
+ * for; a tooltip is glanced at, so it gets only the tags that distinguish.
+ */
 export function artistTooltip(artist: Artist): string {
-  return artist.tags.length > 0 ? `${artist.name}\n${artist.tags.join(", ")}` : artist.name;
+  return artist.specificTags.length > 0
+    ? `${artist.name}\n${artist.specificTags.join(", ")}`
+    : artist.name;
 }

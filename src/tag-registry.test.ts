@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { parseCsv } from "./csv";
-import { allTags } from "./data";
+import { allTags, artists } from "./data";
 import { compareArtistNames } from "./sort";
 import { groupTags } from "./tag-groups";
 import {
+  broadTags,
   buildRegistry,
+  redundantTags,
   withDerivedTags,
   REGISTRY,
   TAG_CATEGORIES,
@@ -82,6 +84,88 @@ describe("withDerivedTags", () => {
   });
 });
 
+describe("redundantTags", () => {
+  const registry = registryOf(
+    [
+      "easycore,genre,hardcore;pop punk",
+      "pop punk,genre,pop rock;punk rock",
+      "pop rock,genre,pop;rock",
+      "punk rock,genre,rock",
+      "hardcore,genre,punk rock",
+      "pop,genre,",
+      "rock,genre,",
+      "Stockholm,region,Swedish",
+      "Swedish,region,Scandinavian",
+      "Scandinavian,region,",
+      "male vocals,quality,",
+    ].join("\n"),
+  );
+
+  it("finds nothing when every tag is the most specific in its direction", () => {
+    expect(redundantTags(["pop punk", "Stockholm", "male vocals"], registry)).toEqual([]);
+  });
+
+  it("reports a tag another one derives directly", () => {
+    expect(redundantTags(["pop punk", "punk rock"], registry)).toEqual(["punk rock"]);
+  });
+
+  it("reports one derived transitively, several links up", () => {
+    expect(redundantTags(["easycore", "rock"], registry)).toEqual(["rock"]);
+  });
+
+  it("reports regions the same way as genres", () => {
+    expect(redundantTags(["Stockholm", "Scandinavian"], registry)).toEqual(["Scandinavian"]);
+  });
+
+  it("keeps two specific tags that merely share an ancestor", () => {
+    // Both derive punk rock; neither derives the other, so both are given tags.
+    expect(redundantTags(["pop punk", "hardcore"], registry)).toEqual([]);
+  });
+
+  it("leaves an unregistered tag alone", () => {
+    expect(redundantTags(["hyperpop", "male vocals"], registry)).toEqual([]);
+  });
+});
+
+describe("broadTags", () => {
+  /** `count` artists carrying `tags`, so a share of the roster is easy to state. */
+  const cohort = (count: number, tags: string[]) => Array.from({ length: count }, () => ({ tags }));
+
+  it("calls a tag broad once it covers more than the given share of the roster", () => {
+    // "rock" is on 8 of 10, "emo" on 2, "pop" on 2. Breadth is failure to
+    // distinguish, so the split is on how much of the roster a tag covers and
+    // nothing else.
+    const roster = [...cohort(6, ["rock"]), ...cohort(2, ["rock", "emo"]), ...cohort(2, ["pop"])];
+    expect([...broadTags(roster, 0.5)]).toEqual(["rock"]);
+  });
+
+  it("keeps a tag exactly at the threshold — the cut is strictly above", () => {
+    expect(broadTags([...cohort(5, ["rock"]), ...cohort(5, ["pop"])], 0.5).has("rock")).toBe(false);
+  });
+
+  it("does not care whether the carriers were given the tag or derived it", () => {
+    // The rule deliberately ignores provenance: a hand-written tag on most of
+    // the roster distinguishes no better than an inherited one.
+    const stated = cohort(9, ["male vocals"]);
+    const derived = cohort(9, ["rock"]);
+    expect(broadTags([...stated, ...cohort(1, ["x"])], 0.5).has("male vocals")).toBe(true);
+    expect(broadTags([...derived, ...cohort(1, ["x"])], 0.5).has("rock")).toBe(true);
+  });
+
+  it("exempts era tags, whose own section is about which decades dominate", () => {
+    // "2010s" covers the whole roster and must survive: the era chart's subject
+    // is exactly that concentration.
+    const roster = cohort(10, ["2010s", "rock"]);
+    const broad = broadTags(roster, 0.5);
+    expect(broad.has("2010s")).toBe(false);
+    expect(broad.has("rock")).toBe(true);
+  });
+
+  it("has nothing to say about an empty roster", () => {
+    expect([...broadTags([])]).toEqual([]);
+  });
+});
+
 describe("validateRegistry", () => {
   it("reports a derived tag that is not itself registered", () => {
     const problems = validateRegistry(registryOf("ska punk,genre,ska\n"));
@@ -138,6 +222,15 @@ describe("validateRegistry", () => {
 describe("the shipped vocabulary", () => {
   it("registers every tag the roster uses, with a sound hierarchy", () => {
     expect(validateRegistry(REGISTRY, allTags)).toEqual([]);
+  });
+
+  it("gives every artist only the most specific tag in each direction", () => {
+    // Named per artist rather than counted, so a failure says which row to edit
+    // and which tag to drop — the general one, since it is derived anyway.
+    const offenders = artists
+      .map((artist) => ({ artist: artist.name, redundant: redundantTags(artist.ownTags) }))
+      .filter(({ redundant }) => redundant.length > 0);
+    expect(offenders).toEqual([]);
   });
 
   it("leaves nothing in the 🎲 panel's Other group", () => {

@@ -39,7 +39,7 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   ├── thumb.ts             # createThumb(): artist thumbnail/placeholder, shared by board + map
 │   ├── random.ts            # Weighting schemes + weighted random pick (see §6)
 │   ├── filter.ts            # matchesTags(): the 🎲 tag filter's matching rule (see §6)
-│   ├── tag-registry.ts      # Embeds data/tags.csv; withDerivedTags() (see §3a)
+│   ├── tag-registry.ts      # Embeds data/tags.csv; withDerivedTags(), broadTags() (§3a, §3b)
 │   ├── tag-groups.ts        # groupTags(): vocabulary categories for the filter panel (see §6)
 │   ├── cloud-layout.ts      # Tag similarity, scene/world grouping + layout for ☁️ (see §7)
 │   ├── cloud.ts             # The ☁️ map dialog: renders the layout, pan/zoom (see §7)
@@ -94,8 +94,9 @@ Columns, in order:
 
   Conventions: no commas/semicolons/quotes inside a tag (keeps the field unquoted), no duplicates
   within an artist. Tag matching is **case-sensitive**, so keep each tag's spelling identical
-  everywhere it appears. `src/data.ts` parses the field into `Artist.ownTags` (blank → `[]`) and
-  those plus everything derived from them into `Artist.tags` (§4).
+  everywhere it appears. `src/data.ts` parses the field into `Artist.ownTags` (blank → `[]`), those
+  plus everything derived from them into `Artist.tags`, and that minus the too-broad tags into
+  `Artist.specificTags` (§3b, §4).
 - The file holds the full artist roster (a few hundred rows). It may be edited by hand or by the
   enrichment script (§9); `scripts/tag-research.ts` (§9a) gathers the outside evidence tagging
   should rest on.
@@ -142,6 +143,55 @@ without any of it being written on 253 artist rows by hand.
   above are enforced by `validateRegistry` and asserted against the real data in
   `src/tag-registry.test.ts`. A tag used in `artists.csv` but absent here still reaches the 🎲
   panel, in a trailing **Other** group — a soft failure, and a test failure.
+
+### 3b. Too-broad tags, and the three tag sets
+
+Deriving the hierarchy creates a second problem: an artist ends up carrying `rock`, which four
+fifths of the roster also carries. A tag that covers most of the collection cannot describe anyone
+within it — it is excellent for *finding* artists and useless for telling them apart — so each
+artist carries three tag sets:
+
+| Set | Contents | Read by |
+| --- | --- | --- |
+| `ownTags` | exactly what the CSV row says (§3) | the Save export; nothing user-facing |
+| `tags` | `ownTags` + everything derived from them | the 🎲 **filter** — `European` must find the Swedes |
+| `specificTags` | `tags` minus the too-broad ones | **everything else**: 📊 statistics, ☁️ map, card tooltips |
+
+The one exception is the 📊 dialog's composition list ("What your list is made of"), which reads
+`ownTags` — see §8.0.
+
+`broadTags` (`tag-registry.ts`) marks a tag too broad when it covers more than `BROAD_PREVALENCE`
+(a fifth) of the roster. **Breadth is failure to distinguish, and nothing else** — in particular it
+does not matter whether a human wrote the tag or the hierarchy supplied it. `male vocals` is
+hand-written on every one of its carriers and still splits the roster 7:3, so it narrows nothing
+and goes; `rock` is written by nobody and goes for the same reason. On the shipped roster the rule
+drops 21 tags: `rock`, `pop`, `punk rock`, `alternative rock`, `pop rock`, `pop punk`, `electronic`,
+`experimental`, `American`, `North American`, `European`, `male vocals`, `female vocals`,
+`catchy hooks`, `anthemic choruses`, `distorted guitars`, `guitar-driven`, `angsty lyrics`,
+`melancholy mood`, `atmospheric textures`, `solo act`.
+
+A fifth is a real cut rather than a nominal one: it takes `pop punk`, the collection's largest
+genre. That is the intent — a genre covering a fifth of the collection is what the collection *is*,
+so it cannot distinguish within it.
+
+**Era tags are exempt.** They are a separate axis with a section of their own (§8.4) whose whole
+subject is which decades the collection concentrates in; "169 of your artists are from the 2010s"
+is that section's finding, not noise to filter out of it. Nothing compares an era against a genre,
+so their prevalence never crowds another list.
+
+Breadth is measured **over the roster, not declared in `data/tags.csv`**, because it is a fact about
+this collection rather than about the vocabulary: `metal` is an umbrella on a roster of pop punk
+bands and a real distinction on one that is half metal. It moves as the roster does, with nothing to
+keep in sync. Declaring it per-tag in the vocabulary was considered and rejected for that reason, as
+was deriving it from the hierarchy (anything another tag in use derives), which removes 104 tags
+including `emo` and `indie pop` — having a sub-genre does not make a tag broad.
+
+**Known limitation.** A pure prevalence cut removes the largest umbrellas but leaves the next rank
+of them — `California`, `Western European`, `New York State`, the connective tissue (§3a) that no
+row states. This no longer shows in the composition list, which reads `ownTags` (§8.0), but those
+tags still reach the card tooltips and the ☁️ map's similarity. Adding a second, disjunctive test
+(also call a tag broad when hardly any of its carriers were given it) would remove them; it is a
+one-line change in `broadTags` if they are judged to be doing harm there.
 
 ## 4. Data flow & the "static baseline"
 
@@ -330,12 +380,12 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
      - Specificity is inferred from **rarity**, not read off the registry's hierarchy (§3a). The
        two largely agree — a derived umbrella is by construction carried by everything beneath it —
        and rarity additionally ranks genres the hierarchy leaves unrelated.
-     - Scenes are founded on **`ownTags`**, the genres artists were actually given, while the
-       similarity model above counts derived tags too. A shared umbrella is real evidence two
-       artists are related, but it cannot *define* a scene: every rock band derives `rock`, so
-       umbrellas found huge meaningless rings and make the adoption test below unanimous. Founding
-       on derived tags gave 46 scenes with **every** artist adopted; on own tags it gives 42 scenes
-       with 17 loners, the same shape the pre-hierarchy roster produced (41 scenes, 6 loners).
+     - Scenes are founded on **`specificTags`** (§3b), like the similarity model above. Derived
+       genres belong: a band written down as `emo pop` really is in the pop punk scene, and reading
+       only its stated tag scatters one scene across its sub-genres. Too-broad ones do not — every
+       rock band derives `rock`, so an umbrella founds one huge meaningless ring and makes the
+       adoption test below unanimous. Founding on the full derived set gave 46 scenes with **every**
+       artist adopted; on `specificTags` it gives 41 scenes with 1 loner.
 
      Artists left unclaimed may be **adopted** — but only on genre evidence
      (sharing a genre tag with members; mean ≥ 0.5), since counting ubiquitous quality/era tags
@@ -401,19 +451,39 @@ light-dismiss and the `main.ts` click-outside fallback (§5); its only form cont
 
 ### 8.0 Which tags a statistic counts
 
-`countedTags` reads an artist's **`ownTags`** — what its CSV row says — and not the tags derived
-from those (§3a). This was a measurement, not a preference. Counting derived tags too, every
-prevalence list is topped by umbrellas: `rock, pop, alternative rock, punk rock, pop rock` for
-genres and `North American, American, European` for regions. That describes the shape of the
-*vocabulary*, not of the collection, and it is the exact failure PRD §10.2 forbids — a list whose
-ordering is an artefact of how the data is stored. On own tags the same list reads `pop punk, power
-pop, emo pop, alternative rock, electropop`, which is the question the reader asked. Derived tags
-also push 42 extra tags past `MIN_SUPPORT` for no gain, tightening the correction (§8.2a).
+`countedTags` reads an artist's **`specificTags`** (§3b) — everything its CSV row implies, derived
+tags included, minus the tags too broad to describe anything. Both halves of that were measured.
 
-Two figures do count derived tags, because they **are** the ☁️ map: `rankTasteWorlds`, which
-delegates wholesale to `groupRoster`, and an artist's `kinship`, which is `pairwiseSimilarities`.
-Derived tags genuinely help the similarity model — two artists sharing an umbrella are related
-evidence — and the map and the dialog must not disagree about the collection's shape.
+**One statistic opts out entirely.** `categoryComposition` ("What your list is made of") counts
+`ownTags` and applies no breadth rule, because it is an inventory of the descriptions used rather
+than a claim about the artists: a description nobody wrote is not part of it. Counting derived tags
+led its categories with `rock` and `pop`; counting derived-minus-broad led them with `California`
+and `Western European` instead — the same failure one level down. Reading the rows settles it with
+no threshold at all. The cost is that a scene split across sub-genres is reported split, which
+`rankTasteWorlds` (§8.3) is what answers instead.
+
+**Derived tags are counted** because own tags alone cannot answer "how much of this collection is
+pop punk": whether a band is *written down* as pop punk is an artefact of how the row was tagged
+rather than a fact about the music. Rows carry only their most specific tag (§3), so Paramore says
+`emo pop` and stops. Enforcing that rule across the roster moved `pop punk` from 39 carriers to 30
+without a single artist changing — a figure that swings on CSV hygiene is measuring the wrong thing.
+
+**Broad tags are dropped** because they are the mirror-image error, and dropping them is not merely
+cosmetic:
+
+- The prevalence lists would otherwise be led by `rock` (82%) over every genre anyone chose — the
+  failure PRD §10.2 forbids, an ordering that is an artefact of how the data is stored.
+- `measurePredictivePower` improves from r² 0.46% to 0.60%: a tag four fifths of the roster carries
+  has a leave-one-out mean of nearly the roster mean, so averaging it into every prediction flattens
+  the model rather than informing it.
+- The multiplicity correction tests 196 tags instead of 217, since a tag that sits at the roster
+  average by construction cannot reach a tail but still tightens the cutoff for tags that can. The
+  Benjamini–Hochberg margin rises from 4.6× to 5.1× (§8.2a).
+
+This puts the whole dialog on one definition of carrying a tag, shared with the ☁️ map — including
+the two figures that **are** the map (`rankTasteWorlds`, which delegates to `groupRoster`, and
+`kinship`, which is `pairwiseSimilarities`). Only the 🎲 filter keeps the broad tags, since finding
+artists is exactly what they are good for.
 
 ### 8.1 Two tier valuations, deliberately
 
@@ -500,7 +570,7 @@ carries it" is simply a true and useful description of the collection.
 `markSignificant` runs as a second pass over every tag, because the correction has to see the whole
 vocabulary at once. For each tag it asks two questions — is its average elevated, are its carriers
 unusually clustered — by **shuffling the tier assignments across the roster** (leaving each artist's
-tags alone) `NULL_SAMPLES` (10 000) times and seeing how often a group of that size lands as far
+tags alone) `NULL_SAMPLES` (20 000) times and seeing how often a group of that size lands as far
 out by luck. A prefix of a shuffle *is* a uniform random subset, so one walk down each shuffle
 yields the null for every carrier count at once; the RNG is seeded, so the dialog stays a pure
 function of the roster. Cost is ~45 ms on the shipped data, inside the existing lazy first-open
@@ -513,16 +583,16 @@ tail. The resulting p-values are corrected with **Benjamini–Hochberg** at `FAL
 `rankReliable` and `rankVariable` on `clusteringIsReal`.
 
 `NULL_SAMPLES` is load-bearing, not a tuning knob: with S shuffles the smallest observable p-value
-is 1/(S+1), and BH's rank-1 threshold here is 0.05/183 ≈ 0.00027. At 2 000 shuffles **no tag could
+is 1/(S+1), and BH's rank-1 threshold here is 0.05/196 ≈ 0.00026. At 2 000 shuffles **no tag could
 pass however real it was**, which would look like a finding rather than the measurement artefact it
-is. At 10 000 the floor (0.0001) clears the threshold by a factor of only ~2.7, so a much larger
-vocabulary would need more shuffles — counting only each artist's own tags (§8.0) is part of what
-keeps the margin, since including derived tags tests 225 and cuts it to ~2.2.
+is. At 20 000 the floor (0.00005) clears the threshold by a factor of ~5.1. It was raised from
+10 000 when §8.0 switched to counting derived tags; excluding the too-broad ones (§3b) then brought
+the tested count back down to 196, so the margin is now comfortable rather than marginal.
 
 On the shipped roster **nothing clears the gate**, and the dialog says so rather than showing a
-heading over nothing. The strongest tag is `indietronica` at p = 0.0029 (12 carriers) against that
-0.00027 threshold, then `synthpop` at 0.0034 (20 carriers) and `2020s` at 0.0074; 22 tags clear
-p < 0.05 uncorrected, where 183 × 0.05 ≈ 9.2 is what chance alone produces. That result is pinned in
+heading over nothing. The strongest tag is `indietronica` at p = 0.0027 (12 carriers) against that
+0.00026 threshold; the tags clearing p < 0.05 uncorrected are about what 196 × 0.05 ≈ 10 coin flips
+produce anyway. That result is pinned in
 `stats.test.ts` so a data change that produces real preferences fails loudly and gets looked at.
 Each tag's uncorrected p survives on `TagStat.elevationP` precisely so these figures can be
 re-measured after a retag rather than remembered.
@@ -534,8 +604,8 @@ re-measured after a retag rather than remembered.
   into ~√k families of related sound. Reused rather than reinvented so the 📊 dialog and the ☁️ map
   cannot disagree about the shape of one collection — a second clustering here would drift from the
   one the user can actually see. Descriptive, so ungated: which artists group together is a fact
-  about their tags, with the tiers playing no part. On the shipped roster it yields 6 worlds over 38
-  scenes, covering 233 of 239 artists; the 6 unclaimed are reported rather than forced into a
+  about their tags, with the tiers playing no part. On the shipped roster it yields 6 worlds over 41
+  scenes, covering 242 of 243 artists; the 1 unclaimed is reported rather than forced into a
   family. Worlds are named by listing their own scenes — an invented label like "synth pop and
   friends" would be a guess dressed as a finding.
 
@@ -578,7 +648,7 @@ are withheld from every other list, the composition breakdown, the predictive-po
 rarest-tag annotation — being numerous, well-supported, and internally uniform, they would otherwise crowd out the
 rest of the vocabulary.
 
-The list lengths (`TAG_LIST_LIMIT` 10, `PREDICTOR_LIST_LIMIT` 6, `ARTIST_LIST_LIMIT` 6,
+The list lengths (`TAG_LIST_LIMIT` 10, `PREDICTOR_LIST_LIMIT` 6, `ARTIST_LIST_LIMIT` 10,
 `COMPOSITION_PER_CATEGORY` 5) and the `MIN_SUPPORT`, `SPREAD_MIN_SUPPORT`, `MIN_CAMP_SIZE`,
 `PRIOR_STRENGTH`, `ISOLATION_NEIGHBOURS`, `KIN_SHARE` and `FAVOURITE_SHARE` thresholds are exported constants in
 `stats.ts` — **tunable, not contractual** (PRD §10 leaves them unspecified). `NULL_SAMPLES` and
@@ -732,7 +802,8 @@ Details worth knowing before changing it:
 - **The tag vocabulary is tested as data** (`src/tag-registry.test.ts`): parsing and derivation on
   synthetic registries, then the §3a invariants asserted against the shipped files — every roster
   tag is registered, every `Derived` value resolves, no cycles, no genre deriving a region,
-  rows canonically sorted. These are what stop `data/artists.csv` and `data/tags.csv`
+  no row carrying a tag another tag on it already derives (`redundantTags`, §3), rows canonically
+  sorted. `broadTags` (§3b) is covered here too, on synthetic rosters. These are what stop `data/artists.csv` and `data/tags.csv`
   drifting apart as the roster is retagged; the "Other" group being empty is asserted rather than
   assumed.
 - Type-checking via `tsc --noEmit`; formatting via Prettier; all enforced in CI (§10). The

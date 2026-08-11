@@ -41,7 +41,8 @@ the PRD; if it's about how the code achieves it, it's ARCHITECTURE.
 - Minting a tag means adding a row to `data/tags.csv`, **not** editing
   `src/tag-groups.ts` (which no longer lists tags). Give it a category and the tags it derives
   directly. `npm test` fails if a roster tag is unregistered, if a derived tag does not resolve,
-  if a genre derives a region, or if the rows are out of canonical order.
+  if a genre derives a region, if a row carries a tag another tag on it already derives, or if the
+  rows are out of canonical order.
 - **Tag from evidence, not recall.** `npm run tag-research -- "<name>"` (ARCHITECTURE §9a) prints
   what MusicBrainz and Wikipedia say (origin city, country, group-vs-person, active years, genres)
   alongside the crowd tag votes. Region and era tags should follow it; musical-quality tags are
@@ -102,16 +103,17 @@ a descriptive count inferential *and* smuggled tier position back in as the meas
 **Three findings are settled. Do not re-derive them, and do not build features that assume
 otherwise:**
 
-1. **The tags barely predict the tiers** — r² ≈ 2.0% over 240 artists (`measurePredictivePower`).
+1. **The tags barely predict the tiers** — r² ≈ 0.6% over 243 artists (`measurePredictivePower`).
    Any statistic ranking artists by distance from a tag-based prediction therefore collapses into
    "what tier is it", because the prediction is nearly constant. Two sections died this way; the
-   dialog now reports the measurement instead. (Richer tagging did not rescue it: tripling the
-   vocabulary moved r² from ~1% to ~2%.) This one reads `tierPosition`, so retuning `TIER_WEIGHT`
-   leaves it untouched — only the roster and the tagging move it.
+   dialog now reports the measurement instead. Nothing has ever rescued it: tripling the vocabulary
+   moved r² from ~1% to ~2%, counting derived tags dropped it to 0.46%, and excluding the too-broad
+   ones recovered only a little of that. This one reads `tierPosition`, so retuning `TIER_WEIGHT` leaves
+   it untouched — only the roster and the tagging move it.
 2. **No tag's elevation survives correction.** Every list picks the best of ~180 tags, and over that
-   many tries the best of anything looks striking. The strongest real tag reaches p = 0.0029
-   (`indietronica`, 12 carriers) against a Benjamini–Hochberg threshold of 0.00027. Twenty-two tags
-   clear p < 0.05 uncorrected, where 183 × 0.05 ≈ 9.2 is what chance alone produces. Re-measure
+   many tries the best of anything looks striking. The strongest real tag reaches p = 0.0027
+   (`indietronica`, 12 carriers) against a Benjamini–Hochberg threshold of 0.00026. The handful
+   clearing p < 0.05 uncorrected is about what 196 × 0.05 ≈ 10 coin flips produce anyway. Re-measure
    rather than trusting these numbers after a retag **or after retuning `TIER_WEIGHT`** — both move
    them, and every tag's uncorrected p is on `TagStat.elevationP`.
 3. **Prevalence cannot separate taste from base rate.** A tag's frequency carries both how much
@@ -132,12 +134,32 @@ otherwise:**
   found among the fewest carriers unless shrunk (`PRIOR_STRENGTH`) or floored (`SPREAD_MIN_SUPPORT`).
 - **Check that a chosen threshold is reachable.** `NULL_SAMPLES` at 2 000 made *every* tag fail by
   arithmetic, because the smallest observable p-value was above the correction's cut — a
-  measurement artefact that looked exactly like a finding. At 10 000 the margin is now only ~3×;
-  growing the vocabulary further eats it.
-- **Count the tags an artist was given, not the ones derived from them** (`countedTags`). Counting
-  derived tags too, every prevalence list is topped by umbrellas — `rock, pop, alternative rock`
-  — which describes the vocabulary rather than the collection. The exceptions are the two figures
-  that *are* the ☁️ map (`rankTasteWorlds`, `kinship`), which must match it.
+  measurement artefact that looked exactly like a finding. At 20 000 against 196 tested tags the
+  margin is ~5.1×; growing the vocabulary further eats it.
+- **Count `specificTags`** (`countedTags`) — every tag the row implies, derived ones included,
+  minus the too-broad ones (ARCHITECTURE §3b). Both halves were measured. Derived tags count because
+  whether a band is *written down* as pop punk is CSV hygiene, not a fact about the music: rows
+  carry only their most specific tag, so Paramore says `emo pop` and stops, and enforcing that rule
+  across the roster once moved `pop punk` from 39 carriers to 30 without one artist changing. Broad
+  tags are dropped because they are the mirror-image error — `rock` covers 82% of the roster and no
+  row states it.
+- **Too broad means "fails to distinguish", and is measured by prevalence alone.** `broadTags`
+  marks a tag broad when it covers more than `BROAD_PREVALENCE` (a fifth) of the roster. Whether a
+  human wrote the tag or the hierarchy supplied it is **not** a criterion: `male vocals` is
+  hand-written on every carrier and still splits the roster 7:3, so it narrows nothing and goes,
+  exactly as `rock` does. Era tags are exempt — their own section is about which decades dominate.
+  Do not move this into `data/tags.csv`: breadth is a fact about the roster, not the vocabulary,
+  and `metal` is an umbrella here and a real distinction on a metal roster. ARCHITECTURE §3b
+  records one known limitation and the one-line change that would fix it.
+- **Broad tags are for the 🎲 filter and nothing else.** Finding artists by `European` is the whole
+  point of the hierarchy; saying an artist is `rock` when four fifths of the roster is says nothing.
+  Everything that reports or compares — 📊, the ☁️ map, the card tooltips — reads `specificTags`.
+- **"What your list is made of" is the exception: it counts `ownTags` and applies no breadth rule.**
+  It is an inventory of the descriptions used, so a description nobody wrote is not in it, and no
+  threshold is needed — nobody is described as `rock`. Do not "fix" it to count derived tags: that
+  leads the categories with `rock` and `pop`, and derived-minus-broad merely substitutes `California`
+  and `Western European`. Its known cost is that a scene split across sub-genres reports split; the
+  ☁️ worlds answer that level.
 - **Reuse the ☁️ map's grouping** (`groupRoster`) for anything about which artists resemble which.
   Two features describing one collection must not disagree about its shape.
 - **Prefer a null result to a decorative one.** "Your tags explain 1% of your ranking" is a better

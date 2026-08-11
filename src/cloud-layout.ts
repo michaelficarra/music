@@ -86,7 +86,7 @@ export function pairwiseSimilarities(artists: readonly Artist[]): number[][] {
   // Index the distinct tags so vectors can live in flat typed arrays.
   const tagIndex = new Map<string, number>();
   for (const artist of artists) {
-    for (const tag of artist.tags) {
+    for (const tag of artist.specificTags) {
       if (!tagIndex.has(tag)) tagIndex.set(tag, tagIndex.size);
     }
   }
@@ -99,7 +99,7 @@ export function pairwiseSimilarities(artists: readonly Artist[]): number[][] {
   const occurrences = new Float64Array(tagCount);
   const cooccurrence = new Float64Array(tagCount * tagCount);
   for (const artist of artists) {
-    const indices = artist.tags.map((tag) => tagIndex.get(tag)!);
+    const indices = artist.specificTags.map((tag) => tagIndex.get(tag)!);
     for (const t of indices) {
       occurrences[t]!++;
       for (const u of indices) cooccurrence[t * tagCount + u]!++;
@@ -121,7 +121,7 @@ export function pairwiseSimilarities(artists: readonly Artist[]): number[][] {
   // (zero vector for a tagless artist).
   const vectors = artists.map((artist) => {
     const vector = new Float64Array(tagCount);
-    for (const tag of artist.tags) {
+    for (const tag of artist.specificTags) {
       const t = tagIndex.get(tag)!;
       const idf = 1 + Math.log(artistCount / occurrences[t]!);
       for (let u = 0; u < tagCount; u++) vector[u]! += idf * cooccurrence[t * tagCount + u]!;
@@ -192,18 +192,19 @@ function partitionIntoClusters(
   // form before umbrella genres sweep up everything; ties by name for
   // determinism. Vocabulary categories live in tag-groups.ts.
   //
-  // Scenes are founded on the genres artists were actually *given* (`ownTags`),
-  // never on tags derived from those (§3a). Derived tags are right for the
-  // similarity model above — a shared umbrella is real evidence two artists are
-  // related — but they cannot *define* a scene: every rock band derives `rock`,
-  // so umbrellas found enormous meaningless clusters and, worse, make the
-  // adoption test below unanimous, leaving nobody on the rim.
-  const distinctTags = [...new Set(artists.flatMap((artist) => artist.ownTags))];
+  // Scenes are founded on `specificTags` — everything a row implies except the
+  // tags too broad to mean anything (§3b). Derived genres belong here: a band
+  // written down as `emo pop` really is in the pop punk scene, and reading only
+  // the stated tag would scatter one scene across its sub-genres. Broad ones do
+  // not: every rock band derives `rock`, so an umbrella founds one enormous
+  // meaningless cluster and makes the adoption test below unanimous, leaving
+  // nobody on the rim.
+  const distinctTags = [...new Set(artists.flatMap((artist) => artist.specificTags))];
   const genreTags = groupTags(distinctTags).find((group) => group.label === "Genres")?.tags ?? [];
   const carriers = new Map(
     genreTags.map((tag) => [
       tag,
-      artists.flatMap((artist, i) => (artist.ownTags.includes(tag) ? [i] : [])),
+      artists.flatMap((artist, i) => (artist.specificTags.includes(tag) ? [i] : [])),
     ]),
   );
   const orderedGenres = [...carriers.keys()].sort(
@@ -228,13 +229,13 @@ function partitionIntoClusters(
   const loners: number[] = [];
   for (let i = 0; i < artists.length; i++) {
     if (clusterOf.has(i)) continue;
-    const ownGenres = artists[i]!.ownTags.filter((tag) => genreSet.has(tag));
+    const ownGenres = artists[i]!.specificTags.filter((tag) => genreSet.has(tag));
     let bestCluster: PartitionedCluster | null = null;
     let bestScore = 0;
     for (const cluster of clusters) {
       let sharedTotal = 0;
       for (const m of cluster.members) {
-        sharedTotal += ownGenres.filter((tag) => artists[m]!.ownTags.includes(tag)).length;
+        sharedTotal += ownGenres.filter((tag) => artists[m]!.specificTags.includes(tag)).length;
       }
       const score = sharedTotal / cluster.members.length;
       if (score > bestScore) {

@@ -79,8 +79,17 @@ export interface Artist {
   ownTags: readonly string[];
   /**
    * Every tag the artist carries: `ownTags` plus the tags derived from those
-   * (data/tags.csv). This is what the 🎲 filter, the ☁️ map and the card
-   * tooltips read, so selecting `European` finds the Swedes.
+   * (data/tags.csv). Read by the 🎲 **filter**, so selecting `European` finds
+   * the Swedes and `punk rock` finds the ska-punk bands.
    */
   tags: readonly string[];
+  /**
+   * `tags` minus the ones too broad to describe anything (`broadTags`).
+   *
+   * Everything that *reports or compares* tags reads this rather than `tags` —
+   * the 📊 statistics, the ☁️ map's similarity, the card tooltips. Finding an
+   * artist by `rock` is useful; saying that it is a rock band, when four fifths
+   * of the roster is, is not (ARCHITECTURE §3b).
+   */
+  specificTags: readonly string[];
 }

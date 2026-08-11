@@ -6,7 +6,7 @@
 // the registry lagging behind the roster degrades softly — but keep it in step
 // (src/tag-registry.test.ts fails if it drifts).
 
-import { REGISTRY } from "./tag-registry";
+import { REGISTRY, isEraTag } from "./tag-registry";
 
 export interface TagGroup {
   label: string;
@@ -15,9 +15,10 @@ export interface TagGroup {
 
 /** Era tags are recognised by shape ("1950s" … "2020s") rather than by their
     registry category, so a decade nobody has tagged yet still lands in the right
-    group. Exported for the 📊 statistics, which give eras a section of their
-    own (stats.ts). */
-export const isEraTag = (tag: string): boolean => /^\d{4}s$/.test(tag);
+    group. Defined in tag-registry.ts — which needs it to exempt eras from the
+    breadth rule and cannot import this module without a cycle — and re-exported
+    here, where its callers (the 📊 statistics) already look for it. */
+export { isEraTag };
 
 const GROUPS: { label: string; matches: (tag: string) => boolean }[] = [
   { label: "Genres", matches: (tag) => REGISTRY.category.get(tag) === "genre" },

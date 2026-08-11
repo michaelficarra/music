@@ -4,7 +4,7 @@
 import csvText from "../data/artists.csv?raw";
 import { parseCsv } from "./csv";
 import { compareArtistNames } from "./sort";
-import { withDerivedTags } from "./tag-registry";
+import { broadTags, withDerivedTags } from "./tag-registry";
 import { UNRANKED, isTier, type Artist, type Slot } from "./types";
 
 /** Column order in data/artists.csv (see ARCHITECTURE §3). */
@@ -27,8 +27,7 @@ export const originalRows: readonly (readonly string[])[] = rows;
 
 const bodyRows = rows.slice(1).filter((r) => (r[COLUMN.artist] ?? "").length > 0);
 
-/** The artist roster, in CSV order. */
-export const artists: readonly Artist[] = bodyRows.map((r) => {
+const tagged = bodyRows.map((r) => {
   const tierRaw = (r[COLUMN.tier] ?? "").trim();
   const baselineSlot: Slot = isTier(tierRaw) ? tierRaw : UNRANKED;
   // Semicolon-delimited in the CSV; blank (e.g. a freshly added artist) → [].
@@ -47,6 +46,23 @@ export const artists: readonly Artist[] = bodyRows.map((r) => {
     tags: withDerivedTags(ownTags),
   };
 });
+
+/**
+ * The tags too broad to describe this roster — `rock`, `pop`, `North American`.
+ *
+ * A second pass, because breadth is a property of the collection as a whole
+ * rather than of any one row: it depends on how often a tag was *stated* across
+ * everyone who carries it (tag-registry.ts). Exported for measurement — the
+ * threshold is meant to be re-checked against the roster after a retag
+ * (ARCHITECTURE §3b) — not because anything renders it.
+ */
+export const broadTagSet: ReadonlySet<string> = broadTags(tagged);
+
+/** The artist roster, in CSV order. */
+export const artists: readonly Artist[] = tagged.map((artist) => ({
+  ...artist,
+  specificTags: artist.tags.filter((tag) => !broadTagSet.has(tag)),
+}));
 
 /** Baseline slot for each artist, keyed by name. */
 export const baselineByName: ReadonlyMap<string, Slot> = new Map(

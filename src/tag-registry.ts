@@ -102,6 +102,87 @@ export function withDerivedTags(
   return all;
 }
 
+/**
+ * The tags in a single row that another tag on that same row already derives.
+ *
+ * A row saying `pop punk` need not also say `punk rock` — the hierarchy supplies
+ * it at load time (ARCHITECTURE §3), so writing it out is redundant. It is not
+ * merely untidy: `withDerivedTags` produces the same set either way, but the 📊
+ * statistics count the tags an artist was *given*, and a row that spells out its
+ * own implications inflates that count with tags nobody chose.
+ *
+ * Takes one row's `ownTags` rather than the whole roster, so the check reads the
+ * same in a fixture as it does against the shipped data.
+ */
+export function redundantTags(
+  ownTags: readonly string[],
+  registry: TagRegistry = REGISTRY,
+): string[] {
+  const implied = new Set<string>();
+  for (const tag of ownTags) {
+    // The closure of a tag's *direct* derivations — i.e. everything it implies,
+    // not counting itself, so a tag never reports as its own redundancy.
+    for (const ancestor of withDerivedTags(registry.derived.get(tag) ?? [], registry)) {
+      implied.add(ancestor);
+    }
+  }
+  return ownTags.filter((tag) => implied.has(tag));
+}
+
+/** An era tag, recognised by shape rather than by category (ARCHITECTURE §3a):
+    `2000s`, `1990s`. Lives here so `broadTags` can exempt them without importing
+    tag-groups.ts, which imports this module. */
+export const isEraTag = (tag: string): boolean => /^\d{4}s$/.test(tag);
+
+/**
+ * The share of the roster a tag may cover before it is **too broad** to
+ * describe anyone.
+ *
+ * Breadth is a failure to distinguish, and nothing else. A tag on four fifths
+ * of the roster splits it 4:1 and tells a reader almost nothing about the
+ * artist in front of them, whether or not a human typed it: `rock` is derived
+ * by every guitar genre, `male vocals` is written out by hand, and neither
+ * narrows anything. Such tags remain the point of the hierarchy for *finding*
+ * artists, so the 🎲 filter keeps them; everything that reports or compares
+ * drops them (ARCHITECTURE §3b).
+ *
+ * A fifth is a real cut, not a nominal one — it removes 25 tags including
+ * `pop punk`, the largest genre. That is the intent: a genre on a fifth of the
+ * collection is what the collection *is*, so it cannot distinguish within it.
+ *
+ * Breadth is measured over the roster rather than declared in `data/tags.csv`
+ * because it is a fact about this collection, not about the vocabulary: `metal`
+ * is an umbrella on a roster of pop punk bands and a real distinction on one
+ * that is half metal. It moves as the roster does, with nothing to keep in sync.
+ */
+export const BROAD_PREVALENCE = 0.2;
+
+/**
+ * The tags too broad to describe the roster: those carried by more than `share`
+ * of it.
+ *
+ * **Era tags are exempt.** They are a separate axis with a section of their own
+ * (§8.4) whose entire subject is which decades the collection concentrates in —
+ * "72% of your artists are from the 2010s" is that section's finding, not noise
+ * to be filtered out of it. Nothing else compares an era against a genre, so
+ * their prevalence never crowds another list.
+ */
+export function broadTags(
+  roster: readonly { readonly tags: readonly string[] }[],
+  share = BROAD_PREVALENCE,
+): ReadonlySet<string> {
+  if (roster.length === 0) return new Set();
+  const carriers = new Map<string, number>();
+  for (const artist of roster) {
+    for (const tag of new Set(artist.tags)) carriers.set(tag, (carriers.get(tag) ?? 0) + 1);
+  }
+  const broad = new Set<string>();
+  for (const [tag, count] of carriers) {
+    if (!isEraTag(tag) && count / roster.length > share) broad.add(tag);
+  }
+  return broad;
+}
+
 export interface RegistryProblem {
   tag: string;
   problem: string;

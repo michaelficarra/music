@@ -23,6 +23,9 @@ import {
 import { isEraTag } from "./tag-groups";
 import { TIERS, TIER_WEIGHT, tierPosition, type Artist, type Slot } from "./types";
 
+/** `tags` is what the artist carries; the statistics read `specificTags`, which
+    a synthetic roster sets to the same thing — breadth is measured over the real
+    roster in data.ts, not re-derived here. */
 const artist = (name: string, slot: Slot, tags: string[]): Artist => ({
   name,
   baselineSlot: slot,
@@ -30,6 +33,7 @@ const artist = (name: string, slot: Slot, tags: string[]): Artist => ({
   imageSource: "",
   ownTags: tags,
   tags,
+  specificTags: tags,
 });
 
 /** `count` artists on one tier sharing one set of tags, uniquely named. */
@@ -308,15 +312,14 @@ describe("rankByFavouriteIndex", () => {
 });
 
 describe("categoryComposition", () => {
-  // Era stats never reach this function — computeStats partitions them into
-  // their own section first — so none feature in these inputs.
+  /** `count` ranked artists stating `ownTags` — the rows the inventory reads. */
+  const stating = (count: number, ownTags: string[], slot: Slot = "B"): Artist[] =>
+    Array.from({ length: count }, (_, i) => artist(`${ownTags.join("-")}${i}`, slot, ownTags));
+
   it("groups tags by vocabulary category, in display order, most common first", () => {
     const composition = categoryComposition([
-      stat("pop punk", { prevalence: 0.3 }),
-      stat("emo", { prevalence: 0.5 }),
-      stat("catchy hooks", { prevalence: 0.2 }),
-      stat("British", { prevalence: 0.15 }),
-      stat("side project", { prevalence: 0.1 }),
+      ...stating(5, ["emo", "catchy hooks", "British", "side project"]),
+      ...stating(3, ["pop punk"]),
     ]);
     expect(composition.map((c) => [c.category, c.stats.map((t) => t.tag)])).toEqual([
       ["Genres", ["emo", "pop punk"]],
@@ -326,34 +329,71 @@ describe("categoryComposition", () => {
     ]);
   });
 
+  it("counts the tags rows state, never the ones derived from them", () => {
+    // Every one of these artists carries "punk rock" and "rock" by derivation.
+    // Neither may appear: nobody described an artist that way, and an inventory
+    // of descriptions used is exactly what this list is.
+    const roster = [
+      ...Array.from({ length: 4 }, (_, i) => ({
+        ...artist(`a${i}`, "B", ["pop punk", "punk rock", "rock"]),
+        ownTags: ["pop punk"],
+      })),
+    ];
+    expect(categoryComposition(roster)[0]!.stats.map((t) => t.tag)).toEqual(["pop punk"]);
+  });
+
+  it("applies no breadth rule — a tag on everyone is what the list is for", () => {
+    // "male vocals" covers the whole roster. It is excluded from every other
+    // statistic for saying nothing, and belongs at the top of this one.
+    const composition = categoryComposition(stating(6, ["male vocals", "emo"]));
+    expect(composition.map((c) => c.stats.map((t) => t.tag))).toEqual([["emo"], ["male vocals"]]);
+  });
+
   it("keeps the most common tag even where it says nothing about the ranking", () => {
-    // The point of the reframing: prevalence is a description of what was
-    // collected, so the biggest tag belongs in it whatever its tiers look like.
-    // "male vocals" leads this roster and sits *below* its average placement —
-    // an earlier version dropped it for that, which was the tier-as-quality
-    // assumption creeping back in.
+    // Prevalence is a description of what was collected, so the biggest tag
+    // belongs in it whatever its tiers look like. An earlier version dropped
+    // "male vocals" for sitting below its average placement, which was the
+    // tier-as-quality assumption creeping back in.
     const composition = categoryComposition([
-      stat("male vocals", { prevalence: 0.62, ratio: 0.9, elevationIsReal: false }),
-      stat("female vocals", { prevalence: 0.28, ratio: 1.16, elevationIsReal: false }),
+      ...stating(6, ["male vocals"], "E"),
+      ...stating(3, ["female vocals"], "S"),
     ]);
-    expect(composition.map((c) => c.stats.map((t) => t.tag))).toEqual([
-      ["male vocals", "female vocals"],
-    ]);
+    expect(composition[0]!.stats.map((t) => t.tag)).toEqual(["male vocals", "female vocals"]);
   });
 
   it("honours the per-category limit", () => {
-    // All four are genres per tag-groups.ts, so they compete within one category.
-    const genres = ["emo", "pop punk", "post-hardcore", "electropop"].map((tag, i) =>
-      stat(tag, { prevalence: 0.5 - i / 100 }),
-    );
-    expect(categoryComposition(genres, 2)[0]!.stats.map((s) => s.tag)).toEqual(["emo", "pop punk"]);
+    const roster = [
+      ...stating(6, ["emo"]),
+      ...stating(5, ["pop punk"]),
+      ...stating(4, ["post-hardcore"]),
+      ...stating(3, ["electropop"]),
+    ];
+    expect(categoryComposition(roster, 2)[0]!.stats.map((s) => s.tag)).toEqual(["emo", "pop punk"]);
+  });
+
+  it("drops a tag too rare to be worth reporting", () => {
+    expect(
+      categoryComposition([
+        ...stating(5, ["emo"]),
+        ...stating(MIN_SUPPORT - 1, ["ska punk"]),
+      ])[0]!.stats.map((t) => t.tag),
+    ).toEqual(["emo"]);
+  });
+
+  it("ignores unranked artists and era tags", () => {
+    // Eras have a section of their own; unranked artists are invisible to every
+    // statistic.
+    const composition = categoryComposition([
+      ...stating(4, ["emo", "2000s"]),
+      ...stating(9, ["ska punk"], "unranked"),
+    ]);
+    expect(composition.map((c) => [c.category, c.stats.map((t) => t.tag)])).toEqual([
+      ["Genres", ["emo"]],
+    ]);
   });
 
   it("omits empty categories and never surfaces an 'Other' tag", () => {
-    const composition = categoryComposition([
-      stat("emo", { prevalence: 0.2 }),
-      stat("not in vocabulary", { prevalence: 0.9 }),
-    ]);
+    const composition = categoryComposition(stating(4, ["emo", "not in vocabulary"]));
     expect(composition.map((c) => [c.category, c.stats.map((t) => t.tag)])).toEqual([
       ["Genres", ["emo"]],
     ]);
@@ -492,10 +532,15 @@ describe("rankIsolation", () => {
       artist("ghost", "unranked", ["emo", "pop punk"]),
     ]);
     expect([...core, ...distinctive].map((a) => a.name)).not.toContain("ghost");
-    // Seven ranked artists over a limit of six: the two ends are the same
-    // ranking read from opposite directions, so the least typical artist is
-    // exactly the one the core list has no room for.
-    expect(core).toHaveLength(ARTIST_LIST_LIMIT);
+  });
+
+  it("reads the same ranking from both ends", () => {
+    // Seven ranked artists over an explicit limit of six — stated here rather
+    // than taken from ARTIST_LIST_LIMIT, so retuning that constant cannot
+    // quietly make this case vacuous. The least typical artist is exactly the
+    // one the core list has no room for.
+    const { core, distinctive } = rankIsolation(sceneAndStranger, 6);
+    expect(core).toHaveLength(6);
     expect(core.map((a) => a.name)).not.toContain("stranger");
     expect(distinctive[0]!.name).toBe("stranger");
   });
@@ -620,7 +665,6 @@ describe("computeStats", () => {
       stats.eras,
       stats.variable,
       stats.reliable,
-      stats.composition.flatMap((c) => c.stats),
     ];
 
     it("finds plenty of ranked artists and supported tags", () => {
@@ -690,6 +734,13 @@ describe("computeStats", () => {
         expect(tagStat.mean).toBeLessThanOrEqual(tagStat.high);
         expect(tagStat.high).toBeLessThanOrEqual(TIERS.length);
         expect(tagStat.count).toBeGreaterThanOrEqual(MIN_SUPPORT);
+      }
+      // The composition counts stated tags, so they carry no tier-derived
+      // fields to range-check — only that a share is a share.
+      for (const count of stats.composition.flatMap((c) => c.stats)) {
+        expect(count.prevalence).toBeGreaterThan(0);
+        expect(count.prevalence).toBeLessThanOrEqual(1);
+        expect(count.count).toBeGreaterThanOrEqual(MIN_SUPPORT);
       }
       for (const artistStat of [...stats.isolation.core, ...stats.isolation.distinctive]) {
         expect(artistStat.kinship).toBeGreaterThanOrEqual(0);

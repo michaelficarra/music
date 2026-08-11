@@ -309,6 +309,11 @@ function compositionRows(composition: CategoryComposition, largest: number): HTM
  * a unit a reader can check. Only the lonely end keeps the rarest-tag note,
  * where the question "what makes this one different?" is the one being asked;
  * on the crowded end it answered a question nobody had.
+ *
+ * The lead cell is a bare number, so **both sections' explainers must say what
+ * it counts**. On the lonely end it is 0 for every row, and an unexplained
+ * column of zeros reads as "shares no tags with anyone" — which is not what it
+ * means, and is not true of any of them.
  */
 const isolationRow = (artist: ArtistIsolation, mostKin: number, note: boolean): HTMLElement => {
   const row = document.createElement("div");
@@ -620,9 +625,14 @@ function worldsExplainer(worlds: TasteWorlds): string {
     "Above the level of any single tag: your artists gather into genre scenes, and those scenes " +
     "into a handful of broader worlds. These are the same neighbourhoods the ☁️ map draws, so the " +
     "two features agree about the shape of your collection.";
-  return worlds.loners === 0
-    ? base
-    : `${base} ${worlds.loners} artists belong to no scene at all and are left out of the count — a corner of the list rather than a gap in it.`;
+  if (worlds.loners === 0) return base;
+  // One loner is common on a well-clustered roster, so this sentence has to
+  // read correctly in the singular.
+  const who =
+    worlds.loners === 1
+      ? "One artist belongs to no scene at all and is"
+      : `${worlds.loners} artists belong to no scene at all and are`;
+  return `${base} ${who} left out of the count — a corner of the list rather than a gap in it.`;
 }
 
 /** "S, A and B" — an Oxford-comma-free English list, for the tier names. */
@@ -730,7 +740,7 @@ function buildBody(body: HTMLElement): void {
         ),
         section(
           "One of a kind",
-          "The same count at its other end: artists almost nothing else you have collected shares a tag list with. Being an outlier is not a demerit; these are the corners your taste reaches into.",
+          "The same count at its other end: artists almost nothing else you have collected shares a tag list with. A count of 0 means no single other artist carries half of this one's tags — not that it shares no tags at all, which is rare here; most of these still have several tags in common with their nearest neighbour. Being an outlier is not a demerit; these are the corners your taste reaches into.",
           stats.isolation.distinctive.map((artist) => isolationRow(artist, mostKin, true)),
           { rowsClass: "with-kin" },
         ),

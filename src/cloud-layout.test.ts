@@ -10,6 +10,8 @@ const artist = (name: string, tags: string[]): Artist => ({
   imageSource: "",
   ownTags: tags,
   tags,
+  // The map reads specificTags; a synthetic roster has no umbrellas to strip.
+  specificTags: tags,
 });
 
 const distance = (a: { x: number; y: number }, b: { x: number; y: number }): number =>

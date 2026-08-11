@@ -32,10 +32,15 @@ Each **artist** has:
 **Tags form a hierarchy: a specific tag always carries with it the more general tags containing
 it, and those are called its *derived tags*.** An artist described as *pop punk* also derives punk
 rock, pop rock and rock; one from *Stockholm* derives Swedish, Scandinavian, Nordic and European.
-The card tooltip, the tag filter and the ☁️ map all show derived tags alongside the specific ones,
-so an artist tagged only *Swedish* is found by someone looking for European artists. (The 📊
-statistics deliberately count only the tags an artist was given — §10.2.) The hierarchy is part of
-the curated source data, not something users edit.
+**The tag filter treats an artist as carrying all of them**, so someone looking for European
+artists finds one tagged only *Swedish*, and *punk rock* finds the ska-punk bands.
+
+Everywhere that *describes* an artist rather than finding one — the card tooltip, the ☁️ map and the
+📊 statistics — derived tags still count, but **tags too broad to distinguish anyone are left out**.
+A tag is too broad when it covers more than a fifth of the roster: on a list this heavily weighted
+towards guitar music, being tagged *rock* separates an artist from almost nobody. Era tags are the
+exception, since the statistics have a section about exactly which decades the collection favours.
+The hierarchy is part of the curated source data, not something users edit.
 
 The set of artists is fixed at load time (curated in the source data). Users sort artists; they
 do not add, rename, or delete artists, and do not edit images or tags, from within the app.
@@ -376,7 +381,12 @@ dominant decade are deliberately *not* repeated here — each heads a section of
 - **What your list is made of** — the most common tags in each vocabulary category (genre, musical
   quality, region, notable aspect), by plain prevalence. Broken down per category because one flat list is
   dominated by vocal-style and production tags, burying the question "what genres is this made of"
-  under the answer to a different one.
+  under the answer to a different one. **This one section counts only the tags actually written on
+  each artist**, not the ones derived from them (§2) — an inventory of the descriptions used, so a
+  description nobody wrote is not in it. That also means it needs no breadth rule: nobody is
+  described as *rock*, so *rock* cannot appear. The trade is that a scene split across sub-genres is
+  reported split (*emo pop* and *pop punk* as separate rows); "the worlds it splits into", below,
+  is what answers the question at that level.
 - **The worlds it splits into** — the collection above the level of any single tag: artists gather
   into genre scenes, and those scenes into a handful of broader worlds, each named by the scenes it
   contains rather than by an invented label. These are **the same neighbourhoods the ☁️ map draws**,
@@ -386,6 +396,9 @@ dominant decade are deliberately *not* repeated here — each heads a section of
   company in the list, and those least like anything else in it. Both lead with the figure they are
   ordered by — **how many other artists carry at least half of this one's tags** — so the ordering
   is checkable, and share one bar scale so the lonely end reads as short beside the crowded one.
+  **Both sections state what that figure counts**, because at the lonely end it is routinely 0 for
+  every row, and an unlabelled column of zeros reads as "shares no tags with anything", which is
+  not what it means.
   Being an outlier is explicitly not a demerit; those are the corners the taste reaches into, and
   only that list carries the extra note of the artist's **least-shared tag**, since "what makes this
   one different?" is the question only it raises.
