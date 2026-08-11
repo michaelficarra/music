@@ -864,9 +864,225 @@ body:has(#cloud-dialog[open]) {
   gap: 0.2rem;
 }
 
-/* The shadow keeps the map's ✕ legible over whatever nodes drift beneath it. */
-.cloud-close {
+/* The map's corner controls (🔍 and ✕) on one row. This is the positioned
+   element now, so the shared .modal-close inside it contributes its size and
+   padding but not its own corner pinning. Aligned to the top, so the search
+   field's dropdown can grow downwards without dragging the buttons with it. */
+.cloud-tools {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.cloud-tools .modal-close {
+  position: static;
+}
+
+/* The shadow keeps the map's ✕ and 🔍 legible over whatever nodes drift
+   beneath them. */
+.cloud-close,
+.cloud-search-toggle {
   box-shadow: 0 2px 8px #00000080;
+}
+
+/* The 🔍 matches the ✕ beside it: the two read as one pair of controls, so they
+   take the same metrics rather than the wider default button padding. */
+.cloud-search-toggle {
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.45rem 0.6rem;
+}
+
+/* ——— The map's 🔍 search (cloud.ts, src/search.ts) ——— */
+
+/* The collapsed-by-default search field. Positioned so the suggestion list can
+   anchor to its bottom edge; the field itself is a row of input + inline clear. */
+.cloud-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid #00000060;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px #00000080;
+}
+
+.cloud-search[hidden] {
+  display: none;
+}
+
+.cloud-search-input {
+  width: min(52vw, 15rem);
+  padding: 0.45rem 0.5rem;
+  color: var(--text);
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.cloud-search-input:focus {
+  outline: none;
+}
+
+.cloud-search-input::placeholder {
+  color: var(--muted);
+}
+
+/* The inline ✕: clears the query and, with it, the spotlight. Quiet until
+   hovered, since it sits inside the field rather than beside it. */
+.cloud-search-clear {
+  padding: 0.2rem 0.45rem;
+  margin-right: 0.15rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--muted);
+  background: none;
+  border: none;
+}
+
+.cloud-search-clear:hover {
+  color: var(--text);
+  background: #ffffff1a;
+}
+
+.cloud-search-clear[hidden] {
+  display: none;
+}
+
+/* The suggestions, hanging under the field. Capped so a broad query cannot
+   reach the bottom of the screen. */
+.cloud-search-results {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  left: 0;
+  right: 0;
+  max-height: 40vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  margin: 0;
+  padding: 0.2rem;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid #00000060;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px #00000080;
+}
+
+.cloud-search-results[hidden] {
+  display: none;
+}
+
+/* One suggestion: its name, and — for a tag — how many artists carry it, so the
+   figure the list is about is on screen beside every row. */
+.cloud-search-option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gap);
+  padding: 0.3rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.cloud-search-option:hover,
+.cloud-search-option.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.cloud-search-count {
+  flex: none;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Keep the count legible once the row is filled with the accent. */
+.cloud-search-option:hover .cloud-search-count,
+.cloud-search-option.active .cloud-search-count {
+  color: #ffffffcc;
+}
+
+.cloud-search-empty {
+  padding: 0.3rem 0.45rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ——— The spotlight ——— */
+
+/* While a search result is lit, the rest of the map recedes. Three levels: the
+   artists the query named, their neighbourhoods, and everything else. Members
+   of a lit cluster the query did not name stay legible — the point is to show
+   where the match lives, not to hide its company. */
+.cloud-plane.spotlit .cloud-node {
+  opacity: 0.15;
+}
+
+.cloud-plane.spotlit .cloud-node.in-spotlight {
+  opacity: 0.6;
+}
+
+.cloud-plane.spotlit .cloud-node.spotlit {
+  opacity: 1;
+}
+
+/* The named artists themselves, ringed in the accent — the same glow the board
+   gives a 🎲 pick, so "this is the one you asked for" reads the same in both. */
+.cloud-plane.spotlit .cloud-node.spotlit .thumb {
+  box-shadow:
+    0 0 0 3px var(--accent),
+    0 0 14px 3px #4c8dff66;
+}
+
+/* Unlit glows fade almost away; a lit one warms towards the accent so the
+   neighbourhood reads as chosen rather than merely brighter. */
+.cloud-plane.spotlit .cloud-ring {
+  opacity: 0.2;
+}
+
+.cloud-plane.spotlit .cloud-ring.spotlit {
+  opacity: 1;
+  background: radial-gradient(
+    circle closest-side,
+    #4c8dff4d 0%,
+    #4c8dff3d 25%,
+    #4c8dff26 50%,
+    #4c8dff0d 75%,
+    #4c8dff00 100%
+  );
+}
+
+/* The dim and the glow fade in and out rather than snapping. */
+.cloud-node,
+.cloud-ring {
+  transition:
+    opacity 0.3s ease,
+    background 0.3s ease;
+}
+
+.cloud-node .thumb {
+  transition: box-shadow 0.3s ease;
+}
+
+/* Applied by cloud.ts only while it is moving the view to reveal a spotlight,
+   and removed the moment a pan or zoom begins, so a drag is never animated. */
+.cloud-plane.gliding {
+  transition: transform 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud-node,
+  .cloud-ring,
+  .cloud-node .thumb,
+  .cloud-plane.gliding {
+    transition: none;
+  }
 }
 
 /* ——— The 📊 statistics dialog (stats-view.ts) ——— */

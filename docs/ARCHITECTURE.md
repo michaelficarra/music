@@ -42,7 +42,8 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   ├── tag-registry.ts      # Embeds data/tags.csv; withDerivedTags(), broadTags(), isSoundTag() (§3a, §3b)
 │   ├── tag-groups.ts        # groupTags(): vocabulary categories for the filter panel (see §6)
 │   ├── cloud-layout.ts      # Tag similarity, scene/world grouping + layout for ☁️ (see §7)
-│   ├── cloud.ts             # The ☁️ map dialog: renders the layout, pan/zoom (see §7)
+│   ├── cloud.ts             # The ☁️ map dialog: renders the layout, pan/zoom, 🔍 (see §7, §7a)
+│   ├── search.ts            # The ☁️ map's 🔍: fuzzy matching + spotlight resolution (see §7a)
 │   ├── stats.ts             # Roster/tag/tier aggregation behind the 📊 statistics (see §8)
 │   ├── stats-view.ts        # The 📊 statistics dialog: renders stats.ts's results (see §8)
 │   ├── sort.ts              # compareArtistNames(): canonical (case/accent-insensitive) name order
@@ -492,6 +493,55 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
   While it is open, the page's own scroll bar is suppressed
   (`body:has(#cloud-dialog[open])`). The view re-fits to the whole cloud on every open.
 
+### 7a. Map search (`src/search.ts`)
+
+The map's 🔍 (PRD §9.1) follows the same split once more: the matching rules and what a result
+means are pure and unit tested in `src/search.test.ts`; `cloud.ts` renders the result; the field,
+its inline ✕ and the suggestion listbox are static shell in `index.html`, grouped with the ✕ in a
+`.cloud-tools` corner container.
+
+- **The corpus** is one entry per artist plus one per **sound tag** (`buildSearchIndex`, reading
+  `data.ts`'s `allSoundTags`). Sound tags rather than `allTags`, and this is the one place the
+  four tag sets (§3b) are chosen *against* the "finding is what the broad set is for" rule: the
+  spotlight's answer is a *place on this map*, and a region, decade or too-broad genre names no
+  cluster to point at. Each entry's fold is precomputed, so a keystroke is one scoring pass rather
+  than a `String.normalize` over the roster.
+- **Folding** (`foldForMatch`) is NFD + diacritic strip + lowercase, plus a small table for the
+  letters whose mark is part of the code point (`ø`, `æ`, `œ`, `ß`, `ł`, `đ`, `ð`, `ħ`). The table
+  exists because `compareArtistNames` (`sort.ts`) already treats those as equal to their plain
+  form under `sensitivity: "base"`, and the app must not hold two different opinions about which
+  strings are the same string. Letters base sensitivity keeps distinct (`þ`, `ı`, `ŧ`) are absent.
+- **Scoring** (`fuzzyMatch`) is subsequence matching in **five tiers 200 apart** — exact, prefix,
+  word-start, substring, scattered — with bounded refinements (length share, word starts, gap
+  penalty, earliness) that only reorder *within* a tier. The bounds are chosen so the tiers cannot
+  overlap: an intact match must never lose to a lucky scattering of the same letters. Deliberately
+  **no edit distance**: tolerating a wrong letter, over a roster where names differ by one, would
+  produce confident nonsense. `searchTargets` applies the `MIN_QUERY_LENGTH` floor (shared with the
+  view as `isSearchable`, so "typed too little" and "found nothing" stay distinct states), then
+  sorts by score, carrier count, and `compareArtistNames` for a stable order.
+- **`resolveSpotlight(layout, artists, entry)`** turns a chosen entry into the artists and the
+  cluster *indices* to light, reading the `CloudLayout` the plane was drawn from rather than
+  regrouping the roster — the spotlight can therefore never disagree with the rings beneath it. An
+  artist entry resolves to itself and its cluster (none, if it is a loner); a tag entry to every
+  carrier and every cluster holding one.
+- **Rendering** (`cloud.ts`): the layout and three element registries (`nodeByName`, `haloByName`,
+  `ringByCluster`) are kept on the closure when the plane is built — identity lives in those maps,
+  not in `data-` attributes, since nothing outside the module addresses the nodes. `applySpotlight`
+  toggles `spotlit` on the plane, on the lit rings and named nodes, and `in-spotlight` on the
+  remaining members of a lit cluster, giving the three brightness levels in `styles.css`.
+- **`revealSpotlight`** boxes the lit region in world px (each lit cluster's circle, plus each
+  named artist's node, which covers the loners), converts it with the current transform, and
+  **returns early if it is already on screen** with a `REVEAL_MARGIN` to spare. Otherwise it zooms
+  *out* only as far as needed to fit (`Math.min(scale, fits)` — a single artist gives `fits =
+  Infinity`, correctly read as "no zoom change"), centres, and reuses `clampPan`/`applyTransform`.
+  The move is animated by a `.gliding` class on the plane, dropped on a timer (a transform that
+  lands where it already was fires no `transitionend`) and cancelled by any wheel or pointer-down
+  so a drag is never animated behind the pointer. `prefers-reduced-motion` skips it entirely.
+- **Escape** is intercepted on the input only while the dropdown is open, with `preventDefault()`
+  (the dialog's close request is the keydown's default action) and `stopPropagation()`; otherwise
+  it falls through to the native close. `mousedown` on the listbox is prevented so clicking a
+  suggestion does not blur the field out from under the click.
+
 ## 8. Statistics (`src/stats.ts`, `src/stats-view.ts`)
 
 The 📊 dialog (PRD §10) follows the map's split: pure aggregation in `stats.ts` (no DOM, unit
@@ -884,7 +934,10 @@ Details worth knowing before changing it:
   environment for `localStorage`), the weighting/selection in `src/random.test.ts`, the
   canonical name ordering in `src/sort.test.ts`, the ☁️ map's similarity model and layout in
   `src/cloud-layout.test.ts` (determinism, bounds, and cluster geometry — on synthetic rosters
-  and as a smoke test over the real one), and the 📊 statistics aggregation in
+  and as a smoke test over the real one), the map's 🔍 matching and spotlight resolution in
+  `src/search.test.ts` (folding, the score tiers' ordering, the query-length floor, and that a
+  suggestion always lands on at least one artist — synthetic rosters and the real one), and the
+  📊 statistics aggregation in
   `src/stats.test.ts` (scoring/banding, minimum support, ranking ties, leave-one-out outliers —
   likewise on synthetic rosters and the real one).
 - **The tag vocabulary is tested as data** (`src/tag-registry.test.ts`): parsing and derivation on

@@ -295,6 +295,38 @@ is saying where the artist belongs, not everything true about it.
 - A **close control (✕) in the top-right corner** exits the map, as do the platform's standard
   dismissal actions (e.g. the Esc key). Closing returns to the board exactly as it was.
 
+### 9.1 Searching the map (🔍)
+
+A **🔍 button beside the ✕** expands a **search field** for finding an artist or a tag on a map far
+too large to read at a glance. The button folds the field away again, as does leaving an empty
+field.
+
+- **What can be searched: every artist, and every tag that places an artist on the map** — the
+  genres and musical qualities the clusters are built from (§2). Regions, decades and notable
+  aspects are deliberately **not** offered: the map groups nobody by them, so a country has no
+  neighbourhood to be shown, and neither do the tags too broad to distinguish anything. Artists
+  remain findable by name whatever their tags say.
+- Suggestions appear **once three characters have been typed** — fewer matches most of the roster,
+  which is a list rather than a suggestion — and are **fuzzy**: matching ignores case and accents,
+  and the typed characters need only appear **in order**, not adjacently, so an abbreviation finds
+  its tag and a partly-remembered name finds its artist. Every typed character must appear, so a
+  query with a wrong letter matches nothing rather than guessing.
+- Suggestions are ordered **best match first**, and each **tag says how many artists carry it** —
+  which is also what tells a tag apart from an artist of the same name.
+- **Choosing a suggestion** (by clicking it, or with the arrow keys and Enter) **shines a spotlight**
+  on the map: the rest of the map dims, the **clusters holding the matched artists** brighten, and
+  the **matched artists themselves** are brighter still and ringed. A tag whose carriers are spread
+  over several clusters lights every one of them. An artist in no cluster lights alone, in the glow
+  it already has.
+- The view **moves only if it has to**: a spotlight already on screen is left exactly where it is,
+  and one that is off screen or only partly visible is brought into view by panning, and zooming
+  out no further than needed to fit it.
+- The **spotlight stays** until the query is **cleared with the ✕ inside the search field**. It
+  survives choosing another suggestion (which replaces it), dismissing the suggestions, and closing
+  and reopening the map.
+- With suggestions showing, **Esc dismisses the suggestions** rather than the map; a second press
+  closes the map as usual (§9).
+
 ## 10. Statistics (📊)
 
 A **📊** button opens a **read-only dialog of statistics** about the tier list, derived from the
@@ -456,6 +488,9 @@ it**, and viewing it changes nothing about tiers, the picker, or filters.
 - **Empty tier:** the tier row is still displayed (empty), as a valid drop target.
 - **Empty unranked area:** still displayed, as described in §3.
 - **No eligible artists for a pick:** handled as in §8.
+- **Map search matching nothing:** the suggestions say so plainly (§9.1). Below the three-character
+  minimum no suggestions are shown at all — having typed too little to search is not the same as
+  having searched and found nothing.
 - **Statistics with too little data:** when nothing is ranked — or no tag is carried by enough
   ranked artists — the statistics dialog (§10) explains that there is not enough data, instead of
   presenting empty sections. Individual sections with nothing to report are omitted, except the

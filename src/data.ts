@@ -85,3 +85,17 @@ export const baselineByName: ReadonlyMap<string, Slot> = new Map(
 export const allTags: readonly string[] = [...new Set(artists.flatMap((a) => a.tags))].sort(
   compareArtistNames,
 );
+
+/**
+ * Every distinct tag that *places* an artist on the ☁️ map — the union of the
+ * roster's `soundTags` — for the map's 🔍 search.
+ *
+ * A strict subset of `allTags`, and deliberately so: the map is a picture of how
+ * the collection sounds, so a region, decade or notable aspect groups nobody on
+ * it and a too-broad genre groups everybody. Offering `Swedish` as something to
+ * search for would promise a neighbourhood the map does not draw (ARCHITECTURE
+ * §7a). Sorted like its neighbour above.
+ */
+export const allSoundTags: readonly string[] = [
+  ...new Set(artists.flatMap((a) => a.soundTags)),
+].sort(compareArtistNames);

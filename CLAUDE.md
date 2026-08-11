@@ -184,7 +184,7 @@ npm run preview        # serve the production build locally
 npm run enrich         # run scripts/enrich-images.ts (Apple Music → MusicBrainz → YouTube → Wikipedia)
 npm run add-artist -- "<name>"   # append an unranked artist to the CSV and enrich just them
 npm run tag-research -- "<name>" # what MusicBrainz/Wikipedia/crowd tags say, to tag from (--all)
-npm test               # unit tests (CSV round-trip, tag vocabulary, store diff, weighting, name sort, ☁️ map layout, 📊 statistics)
+npm test               # unit tests (CSV round-trip, tag vocabulary, store diff, weighting, name sort, ☁️ map layout, ☁️ map search, 📊 statistics)
 npm run typecheck      # tsc --noEmit
 npm run format         # Prettier
 ```
