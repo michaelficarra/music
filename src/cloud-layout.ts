@@ -26,6 +26,11 @@
 //      clusters sit side by side, and the gulfs between families make the
 //      grouping readable.
 //
+// Throughout, an artist is read through its `soundTags` — its genres and
+// musical qualities, with regions, eras and notable aspects left out. The map
+// answers "what does this sound like", and being Swedish or having worked in
+// the 2010s is not an answer to it (ARCHITECTURE §3b, §7).
+//
 // Everything is deterministic — no randomness anywhere — so a given roster
 // always produces the same map.
 //
@@ -74,8 +79,16 @@ export interface CloudLayout {
  * often it appears alongside every tag across the roster, L2-normalised — so
  * near-synonym tags that rarely share an artist still keep similar company;
  * an artist's vector is the IDF-weighted sum of its tags' profiles. Shared
- * tags contribute fully, related tags partially. An artist with no tags has
- * similarity 0 to everyone else.
+ * tags contribute fully, related tags partially. An artist with no sound tags
+ * has similarity 0 to everyone else.
+ *
+ * Only `soundTags` count. The excluded categories do not merely add noise, they
+ * outvote the signal: they are a third of every tag the roster carries, and an
+ * era sits on hundreds of artists at once, so two acts with nothing musical in
+ * common still score a solid resemblance for sharing a decade and a continent.
+ * Dropping them also frees the profiles from a second-order distortion — while
+ * regions co-occurred with genres, one country's scene bled into the profile of
+ * every genre played there.
  */
 export function pairwiseSimilarities(artists: readonly Artist[]): number[][] {
   const artistCount = artists.length;
@@ -86,7 +99,7 @@ export function pairwiseSimilarities(artists: readonly Artist[]): number[][] {
   // Index the distinct tags so vectors can live in flat typed arrays.
   const tagIndex = new Map<string, number>();
   for (const artist of artists) {
-    for (const tag of artist.specificTags) {
+    for (const tag of artist.soundTags) {
       if (!tagIndex.has(tag)) tagIndex.set(tag, tagIndex.size);
     }
   }
@@ -99,7 +112,7 @@ export function pairwiseSimilarities(artists: readonly Artist[]): number[][] {
   const occurrences = new Float64Array(tagCount);
   const cooccurrence = new Float64Array(tagCount * tagCount);
   for (const artist of artists) {
-    const indices = artist.specificTags.map((tag) => tagIndex.get(tag)!);
+    const indices = artist.soundTags.map((tag) => tagIndex.get(tag)!);
     for (const t of indices) {
       occurrences[t]!++;
       for (const u of indices) cooccurrence[t * tagCount + u]!++;
@@ -121,7 +134,7 @@ export function pairwiseSimilarities(artists: readonly Artist[]): number[][] {
   // (zero vector for a tagless artist).
   const vectors = artists.map((artist) => {
     const vector = new Float64Array(tagCount);
-    for (const tag of artist.specificTags) {
+    for (const tag of artist.soundTags) {
       const t = tagIndex.get(tag)!;
       const idf = 1 + Math.log(artistCount / occurrences[t]!);
       for (let u = 0; u < tagCount; u++) vector[u]! += idf * cooccurrence[t * tagCount + u]!;
@@ -152,10 +165,11 @@ export function pairwiseSimilarities(artists: readonly Artist[]): number[][] {
 const MIN_CLUSTER_SIZE = 4;
 /** An unclaimed artist joins its best cluster only on genre evidence: it must
     share a genre tag with at least this fraction of the members, on average.
-    (Generic tags — qualities, eras — are too ubiquitous to mean membership;
-    counting them adopted everyone, however poor the fit.) Artists clearing it
-    nowhere stay unclustered — loners — because a cluster is meant to
-    represent a real relationship, not a best-effort bucket. */
+    (Musical qualities count towards similarity but not towards membership —
+    `catchy hooks` is not a scene, and counting qualities adopted everyone,
+    however poor the fit.) Artists clearing it nowhere stay unclustered —
+    loners — because a cluster is meant to represent a real relationship, not a
+    best-effort bucket. */
 const ADOPTION_THRESHOLD = 0.5;
 /** Padding between a cluster's outermost member and its ring. */
 const RING_PADDING = 0.75;
@@ -192,19 +206,23 @@ function partitionIntoClusters(
   // form before umbrella genres sweep up everything; ties by name for
   // determinism. Vocabulary categories live in tag-groups.ts.
   //
-  // Scenes are founded on `specificTags` — everything a row implies except the
-  // tags too broad to mean anything (§3b). Derived genres belong here: a band
-  // written down as `emo pop` really is in the pop punk scene, and reading only
-  // the stated tag would scatter one scene across its sub-genres. Broad ones do
-  // not: every rock band derives `rock`, so an umbrella founds one enormous
-  // meaningless cluster and makes the adoption test below unanimous, leaving
-  // nobody on the rim.
-  const distinctTags = [...new Set(artists.flatMap((artist) => artist.specificTags))];
+  // Scenes are founded on the genres among `soundTags` — everything a row
+  // implies except the tags too broad to mean anything (§3b) and the ones that
+  // are not about the music. Derived genres belong here: a band written down as
+  // `emo pop` really is in the pop punk scene, and reading only the stated tag
+  // would scatter one scene across its sub-genres. Broad ones do not: every rock
+  // band derives `rock`, so an umbrella founds one enormous meaningless cluster
+  // and makes the adoption test below unanimous, leaving nobody on the rim.
+  //
+  // Filtering to the "Genres" group is still needed even from `soundTags`,
+  // which also holds the musical qualities: those inform how alike two artists
+  // are, but a ring labelled `catchy hooks` names no scene.
+  const distinctTags = [...new Set(artists.flatMap((artist) => artist.soundTags))];
   const genreTags = groupTags(distinctTags).find((group) => group.label === "Genres")?.tags ?? [];
   const carriers = new Map(
     genreTags.map((tag) => [
       tag,
-      artists.flatMap((artist, i) => (artist.specificTags.includes(tag) ? [i] : [])),
+      artists.flatMap((artist, i) => (artist.soundTags.includes(tag) ? [i] : [])),
     ]),
   );
   const orderedGenres = [...carriers.keys()].sort(
@@ -229,13 +247,13 @@ function partitionIntoClusters(
   const loners: number[] = [];
   for (let i = 0; i < artists.length; i++) {
     if (clusterOf.has(i)) continue;
-    const ownGenres = artists[i]!.specificTags.filter((tag) => genreSet.has(tag));
+    const ownGenres = artists[i]!.soundTags.filter((tag) => genreSet.has(tag));
     let bestCluster: PartitionedCluster | null = null;
     let bestScore = 0;
     for (const cluster of clusters) {
       let sharedTotal = 0;
       for (const m of cluster.members) {
-        sharedTotal += ownGenres.filter((tag) => artists[m]!.specificTags.includes(tag)).length;
+        sharedTotal += ownGenres.filter((tag) => artists[m]!.soundTags.includes(tag)).length;
       }
       const score = sharedTotal / cluster.members.length;
       if (score > bestScore) {

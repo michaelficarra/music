@@ -153,7 +153,14 @@ otherwise:**
   records one known limitation and the one-line change that would fix it.
 - **Broad tags are for the 🎲 filter and nothing else.** Finding artists by `European` is the whole
   point of the hierarchy; saying an artist is `rock` when four fifths of the roster is says nothing.
-  Everything that reports or compares — 📊, the ☁️ map, the card tooltips — reads `specificTags`.
+  Everything that reports or compares — 📊, the card tooltips — reads `specificTags`.
+- **Anything that groups artists by resemblance reads `soundTags`** — `specificTags` narrowed to
+  genres and musical qualities (ARCHITECTURE §3b). That is the ☁️ map and the two 📊 sections built
+  on it: the worlds, and core/one-of-a-kind. Regions, eras and aspects are a third of the roster's
+  tags and one era covers hundreds of artists, so counting them halved the model's usable range
+  (median pairwise similarity 0.667 → 0.395) and produced worlds that were really origins in
+  disguise. Do not reintroduce them "for a fuller picture", and do not extend the restriction to
+  the rest of 📊: everywhere else the subject *is* the tags, regions and eras included.
 - **"What your list is made of" is the exception: it counts `ownTags` and applies no breadth rule.**
   It is an inventory of the descriptions used, so a description nobody wrote is not in it, and no
   threshold is needed — nobody is described as `rock`. Do not "fix" it to count derived tags: that
@@ -161,7 +168,9 @@ otherwise:**
   and `Western European`. Its known cost is that a scene split across sub-genres reports split; the
   ☁️ worlds answer that level.
 - **Reuse the ☁️ map's grouping** (`groupRoster`) for anything about which artists resemble which.
-  Two features describing one collection must not disagree about its shape.
+  Two features describing one collection must not disagree about its shape — which extends to the
+  figures such a section *prints*: `rankIsolation` ranks by musical company, so its kin count and
+  its "rarest" caption read `soundTags` too, rather than explaining a musical ranking with a region.
 - **Prefer a null result to a decorative one.** "Your tags explain 1% of your ranking" is a better
   line than a ranked list of noise.
 

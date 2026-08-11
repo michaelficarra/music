@@ -10,6 +10,9 @@ const artist = (over: Partial<Artist> = {}): Artist => ({
   ownTags: [],
   tags: [],
   specificTags: [],
+  // The tooltip describes the artist, so it reads `specificTags` — regions and
+  // all. Set only to satisfy the type.
+  soundTags: [],
   ...over,
 });
 

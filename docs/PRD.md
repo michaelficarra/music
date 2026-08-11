@@ -42,6 +42,14 @@ towards guitar music, being tagged *rock* separates an artist from almost nobody
 exception, since the statistics have a section about exactly which decades the collection favours.
 The hierarchy is part of the curated source data, not something users edit.
 
+**Anything that groups artists by how alike they are reads only the tags about the music itself —
+genres and musical qualities — and ignores regions, eras and notable aspects.** That is the ☁️ map
+(§9) and the two 📊 sections reporting its grouping (§10.3). Being from the same country, or having
+worked in the same decade, is a real fact about two artists and no kind of resemblance between
+them: those tags sit on hundreds of artists at once, so counting them would make near-strangers
+look like neighbours. Everywhere else — the tag filter, the tooltip, every other statistic — all
+the tags still count.
+
 The set of artists is fixed at load time (curated in the source data). Users sort artists; they
 do not add, rename, or delete artists, and do not edit images or tags, from within the app.
 
@@ -243,6 +251,11 @@ A **☁️** button opens a **full-screen map** of the roster: every artist's ca
 usual placeholder — and name) laid out on a two-dimensional plane, organised into **genre
 clusters** drawn from the artists' tags (§2).
 
+The map is a picture of how the collection **sounds**, so it reads only the tags that say so —
+genres and musical qualities — and a shared country, decade or notable aspect never brings two
+artists together on it (§2). An artist's tooltip still lists all of its descriptive tags: the map
+is saying where the artist belongs, not everything true about it.
+
 - **Every artist belongs to at most one cluster** — broadly, the most specific genre it shares
   with enough other artists. Membership is **never forced**: an artist whose own genres are too
   rare to form a group joins another cluster only when it genuinely shares that cluster's sound
@@ -308,10 +321,17 @@ criticism**. Two rules follow, and everything below obeys them:
     reflects **how many artists carrying it the user collected** as well as where they sit;
   - a **ratio against a typical artist** (e.g. `×1.24`), shown on a bar growing left or right of a
     centre line at `×1.00`.
-- **Statistics count the tags an artist was given, not its derived tags (§2).** Counting derived
-  tags too, every list of common tags is headed by the widest ones in the vocabulary — *rock*,
-  *pop*, *North American* — which describes how the tags are organised rather than what was
-  collected. The 🎲 filter and the ☁️ map still use derived tags; only the statistics do not.
+- **Statistics count every tag an artist's row implies, derived tags included (§2), minus the ones
+  too broad to distinguish anyone.** Both halves of that are load-bearing. Derived tags must count
+  because a row carries only its most specific tag: an artist described as *emo pop* belongs to the
+  pop punk scene whether or not those words appear on it, so counting only what was written down
+  scatters one scene across its sub-genres and turns "how much of this list is pop punk?" into a
+  question about tagging habits. Broad tags must not, because otherwise every list of common tags is
+  headed by the widest labels in the vocabulary — *rock*, *pop*, *North American* — which describes
+  how the tags are organised rather than what was collected. **One section departs from this and
+  says so**: *What your list is made of* (§10.3) is an inventory of the descriptions actually used,
+  so it counts only the tags written on each artist — and needs no breadth rule as a result, since
+  nobody is described as *rock*.
 - **Prevalence is a description, not a claim, and is never tested.** How much of the list carries a
   tag is a fact in the same class as how many artists there are; it is counted **by head, not
   weighted by tier**, because on a list of music the user likes an artist's presence is already the
@@ -390,18 +410,23 @@ dominant decade are deliberately *not* repeated here — each heads a section of
 - **The worlds it splits into** — the collection above the level of any single tag: artists gather
   into genre scenes, and those scenes into a handful of broader worlds, each named by the scenes it
   contains rather than by an invented label. These are **the same neighbourhoods the ☁️ map draws**,
-  so the two features agree about the shape of the collection. Artists belonging to no scene are
-  counted out and said so.
+  so the two features agree about the shape of the collection — and, like the map, they are built
+  from genre and musical-quality tags alone (§2). Artists belonging to no scene are counted out and
+  said so.
 - **Your core sound** and **One of a kind** — the two ends of one ranking: the artists with the most
   company in the list, and those least like anything else in it. Both lead with the figure they are
-  ordered by — **how many other artists carry at least half of this one's tags** — so the ordering
-  is checkable, and share one bar scale so the lonely end reads as short beside the crowded one.
+  ordered by — **how many other artists carry at least half of this one's musical tags** — so the
+  ordering is checkable, and share one bar scale so the lonely end reads as short beside the
+  crowded one. Like the map they borrow their notion of likeness from, these two sections read
+  genres and musical qualities only (§2): *one of a kind* means one of a kind to listen to, and the
+  only artist from a given country is not thereby unusual.
   **Both sections state what that figure counts**, because at the lonely end it is routinely 0 for
   every row, and an unlabelled column of zeros reads as "shares no tags with anything", which is
   not what it means.
   Being an outlier is explicitly not a demerit; those are the corners the taste reaches into, and
-  only that list carries the extra note of the artist's **least-shared tag**, since "what makes this
-  one different?" is the question only it raises.
+  only that list carries the extra note of the artist's **least-shared musical tag**, since "what
+  makes this one different?" is the question only it raises — and a section ranking by sound must
+  answer it with a sound.
 - **Decades** — the one section drawn as a **chart** rather than a list, because its order is
   chronological rather than a ranking. Two panels sit over a single **oldest-to-newest** axis: a
   column per decade for how many artists it holds, and beneath it a curve for how much those

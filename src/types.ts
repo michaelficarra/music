@@ -87,9 +87,19 @@ export interface Artist {
    * `tags` minus the ones too broad to describe anything (`broadTags`).
    *
    * Everything that *reports or compares* tags reads this rather than `tags` —
-   * the 📊 statistics, the ☁️ map's similarity, the card tooltips. Finding an
-   * artist by `rock` is useful; saying that it is a rock band, when four fifths
-   * of the roster is, is not (ARCHITECTURE §3b).
+   * the 📊 statistics, the card tooltips. Finding an artist by `rock` is useful;
+   * saying that it is a rock band, when four fifths of the roster is, is not
+   * (ARCHITECTURE §3b).
    */
   specificTags: readonly string[];
+  /**
+   * `specificTags` narrowed to the tags about the music itself — genres and
+   * musical qualities, with regions, eras and notable aspects left out.
+   *
+   * Read by the ☁️ map, which arranges artists by resemblance of *sound*, and by
+   * the two 📊 sections that are the map: the worlds it splits into, and the
+   * core/distinctive lists. Being Swedish, or having worked in the 2010s, is a
+   * fact about an artist rather than a neighbourhood on the map (ARCHITECTURE §3b).
+   */
+  soundTags: readonly string[];
 }

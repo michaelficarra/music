@@ -39,7 +39,7 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   ├── thumb.ts             # createThumb(): artist thumbnail/placeholder, shared by board + map
 │   ├── random.ts            # Weighting schemes + weighted random pick (see §6)
 │   ├── filter.ts            # matchesTags(): the 🎲 tag filter's matching rule (see §6)
-│   ├── tag-registry.ts      # Embeds data/tags.csv; withDerivedTags(), broadTags() (§3a, §3b)
+│   ├── tag-registry.ts      # Embeds data/tags.csv; withDerivedTags(), broadTags(), isSoundTag() (§3a, §3b)
 │   ├── tag-groups.ts        # groupTags(): vocabulary categories for the filter panel (see §6)
 │   ├── cloud-layout.ts      # Tag similarity, scene/world grouping + layout for ☁️ (see §7)
 │   ├── cloud.ts             # The ☁️ map dialog: renders the layout, pan/zoom (see §7)
@@ -95,8 +95,9 @@ Columns, in order:
   Conventions: no commas/semicolons/quotes inside a tag (keeps the field unquoted), no duplicates
   within an artist. Tag matching is **case-sensitive**, so keep each tag's spelling identical
   everywhere it appears. `src/data.ts` parses the field into `Artist.ownTags` (blank → `[]`), those
-  plus everything derived from them into `Artist.tags`, and that minus the too-broad tags into
-  `Artist.specificTags` (§3b, §4).
+  plus everything derived from them into `Artist.tags`, that minus the too-broad tags into
+  `Artist.specificTags`, and that restricted to genres and musical qualities into
+  `Artist.soundTags` (§3b, §4).
 - The file holds the full artist roster (a few hundred rows). It may be edited by hand or by the
   enrichment script (§9); `scripts/tag-research.ts` (§9a) gathers the outside evidence tagging
   should rest on.
@@ -144,21 +145,42 @@ without any of it being written on 253 artist rows by hand.
   `src/tag-registry.test.ts`. A tag used in `artists.csv` but absent here still reaches the 🎲
   panel, in a trailing **Other** group — a soft failure, and a test failure.
 
-### 3b. Too-broad tags, and the three tag sets
+### 3b. Too-broad tags, and the four tag sets
 
 Deriving the hierarchy creates a second problem: an artist ends up carrying `rock`, which four
 fifths of the roster also carries. A tag that covers most of the collection cannot describe anyone
 within it — it is excellent for *finding* artists and useless for telling them apart — so each
-artist carries three tag sets:
+artist carries four tag sets, each a subset of the one above it:
 
 | Set | Contents | Read by |
 | --- | --- | --- |
-| `ownTags` | exactly what the CSV row says (§3) | the Save export; nothing user-facing |
+| `ownTags` | exactly what the CSV row says (§3) | the Save export; the 📊 composition list |
 | `tags` | `ownTags` + everything derived from them | the 🎲 **filter** — `European` must find the Swedes |
-| `specificTags` | `tags` minus the too-broad ones | **everything else**: 📊 statistics, ☁️ map, card tooltips |
+| `specificTags` | `tags` minus the too-broad ones | 📊 statistics, card tooltips |
+| `soundTags` | `specificTags` restricted to genres and musical qualities | the ☁️ **map**, and the two 📊 sections that report its grouping |
 
-The one exception is the 📊 dialog's composition list ("What your list is made of"), which reads
-`ownTags` — see §8.0.
+The 📊 dialog's composition list ("What your list is made of") reading `ownTags` is explained in
+§8.0; the map's narrower set, below.
+
+**`soundTags` (`isSoundTag`, `tag-registry.ts`) is what the map means by likeness.** The map exists
+to show which artists sound alike, and the three excluded categories do not answer that question
+while being numerous enough to drown out the ones that do: `region`, `era` and `aspect` together are
+**a third of every tag the roster carries** (1 280 of 3 751 `specificTags` entries), and a single
+era sits on hundreds of artists at once. Counting them, the median similarity between two artists
+picked at random from the roster is **0.667** — the model had almost no room left to say that two
+artists are *not* alike. On `soundTags` it is **0.395**. Two second-order effects go with it: while
+regions co-occurred with genres, one country's scene bled into the co-occurrence profile of every
+genre played there; and a scene defined by an origin rather than a sound (`J-pop`) was stranded as
+a world of its own instead of sitting with the music it resembles.
+
+The restriction is by **registry category**, not by hand: a tag the vocabulary does not know is not
+a sound tag, which is safe because an unregistered roster tag already fails the tests (§3a). It is
+applied *after* the breadth rule, so a genre on a fifth of the roster is still dropped — failing to
+distinguish and failing to describe the music are two independent reasons to leave a tag out.
+
+Everything else keeps reading `specificTags`. A card tooltip describes the artist in front of you,
+and where an artist is from belongs in that description; only the features that *group* artists by
+resemblance narrow to the sound.
 
 `broadTags` (`tag-registry.ts`) marks a tag too broad when it covers more than `BROAD_PREVALENCE`
 (a fifth) of the roster. **Breadth is failure to distinguish, and nothing else** — in particular it
@@ -359,16 +381,23 @@ The ☁️ map (PRD §9) is split like the picker: pure geometry in `cloud-layou
 tested in `src/cloud-layout.test.ts`), rendering and interaction in `cloud.ts`, and the
 full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
 
-- **Similarity model** (`pairwiseSimilarities`): each tag gets a **co-occurrence profile** — a
-  vector of how often it appears alongside every tag across the roster, L2-normalised so tags
+- **Tag set** (§3b): every step below reads an artist's **`soundTags`** — the genres and musical
+  qualities among its specific tags. The map's whole claim is "these artists sound alike", so a
+  shared country or decade must not contribute to it. Because the excluded categories are a third
+  of the roster's tags, this is not a refinement at the margin: it halves the median similarity
+  between two random artists (0.667 → 0.395), which is the room the model needs to distinguish
+  anyone from anyone.
+- **Similarity model** (`pairwiseSimilarities`): each sound tag gets a **co-occurrence profile** — a
+  vector of how often it appears alongside every other across the roster, L2-normalised so tags
   compare by the *shape* of the company they keep rather than their raw frequency. An artist's
   vector is the **IDF-weighted sum** of its tags' profiles (rare tags are more discriminative
   than ubiquitous ones), and artist-to-artist similarity is the **cosine** of those vectors.
   Sharing a tag contributes fully; carrying *related* tags contributes partially — including
   near-synonyms that rarely share an artist (curators pick one or the other) but keep the same
-  company, e.g. two punk subgenres both co-occurring with `punk rock` and `2000s`. Relatedness
-  is thus **data-driven** — `tag-groups.ts` names the clusters (below) but plays no part in how
-  similar two artists are; its categories (all of "Genres", say) are far too broad for that.
+  company, e.g. two punk subgenres both co-occurring with `punk rock` and `melodic hardcore`.
+  Relatedness is thus **data-driven** — `tag-groups.ts` names the clusters (below) but plays no
+  part in how similar two artists are; its categories (all of "Genres", say) are far too broad
+  for that.
 - **Cluster-first layout** (`computeCloudLayout`): the map is *not* a force-directed embedding —
   an earlier force-simulation approach produced a uniform-density smear with inexplicable
   neighbours and was abandoned. Instead the clusters are built explicitly and all geometry
@@ -380,15 +409,18 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
      - Specificity is inferred from **rarity**, not read off the registry's hierarchy (§3a). The
        two largely agree — a derived umbrella is by construction carried by everything beneath it —
        and rarity additionally ranks genres the hierarchy leaves unrelated.
-     - Scenes are founded on **`specificTags`** (§3b), like the similarity model above. Derived
-       genres belong: a band written down as `emo pop` really is in the pop punk scene, and reading
-       only its stated tag scatters one scene across its sub-genres. Too-broad ones do not — every
-       rock band derives `rock`, so an umbrella founds one huge meaningless ring and makes the
-       adoption test below unanimous. Founding on the full derived set gave 46 scenes with **every**
-       artist adopted; on `specificTags` it gives 41 scenes with 1 loner.
+     - Scenes are founded on the genres within **`soundTags`** (§3b), like the similarity model
+       above. Derived genres belong: a band written down as `emo pop` really is in the pop punk
+       scene, and reading only its stated tag scatters one scene across its sub-genres. Too-broad
+       ones do not — every rock band derives `rock`, so an umbrella founds one huge meaningless
+       ring and makes the adoption test below unanimous. Founding on the full derived set gave 46
+       scenes with **every** artist adopted; on the narrowed set it gives 41 scenes with 1 loner.
+       (The genres are the same either way — `soundTags` and `specificTags` differ only outside
+       that category — so **the rings themselves did not move when the map narrowed to sound**;
+       what changed is which rings neighbour which, and the order of members within each.)
 
      Artists left unclaimed may be **adopted** — but only on genre evidence
-     (sharing a genre tag with members; mean ≥ 0.5), since counting ubiquitous quality/era tags
+     (sharing a genre tag with members; mean ≥ 0.5), since counting ubiquitous musical qualities
      adopted everyone however poor the fit; artists clearing the bar nowhere stay unclustered,
      on the rim (PRD §9: membership is never forced). Within a cluster, members are ordered by
      mean similarity to their fellows — archetypes first.
@@ -480,10 +512,17 @@ cosmetic:
   average by construction cannot reach a tail but still tightens the cutoff for tags that can. The
   Benjamini–Hochberg margin rises from 4.6× to 5.1× (§8.2a).
 
-This puts the whole dialog on one definition of carrying a tag, shared with the ☁️ map — including
-the two figures that **are** the map (`rankTasteWorlds`, which delegates to `groupRoster`, and
-`kinship`, which is `pairwiseSimilarities`). Only the 🎲 filter keeps the broad tags, since finding
-artists is exactly what they are good for.
+This puts the whole dialog on one definition of carrying a tag. Only the 🎲 filter keeps the broad
+tags, since finding artists is exactly what they are good for.
+
+**The two sections that are the ☁️ map narrow once further, to `soundTags`** (§3b): `rankTasteWorlds`,
+which delegates to `groupRoster`, and `rankIsolation`, whose ranking comes from the map's
+`pairwiseSimilarities`. They report the map's grouping, so they must read what the map reads — a
+section explaining a neighbourhood the user can see on screen cannot be computing a different one.
+`rankIsolation` applies it to its *displayed* figures too (`kin`, `rarestTag`), not just to the
+similarity behind the ordering: ranking artists by musical company while captioning them with a
+region is a list disagreeing with its own explanation. Everything else in the dialog is about the
+tags themselves and counts regions, eras and aspects among them.
 
 ### 8.1 Two tier valuations, deliberately
 
@@ -605,9 +644,15 @@ re-measured after a retag rather than remembered.
   cannot disagree about the shape of one collection — a second clustering here would drift from the
   one the user can actually see. Descriptive, so ungated: which artists group together is a fact
   about their tags, with the tiers playing no part. On the shipped roster it yields 6 worlds over 41
-  scenes, covering 242 of 243 artists; the 1 unclaimed is reported rather than forced into a
+  scenes, covering 244 of 245 ranked artists; the 1 unclaimed is reported rather than forced into a
   family. Worlds are named by listing their own scenes — an invented label like "synth pop and
   friends" would be a guess dressed as a finding.
+
+  Narrowing the grouping to `soundTags` (§3b) is what made the worlds worth listing: they had been
+  36%, 34%, 14%, 12%, 2%, 2% of the roster — two blobs, two remainders, and two singletons that were
+  really origin tags in disguise (`J-pop` alone, `traditional pop` alone). They are now 24%, 21%,
+  19%, 17%, 16%, 3%, with `J-pop` seated among the hip hop and ska scenes it actually resembles.
+  The scene list is unchanged, since scenes were always founded on genres (§7).
 
 - **`measurePredictivePower`** predicts each artist's position from the mean of its qualifying
   tags' **leave-one-out** means — each tag's mean recomputed without the artist itself, so its own
@@ -625,19 +670,27 @@ re-measured after a retag rather than remembered.
   r² < 0.1 on the real roster so that a data change making the tags genuinely predictive fails
   loudly rather than passing unnoticed.
 - **`rankIsolation`** ranks both ends by `kin` — how many other ranked artists carry at least
-  `KIN_SHARE` (½) of this artist's tags. A fraction rather than a fixed count, since tag counts
-  vary widely from artist to artist (§3 sets no bound) and a flat threshold would make the
+  `KIN_SHARE` (½) of this artist's **sound tags**. A fraction rather than a fixed count, since tag
+  counts vary widely from artist to artist (§3 sets no bound) and a flat threshold would make the
   sparsely-tagged look lonely for no reason but their sparseness. On the shipped roster
-  it scores 53–55 at the crowded end and 0 at the lonely one, so it separates the lists as sharply
+  it scores up to 44 at the crowded end and 0 at the lonely one, so it separates the lists as sharply
   as a similarity measure would **while meaning something a reader can check** — which is why it,
   and not the similarity, is the displayed figure.
   `kinship` — the mean of an artist's `ISOLATION_NEIGHBOURS` (3) closest similarities from the ☁️
   map's `pairwiseSimilarities` (`cloud-layout.ts`, reused rather than reinvented) — survives as the
   **tie-break**, which is load-bearing at the lonely end where many artists score 0 `kin` and only
   the finer measure can order them. It is never displayed: over a coherent roster it compresses into
-  a narrow band near the top (0.83–0.99 on the shipped data), where a bare "0.84" would read as a
-  strong match. `rarestTag` (the least-shared tag, eras excluded) is carried for both ends but
-  rendered only on `distinctive`.
+  a narrow band near the top (0.65–1.00 on the shipped data), where a bare "0.84" would read as a
+  strong match. `rarestTag` (the least-shared sound tag) is carried for both ends but rendered only
+  on `distinctive`; it needs no era exclusion, since a decade is not a sound tag.
+
+  Both figures halved when the section narrowed to `soundTags` (`kin` peaked at 87 before): an
+  artist's shared decade and continent had been doing much of the work of making it look
+  well-companioned. The captions moved further than the numbers: `The Beatles` was explained by
+  `Liverpool` and is now explained by `merseybeat`, `Apashe` by `Belgian` and now by `dubstep`, and
+  the artists whose sole unusual tag was an origin (`t.A.T.u.`, on `Eastern European`) left the
+  list — which is the point, since "few Russians are on this list" is a fact about the list's
+  coverage rather than about how t.A.T.u. sounds.
 
 ### 8.4 Eras, and tuning
 
@@ -808,7 +861,11 @@ Details worth knowing before changing it:
   synthetic registries, then the §3a invariants asserted against the shipped files — every roster
   tag is registered, every `Derived` value resolves, no cycles, no genre deriving a region,
   no row carrying a tag another tag on it already derives (`redundantTags`, §3), rows canonically
-  sorted. `broadTags` (§3b) is covered here too, on synthetic rosters. These are what stop `data/artists.csv` and `data/tags.csv`
+  sorted. `broadTags` and `isSoundTag` (§3b) are covered here too, on synthetic rosters, plus one
+  invariant over the shipped data that the two of them make possible to violate: **every artist
+  keeps at least one sound tag**. An artist described purely by origin and decade would reach the ☁️
+  map with an empty vector, be similar to nobody, and land on the rim by default rather than on the
+  evidence. These are what stop `data/artists.csv` and `data/tags.csv`
   drifting apart as the roster is retagged; the "Other" group being empty is asserted rather than
   assumed.
 - Type-checking via `tsc --noEmit`; formatting via Prettier; all enforced in CI (§10). The

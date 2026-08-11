@@ -3,15 +3,20 @@ import { computeCloudLayout, pairwiseSimilarities, type CloudPoint } from "./clo
 import { artists as roster } from "./data";
 import type { Artist } from "./types";
 
-const artist = (name: string, tags: string[]): Artist => ({
+/** A synthetic artist. `sound` defaults to `tags`, since most of these rosters
+    are all genres and qualities anyway; the tests about what the map ignores
+    pass it explicitly, so a fixture never has to name a real registry category
+    to say "this tag is not about the music". */
+const artist = (name: string, tags: string[], sound: string[] = tags): Artist => ({
   name,
   baselineSlot: "B",
   imageURL: "",
   imageSource: "",
   ownTags: tags,
   tags,
-  // The map reads specificTags; a synthetic roster has no umbrellas to strip.
+  // A synthetic roster has no umbrellas to strip.
   specificTags: tags,
+  soundTags: sound,
 });
 
 const distance = (a: { x: number; y: number }, b: { x: number; y: number }): number =>
@@ -48,6 +53,27 @@ describe("pairwiseSimilarities", () => {
     expect(sims[0]![4]).toBeGreaterThan(sims[0]![8]!);
     // …while remaining clearly less similar than two artists sharing all tags.
     expect(sims[0]![4]).toBeLessThan(sims[0]![1]!);
+  });
+
+  it("counts only the tags about the music", () => {
+    // Two acts from one country and decade with nothing musical in common. Both
+    // facts are real and both are on the artists — the 🎲 filter finds them by
+    // either — but sharing a passport is not a resemblance the map may draw.
+    const origins = ["Swedish", "2010s"];
+    const shared = [
+      artist("a", ["punk", ...origins], ["punk"]),
+      artist("b", ["rave", ...origins], ["rave"]),
+    ];
+    const sims = pairwiseSimilarities([...families, ...shared]);
+    expect(sims[12]![13]).toBeCloseTo(0, 6);
+    // The same pair, were the origins counted as sound: not a rounding
+    // difference but the whole verdict, which is why this is filtered at all.
+    const naive = pairwiseSimilarities([
+      ...families,
+      artist("a", ["punk", ...origins]),
+      artist("b", ["rave", ...origins]),
+    ]);
+    expect(naive[12]![13]).toBeGreaterThan(0.5);
   });
 
   it("gives a tagless artist similarity 0 to everyone (and no NaN)", () => {
@@ -106,6 +132,16 @@ describe("computeCloudLayout", () => {
     // pop punk and emo share the "distorted guitars" context; EDM shares
     // nothing with either, so it must be the farther neighbour.
     expect(distance(popPunk, byTag.get("emo")!)).toBeLessThan(distance(popPunk, byTag.get("EDM")!));
+  });
+
+  it("is unmoved by tags that are not about the music", () => {
+    // Every artist gains a shared origin and decade — enough, if the map counted
+    // them, to make the whole roster one undifferentiated blob. Not one
+    // coordinate may shift.
+    const travelled = genreRoster.map((member) =>
+      artist(member.name, [...member.tags, "Swedish", "2010s"], [...member.soundTags]),
+    );
+    expect(computeCloudLayout(travelled)).toEqual(computeCloudLayout(genreRoster));
   });
 
   it("sends artists that fit no cluster to the rim, not into a ring", () => {

@@ -331,7 +331,7 @@ const isolationRow = (artist: ArtistIsolation, mostKin: number, note: boolean): 
     nameCell(artist.name, note && artist.rarestTag !== null ? `rarest: ${artist.rarestTag}` : ""),
     shareBar(artist.kin, {
       of: mostKin,
-      title: `${artist.kin} of your artists share at least half its tags`,
+      title: `${artist.kin} of your artists share at least half its musical tags`,
     }),
   );
   return row;
@@ -630,7 +630,8 @@ const worldRow = (world: TasteWorlds["worlds"][number], largest: number): HTMLEl
 function worldsExplainer(worlds: TasteWorlds): string {
   const base =
     "Above the level of any single tag: your artists gather into genre scenes, and those scenes " +
-    "into a handful of broader worlds. These are the same neighbourhoods the ☁️ map draws, so the " +
+    "into a handful of broader worlds of related sound. These are the same neighbourhoods the ☁️ " +
+    "map draws — grouped, as it is, by what the artists play rather than where or when — so the " +
     "two features agree about the shape of your collection.";
   if (worlds.loners === 0) return base;
   // One loner is common on a well-clustered roster, so this sentence has to
@@ -739,13 +740,13 @@ function buildBody(body: HTMLElement): void {
         ),
         section(
           "Your core sound",
-          "The artists with the most company here — the centre of gravity everything else is arranged around. The count is how many of your other artists carry at least half of this one's tags.",
+          "The artists with the most company here — the centre of gravity everything else is arranged around. The count is how many of your other artists carry at least half of this one's musical tags: its genres and qualities, the same tags the ☁️ map arranges by. Where an artist is from and when it worked are left out — they say nothing about what it sounds like.",
           stats.isolation.core.map((artist) => isolationRow(artist, mostKin, false)),
           { rowsClass: "with-kin" },
         ),
         section(
           "One of a kind",
-          "The same count at its other end: artists almost nothing else you have collected shares a tag list with. A count of 0 means no single other artist carries half of this one's tags — not that it shares no tags at all, which is rare here; most of these still have several tags in common with their nearest neighbour. Being an outlier is not a demerit; these are the corners your taste reaches into.",
+          "The same count at its other end: artists that sound like almost nothing else you have collected. A count of 0 means no single other artist carries half of this one's musical tags — not that it shares no tags at all, which is rare here; most of these still have several in common with their nearest neighbour. Being an outlier is not a demerit; these are the corners your taste reaches into.",
           stats.isolation.distinctive.map((artist) => isolationRow(artist, mostKin, true)),
           { rowsClass: "with-kin" },
         ),

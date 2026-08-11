@@ -135,6 +135,30 @@ export function redundantTags(
 export const isEraTag = (tag: string): boolean => /^\d{4}s$/.test(tag);
 
 /**
+ * The categories that describe **how an artist sounds** — what it plays and how
+ * it plays it — as opposed to where it is from, when it worked, or what is
+ * otherwise notable about it.
+ */
+export const SOUND_CATEGORIES: readonly string[] = ["genre", "quality"];
+
+/**
+ * Is this a tag about the music itself?
+ *
+ * The ☁️ map groups artists by resemblance of *sound* (ARCHITECTURE §7), so its
+ * similarity model reads only these: two Swedish bands are not kin for being
+ * Swedish, and every act working in the 2010s is not one scene. Region, era and
+ * aspect tags are common enough to swamp a co-occurrence profile — between them
+ * they are a third of every tag the roster carries — and what they push together
+ * is a coincidence of biography rather than a neighbourhood anyone can hear.
+ *
+ * An unregistered tag is not a sound tag: the vocabulary is what says a tag
+ * describes the music, and a tag the registry has never heard of makes no such
+ * claim (src/tag-registry.test.ts fails before one can ship).
+ */
+export const isSoundTag = (tag: string, registry: TagRegistry = REGISTRY): boolean =>
+  SOUND_CATEGORIES.includes(registry.category.get(tag) ?? "");
+
+/**
  * The share of the roster a tag may cover before it is **too broad** to
  * describe anyone.
  *

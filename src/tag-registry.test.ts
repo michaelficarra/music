@@ -6,6 +6,7 @@ import { groupTags } from "./tag-groups";
 import {
   broadTags,
   buildRegistry,
+  isSoundTag,
   redundantTags,
   withDerivedTags,
   REGISTRY,
@@ -166,6 +167,29 @@ describe("broadTags", () => {
   });
 });
 
+describe("isSoundTag", () => {
+  const registry = registryOf(
+    "emo,genre,\nscreamed vocals,quality,\nSwedish,region,\n2000s,era,\nsibling band,aspect,\n",
+  );
+
+  it("accepts what an artist plays and how it plays it", () => {
+    expect(isSoundTag("emo", registry)).toBe(true);
+    expect(isSoundTag("screamed vocals", registry)).toBe(true);
+  });
+
+  it("rejects where it is from, when it worked, and what else is notable", () => {
+    expect(isSoundTag("Swedish", registry)).toBe(false);
+    expect(isSoundTag("2000s", registry)).toBe(false);
+    expect(isSoundTag("sibling band", registry)).toBe(false);
+  });
+
+  it("rejects a tag the vocabulary has never heard of", () => {
+    // Nothing has claimed it describes the music, so the ☁️ map must not assume
+    // it does. Such a tag is a test failure elsewhere in this file anyway.
+    expect(isSoundTag("shoegaze", registry)).toBe(false);
+  });
+});
+
 describe("validateRegistry", () => {
   it("reports a derived tag that is not itself registered", () => {
     const problems = validateRegistry(registryOf("ska punk,genre,ska\n"));
@@ -231,6 +255,17 @@ describe("the shipped vocabulary", () => {
       .map((artist) => ({ artist: artist.name, redundant: redundantTags(artist.ownTags) }))
       .filter(({ redundant }) => redundant.length > 0);
     expect(offenders).toEqual([]);
+  });
+
+  it("gives the ☁️ map only tags about the music, and enough of them", () => {
+    // The map has nowhere to put an artist it cannot hear: with no sound tags
+    // it is similar to nobody and lands on the rim by default rather than on
+    // the evidence. A row tagged only by origin and decade is the way that
+    // happens, so the roster is checked for it.
+    for (const artist of artists) {
+      expect(artist.soundTags.every((tag) => isSoundTag(tag))).toBe(true);
+      expect(artist.soundTags.length).toBeGreaterThan(0);
+    }
   });
 
   it("leaves nothing in the 🎲 panel's Other group", () => {

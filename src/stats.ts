@@ -131,9 +131,14 @@ export const FALSE_DISCOVERY_RATE = 0.05;
  * covers four fifths of the roster and no row states it; leading a prevalence
  * list with it describes the vocabulary, and averaging it into a prediction
  * drags every artist towards the roster mean. They are dropped once, in
- * data.ts, so every statistic here — and the ☁️ map, and the card tooltips —
- * works from one definition of what carrying a tag means. Only the 🎲 filter
- * keeps them, since finding artists is exactly what they are good for.
+ * data.ts, so every statistic here — and the card tooltips — works from one
+ * definition of what carrying a tag means. Only the 🎲 filter keeps them, since
+ * finding artists is exactly what they are good for.
+ *
+ * The two sections that *are* the ☁️ map — `rankTasteWorlds` and `rankIsolation`
+ * — narrow it once further, to `soundTags`. They report the map's own grouping,
+ * so they must read what the map reads; every other statistic here is about the
+ * tags themselves and counts regions, eras and aspects among them.
  */
 const countedTags = (artist: Artist): readonly string[] => artist.specificTags;
 
@@ -750,9 +755,10 @@ export interface TasteWorlds {
  * any single tag: genre scenes, agglomerated into families of related sound.
  *
  * Delegated wholesale to `groupRoster` (cloud-layout.ts) so these are the *same*
- * neighbourhoods the ☁️ map draws. Two features describing the shape of one
- * collection must not disagree about what that shape is, and a second clustering
- * invented here would eventually drift from the one the user can see.
+ * neighbourhoods the ☁️ map draws — grouped, as the map is, on `soundTags`
+ * alone. Two features describing the shape of one collection must not disagree
+ * about what that shape is, and a second clustering invented here would
+ * eventually drift from the one the user can see.
  *
  * Purely descriptive, like `categoryComposition`: which artists group together
  * is a fact about their tags, with the tiers playing no part, so there is
@@ -903,6 +909,14 @@ export interface IsolationRankings {
  * closest: one near-twin would otherwise make a genuinely unusual artist look
  * ordinary. Both ends are reported — the crowded centre describes the sound the
  * collection is built around, the sparse edge the one-offs.
+ *
+ * This is the one section reading `soundTags` rather than `countedTags`, and it
+ * reads them throughout — the similarity, the kin count and the rarest-tag note
+ * alike. Both halves of that follow from what the section is: it borrows the ☁️
+ * map's model, so it inherits the map's tag set, and a section that ranked by
+ * musical company while explaining itself with a region would be answering a
+ * question it had not asked. "One of a kind" here means one of a kind to listen
+ * to; the sole artist from Belgium is not thereby unusual.
  */
 export function rankIsolation(
   artists: readonly Artist[],
@@ -912,34 +926,34 @@ export function rankIsolation(
   // Kinship needs at least one neighbour to average over.
   if (ranked.length <= 1) return { core: [], distinctive: [] };
 
-  // How many ranked artists carry each tag, for the rarest-tag annotation.
+  // How many ranked artists carry each sound tag, for the rarest-tag
+  // annotation. No era filter is needed: a decade is not a sound tag, so the
+  // set this reads cannot contain one.
   const carriers = new Map<string, number>();
   for (const artist of ranked) {
-    for (const tag of countedTags(artist)) {
-      if (isEraTag(tag)) continue;
-      carriers.set(tag, (carriers.get(tag) ?? 0) + 1);
-    }
+    for (const tag of artist.soundTags) carriers.set(tag, (carriers.get(tag) ?? 0) + 1);
   }
 
-  // `kinship` is the ☁️ map's own similarity, so it has always counted derived
-  // tags; `kin` and `rarestTag` now do too, which is what finally puts this
-  // whole section on one definition of what carrying a tag means (countedTags).
+  // One tag set throughout — the ☁️ map's `soundTags`, which `kinship` reads by
+  // way of `pairwiseSimilarities`, so `kin` and `rarestTag` read it too. The
+  // alternative, letting the displayed figures count tags the ranking behind
+  // them ignored, is how a list ends up disagreeing with its own explanation.
   const similarities = pairwiseSimilarities(ranked);
-  const tagSets = ranked.map((artist) => new Set(countedTags(artist)));
+  const tagSets = ranked.map((artist) => new Set(artist.soundTags));
   const scored: ArtistIsolation[] = ranked.map((artist, i) => {
     const neighbours = similarities[i]!.filter((_, j) => j !== i).sort((a, b) => b - a);
     const nearest = neighbours.slice(0, ISOLATION_NEIGHBOURS);
-    const rarest = countedTags(artist)
-      .filter((tag) => !isEraTag(tag))
-      .sort((a, b) => carriers.get(a)! - carriers.get(b)! || compareArtistNames(a, b))[0];
-    // Kin: others carrying at least half of this artist's own tags.
-    const needed = Math.ceil(countedTags(artist).length * KIN_SHARE);
+    const rarest = [...artist.soundTags].sort(
+      (a, b) => carriers.get(a)! - carriers.get(b)! || compareArtistNames(a, b),
+    )[0];
+    // Kin: others carrying at least half of this artist's own sound tags.
+    const needed = Math.ceil(artist.soundTags.length * KIN_SHARE);
     let kin = 0;
     if (needed > 0) {
       for (let j = 0; j < ranked.length; j++) {
         if (j === i) continue;
         let shared = 0;
-        for (const tag of countedTags(ranked[j]!)) if (tagSets[i]!.has(tag)) shared += 1;
+        for (const tag of ranked[j]!.soundTags) if (tagSets[i]!.has(tag)) shared += 1;
         if (shared >= needed) kin += 1;
       }
     }

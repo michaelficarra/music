@@ -4,7 +4,7 @@
 import csvText from "../data/artists.csv?raw";
 import { parseCsv } from "./csv";
 import { compareArtistNames } from "./sort";
-import { broadTags, withDerivedTags } from "./tag-registry";
+import { broadTags, isSoundTag, withDerivedTags } from "./tag-registry";
 import { UNRANKED, isTier, type Artist, type Slot } from "./types";
 
 /** Column order in data/artists.csv (see ARCHITECTURE §3). */
@@ -59,10 +59,18 @@ const tagged = bodyRows.map((r) => {
 export const broadTagSet: ReadonlySet<string> = broadTags(tagged);
 
 /** The artist roster, in CSV order. */
-export const artists: readonly Artist[] = tagged.map((artist) => ({
-  ...artist,
-  specificTags: artist.tags.filter((tag) => !broadTagSet.has(tag)),
-}));
+export const artists: readonly Artist[] = tagged.map((artist) => {
+  const specificTags = artist.tags.filter((tag) => !broadTagSet.has(tag));
+  return {
+    ...artist,
+    specificTags,
+    // The ☁️ map's set: the specific tags that describe the music rather than
+    // the artist's origins or dates. Narrowed from `specificTags` rather than
+    // from `tags`, so the breadth rule still applies — a genre on a fifth of
+    // the roster fails to distinguish whatever else is dropped alongside it.
+    soundTags: specificTags.filter((tag) => isSoundTag(tag)),
+  };
+});
 
 /** Baseline slot for each artist, keyed by name. */
 export const baselineByName: ReadonlyMap<string, Slot> = new Map(

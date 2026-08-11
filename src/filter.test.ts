@@ -9,8 +9,9 @@ const artistWithTags = (tags: string[]): Artist => ({
   imageSource: "",
   ownTags: tags,
   tags,
-  // The filter reads `tags`; specificTags is irrelevant here but required.
+  // The filter reads `tags`; the narrower sets are irrelevant here but required.
   specificTags: tags,
+  soundTags: tags,
 });
 
 describe("matchesTags", () => {

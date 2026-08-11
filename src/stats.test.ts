@@ -25,8 +25,11 @@ import { TIERS, TIER_WEIGHT, tierPosition, type Artist, type Slot } from "./type
 
 /** `tags` is what the artist carries; the statistics read `specificTags`, which
     a synthetic roster sets to the same thing — breadth is measured over the real
-    roster in data.ts, not re-derived here. */
-const artist = (name: string, slot: Slot, tags: string[]): Artist => ({
+    roster in data.ts, not re-derived here. `sound` is the narrower set the two
+    ☁️-derived sections read, and defaults to the same list again; the tests
+    about what those sections leave out pass it explicitly, rather than relying
+    on a fixture tag happening to be a real registry region. */
+const artist = (name: string, slot: Slot, tags: string[], sound: string[] = tags): Artist => ({
   name,
   baselineSlot: slot,
   imageURL: "",
@@ -34,11 +37,17 @@ const artist = (name: string, slot: Slot, tags: string[]): Artist => ({
   ownTags: tags,
   tags,
   specificTags: tags,
+  soundTags: sound,
 });
 
 /** `count` artists on one tier sharing one set of tags, uniquely named. */
-const cohort = (prefix: string, slot: Slot, count: number, tags: string[]): Artist[] =>
-  Array.from({ length: count }, (_, i) => artist(`${prefix}${i}`, slot, tags));
+const cohort = (
+  prefix: string,
+  slot: Slot,
+  count: number,
+  tags: string[],
+  sound: string[] = tags,
+): Artist[] => Array.from({ length: count }, (_, i) => artist(`${prefix}${i}`, slot, tags, sound));
 
 /** A TagStat literal for testing the ranking functions in isolation. Only the
     fields a given ranking reads need overriding. */
@@ -512,18 +521,32 @@ describe("rankIsolation", () => {
     expect(distinctive[0]!.rarestTag).toBe("instrumental");
   });
 
-  it("never explains an artist with an era tag", () => {
-    // Eras belong to their own section, and "the 1950s" says nothing about why
-    // an artist is unlike its neighbours.
+  it("weighs and explains an artist by its sound alone", () => {
+    // This section borrows the ☁️ map's model, so it reads what the map reads:
+    // genres and musical qualities. A decade belongs to its own section, and an
+    // origin nobody else shares does not make an artist unusual to listen to —
+    // neither may be the reason given for putting one on the lonely end.
     const { core, distinctive } = rankIsolation([
-      ...cohort("scene", "B", 6, ["emo", "pop punk", "1990s"]),
-      artist("crooner", "C", ["1950s", "traditional pop"]),
+      ...cohort("scene", "B", 6, ["emo", "pop punk", "1990s"], ["emo", "pop punk"]),
+      artist("crooner", "C", ["1950s", "Canadian", "traditional pop"], ["traditional pop"]),
     ]);
     for (const entry of [...core, ...distinctive]) {
       expect(entry.rarestTag).not.toBeNull();
       expect(isEraTag(entry.rarestTag!)).toBe(false);
+      expect(entry.rarestTag).not.toBe("Canadian");
     }
     expect(distinctive[0]!.rarestTag).toBe("traditional pop");
+  });
+
+  it("counts kin by shared sound, not by shared origins", () => {
+    // Six artists from one country: five are a scene, the sixth plays something
+    // else entirely. Counting the country would give it five companions.
+    const { distinctive } = rankIsolation([
+      ...cohort("scene", "B", 5, ["emo", "pop punk", "Canadian"], ["emo", "pop punk"]),
+      artist("odd one", "C", ["free jazz", "Canadian"], ["free jazz"]),
+    ]);
+    expect(distinctive[0]!.name).toBe("odd one");
+    expect(distinctive[0]!.kin).toBe(0);
   });
 
   it("ranks both ends over the same artists, and excludes unranked ones", () => {
