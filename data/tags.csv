@@ -189,6 +189,7 @@ space rock,genre,psychedelic rock
 speed metal,genre,metal
 street punk,genre,punk rock
 swing,genre,big band
+swing revival,genre,swing
 symphonic metal,genre,metal
 symphonic power metal,genre,power metal;symphonic metal
 synthpop,genre,electronic;new wave;pop
@@ -349,6 +350,7 @@ St. Louis,region,Missouri
 Stockholm,region,Swedish
 Swedish,region,Scandinavian
 Tennessee,region,American
+Texas,region,American
 Tokyo,region,Japanese
 Toronto,region,Ontario
 Washington State,region,American
