@@ -87,7 +87,13 @@ Columns, in order:
   Two rules govern how many tags a row carries and which ones:
 
   - **There is no upper or lower bound — accuracy is the only criterion.** An artist warranting
-    four tags gets four; one warranting thirty gets thirty. (Today the roster runs about 13–24.)
+    four tags gets four; one warranting thirty gets thirty. (Today the roster runs about 8–21.)
+  - **A tag must be representative, not merely true.** A trait resting on a single album, a one-off
+    collaboration, or a phase the artist is not identified with does not go on the row: Lady Gaga
+    made two jazz records with Tony Bennett and is not tagged `jazz`, while Vulfpeck is. §9a's
+    research script is what separates the two — MusicBrainz **vote share** measures how much of an
+    artist's identity a genre actually is, where a Wikipedia infobox lists every genre ever touched
+    and so cannot on its own justify a tag.
   - **Rows carry only the most specific tag in each direction — never one that another implies.**
     A row saying `pop punk` does not also say `punk rock`, `pop rock` or `rock`; a row saying
     `Swedish` does not also say `Scandinavian` or `European`. The rest are derived at
@@ -114,7 +120,7 @@ here is a test failure, not a shrug.
 Where tags *do* relate, they form a **directed acyclic graph** rather than a flat list: a tag names
 the more general tags derived from it, and the app derives them transitively. That is what lets the
 🎲 panel's `European` find the Swedes and `punk rock` find the ska-punk and skate-punk bands,
-without any of it being written on 253 artist rows by hand.
+without any of it being written on 284 artist rows by hand.
 
 | Column     | Meaning |
 | ---------- | --- |
@@ -166,10 +172,10 @@ The 📊 dialog's composition list ("What your list is made of") reading `ownTag
 **`soundTags` (`isSoundTag`, `tag-registry.ts`) is what the map means by likeness.** The map exists
 to show which artists sound alike, and the three excluded categories do not answer that question
 while being numerous enough to drown out the ones that do: `region`, `era` and `aspect` together are
-**a third of every tag the roster carries** (1 280 of 3 751 `specificTags` entries), and a single
+**a third of every tag the roster carries** (1 276 of 3 630 `specificTags` entries), and a single
 era sits on hundreds of artists at once. Counting them, the median similarity between two artists
-picked at random from the roster is **0.667** — the model had almost no room left to say that two
-artists are *not* alike. On `soundTags` it is **0.395**. Two second-order effects go with it: while
+picked at random from the roster is **0.681** — the model had almost no room left to say that two
+artists are *not* alike. On `soundTags` it is **0.402**. Two second-order effects go with it: while
 regions co-occurred with genres, one country's scene bled into the co-occurrence profile of every
 genre played there; and a scene defined by an origin rather than a sound (`J-pop`) was stranded as
 a world of its own instead of sitting with the music it resembles.
@@ -386,7 +392,7 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
   qualities among its specific tags. The map's whole claim is "these artists sound alike", so a
   shared country or decade must not contribute to it. Because the excluded categories are a third
   of the roster's tags, this is not a refinement at the margin: it halves the median similarity
-  between two random artists (0.667 → 0.395), which is the room the model needs to distinguish
+  between two random artists (0.681 → 0.402), which is the room the model needs to distinguish
   anyone from anyone.
 - **Similarity model** (`pairwiseSimilarities`): each sound tag gets a **co-occurrence profile** — a
   vector of how often it appears alongside every other across the roster, L2-normalised so tags
@@ -593,14 +599,14 @@ without a single artist changing — a figure that swings on CSV hygiene is meas
 **Broad tags are dropped** because they are the mirror-image error, and dropping them is not merely
 cosmetic:
 
-- The prevalence lists would otherwise be led by `rock` (82%) over every genre anyone chose — the
+- The prevalence lists would otherwise be led by `rock` (80%) over every genre anyone chose — the
   failure PRD §10.2 forbids, an ordering that is an artefact of how the data is stored.
-- `measurePredictivePower` improves from r² 0.46% to 0.60%: a tag four fifths of the roster carries
+- `measurePredictivePower` improves from r² 0.29% to 0.32%: a tag four fifths of the roster carries
   has a leave-one-out mean of nearly the roster mean, so averaging it into every prediction flattens
   the model rather than informing it.
-- The multiplicity correction tests 196 tags instead of 217, since a tag that sits at the roster
+- The multiplicity correction tests 192 tags instead of 213, since a tag that sits at the roster
   average by construction cannot reach a tail but still tightens the cutoff for tags that can. The
-  Benjamini–Hochberg margin rises from 4.6× to 5.1× (§8.2a).
+  Benjamini–Hochberg margin rises from 4.69× to 5.21× (§8.2a).
 
 This puts the whole dialog on one definition of carrying a tag. Only the 🎲 filter keeps the broad
 tags, since finding artists is exactly what they are good for.
@@ -712,15 +718,15 @@ tail. The resulting p-values are corrected with **Benjamini–Hochberg** at `FAL
 `rankReliable` and `rankVariable` on `clusteringIsReal`.
 
 `NULL_SAMPLES` is load-bearing, not a tuning knob: with S shuffles the smallest observable p-value
-is 1/(S+1), and BH's rank-1 threshold here is 0.05/196 ≈ 0.00026. At 2 000 shuffles **no tag could
+is 1/(S+1), and BH's rank-1 threshold here is 0.05/192 ≈ 0.00026. At 2 000 shuffles **no tag could
 pass however real it was**, which would look like a finding rather than the measurement artefact it
 is. At 20 000 the floor (0.00005) clears the threshold by a factor of ~5.1. It was raised from
 10 000 when §8.0 switched to counting derived tags; excluding the too-broad ones (§3b) then brought
 the tested count back down to 196, so the margin is now comfortable rather than marginal.
 
 On the shipped roster **nothing clears the gate**, and the dialog says so rather than showing a
-heading over nothing. The strongest tag is `indietronica` at p = 0.0027 (12 carriers) against that
-0.00026 threshold; the tags clearing p < 0.05 uncorrected are about what 196 × 0.05 ≈ 10 coin flips
+heading over nothing. The strongest tag is `indietronica` at p = 0.00295 (12 carriers) against that
+0.00026 threshold; the tags clearing p < 0.05 uncorrected are about what 192 × 0.05 ≈ 10 coin flips
 produce anyway. That result is pinned in
 `stats.test.ts` so a data change that produces real preferences fails loudly and gets looked at.
 Each tag's uncorrected p survives on `TagStat.elevationP` precisely so these figures can be

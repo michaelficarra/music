@@ -38,6 +38,17 @@ the PRD; if it's about how the code achieves it, it's ARCHITECTURE.
   - **There is no target number of tags.** Four is fine, thirty is fine; accuracy is the only
     criterion. (Do not restore the old 5–10 rule, or the old "every tag shared by ≥2 artists"
     rule — both were dropped deliberately.)
+  - **A tag must be representative, not merely true.** A trait resting on one album, one
+    collaboration, or a phase the artist is not identified with does not earn a tag — Lady Gaga's
+    two Tony Bennett records do not make her `jazz`, though Vulfpeck is. Weigh **MusicBrainz vote
+    share**, not mere presence: a Wikipedia infobox lists every genre an artist ever touched, so it
+    can corroborate a tag but never justify one alone. Rarity is not weakness — a tag on one artist
+    can be their strongest.
+  - **`indie` is deliberately absent from the vocabulary.** It names how a record was released, not
+    how it sounds. `indie rock`, `indie pop` and `indie folk` were removed from every row and from
+    `data/tags.csv`, and the sub-genres that derived `indie pop` (`bedroom pop`, `dream pop`,
+    `jangle pop`, `noise pop`, `twee pop`, `indietronica`) now derive `pop`. Do not reintroduce
+    them. `indietronica` is kept on purpose: the prefix is an artefact, the sound is real.
 - Minting a tag means adding a row to `data/tags.csv`, **not** editing
   `src/tag-groups.ts` (which no longer lists tags). Give it a category and the tags it derives
   directly. `npm test` fails if a roster tag is unregistered, if a derived tag does not resolve,
@@ -103,17 +114,17 @@ a descriptive count inferential *and* smuggled tier position back in as the meas
 **Three findings are settled. Do not re-derive them, and do not build features that assume
 otherwise:**
 
-1. **The tags barely predict the tiers** — r² ≈ 0.6% over 243 artists (`measurePredictivePower`).
+1. **The tags barely predict the tiers** — r² ≈ 0.32% over 245 artists (`measurePredictivePower`).
    Any statistic ranking artists by distance from a tag-based prediction therefore collapses into
    "what tier is it", because the prediction is nearly constant. Two sections died this way; the
    dialog now reports the measurement instead. Nothing has ever rescued it: tripling the vocabulary
-   moved r² from ~1% to ~2%, counting derived tags dropped it to 0.46%, and excluding the too-broad
+   moved r² from ~1% to ~2%, counting derived tags dropped it to 0.29%, and excluding the too-broad
    ones recovered only a little of that. This one reads `tierPosition`, so retuning `TIER_WEIGHT` leaves
    it untouched — only the roster and the tagging move it.
 2. **No tag's elevation survives correction.** Every list picks the best of ~180 tags, and over that
-   many tries the best of anything looks striking. The strongest real tag reaches p = 0.0027
+   many tries the best of anything looks striking. The strongest real tag reaches p = 0.00295
    (`indietronica`, 12 carriers) against a Benjamini–Hochberg threshold of 0.00026. The handful
-   clearing p < 0.05 uncorrected is about what 196 × 0.05 ≈ 10 coin flips produce anyway. Re-measure
+   clearing p < 0.05 uncorrected is about what 192 × 0.05 ≈ 10 coin flips produce anyway. Re-measure
    rather than trusting these numbers after a retag **or after retuning `TIER_WEIGHT`** — both move
    them, and every tag's uncorrected p is on `TagStat.elevationP`.
 3. **Prevalence cannot separate taste from base rate.** A tag's frequency carries both how much
@@ -134,14 +145,14 @@ otherwise:**
   found among the fewest carriers unless shrunk (`PRIOR_STRENGTH`) or floored (`SPREAD_MIN_SUPPORT`).
 - **Check that a chosen threshold is reachable.** `NULL_SAMPLES` at 2 000 made *every* tag fail by
   arithmetic, because the smallest observable p-value was above the correction's cut — a
-  measurement artefact that looked exactly like a finding. At 20 000 against 196 tested tags the
-  margin is ~5.1×; growing the vocabulary further eats it.
+  measurement artefact that looked exactly like a finding. At 20 000 against 192 tested tags the
+  margin is ~5.2×; growing the vocabulary further eats it.
 - **Count `specificTags`** (`countedTags`) — every tag the row implies, derived ones included,
   minus the too-broad ones (ARCHITECTURE §3b). Both halves were measured. Derived tags count because
   whether a band is *written down* as pop punk is CSV hygiene, not a fact about the music: rows
   carry only their most specific tag, so Paramore says `emo pop` and stops, and enforcing that rule
   across the roster once moved `pop punk` from 39 carriers to 30 without one artist changing. Broad
-  tags are dropped because they are the mirror-image error — `rock` covers 82% of the roster and no
+  tags are dropped because they are the mirror-image error — `rock` covers 80% of the roster and no
   row states it.
 - **Too broad means "fails to distinguish", and is measured by prevalence alone.** `broadTags`
   marks a tag broad when it covers more than `BROAD_PREVALENCE` (a fifth) of the roster. Whether a
@@ -158,7 +169,7 @@ otherwise:**
   genres and musical qualities (ARCHITECTURE §3b). That is the ☁️ map and the two 📊 sections built
   on it: the worlds, and core/one-of-a-kind. Regions, eras and aspects are a third of the roster's
   tags and one era covers hundreds of artists, so counting them halved the model's usable range
-  (median pairwise similarity 0.667 → 0.395) and produced worlds that were really origins in
+  (median pairwise similarity 0.681 → 0.402) and produced worlds that were really origins in
   disguise. Do not reintroduce them "for a fuller picture", and do not extend the restriction to
   the rest of 📊: everywhere else the subject *is* the tags, regions and eras included.
 - **"What your list is made of" is the exception: it counts `ownTags` and applies no breadth rule.**

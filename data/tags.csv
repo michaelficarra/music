@@ -18,7 +18,7 @@ atmospheric folk,genre,folk
 avant-funk,genre,experimental;funk
 baroque pop,genre,chamber pop
 beatdown hardcore,genre,hardcore
-bedroom pop,genre,indie pop
+bedroom pop,genre,pop
 big band,genre,jazz
 blues,genre,
 blues rock,genre,blues;rock
@@ -49,7 +49,7 @@ deconstructed club,genre,electronic
 digital hardcore,genre,electronic;hardcore
 disco,genre,funk
 djent,genre,progressive metal
-dream pop,genre,indie pop
+dream pop,genre,pop
 dub,genre,reggae
 dubstep,genre,EDM
 easy listening,genre,traditional pop
@@ -102,15 +102,12 @@ hip hop,genre,
 hip house,genre,hip hop;house
 house,genre,electronic
 hyperpop,genre,electronic;pop
-indie folk,genre,folk
-indie pop,genre,pop
-indie rock,genre,alternative rock
-indietronica,genre,electronic;indie pop
+indietronica,genre,electronic;pop
 industrial,genre,electronic
 industrial metal,genre,industrial;metal
 industrial rock,genre,industrial;rock
 J-pop,genre,pop
-jangle pop,genre,indie pop
+jangle pop,genre,pop
 jazz,genre,
 jazz fusion,genre,jazz
 kawaii metal,genre,J-pop;metal
@@ -134,7 +131,7 @@ neon pop punk,genre,pop punk
 new age,genre,
 new wave,genre,rock
 no wave,genre,experimental;punk rock
-noise pop,genre,indie pop;noise rock
+noise pop,genre,pop;noise rock
 noise rock,genre,alternative rock;experimental
 nu metal,genre,alternative metal
 nu-disco,genre,disco
@@ -201,7 +198,7 @@ thrash metal,genre,metal
 traditional pop,genre,pop
 trap,genre,hip hop
 trip hop,genre,electronic;hip hop
-twee pop,genre,indie pop
+twee pop,genre,pop
 vocal jazz,genre,jazz
 witch house,genre,electronic
 acoustic textures,quality,

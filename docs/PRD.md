@@ -26,8 +26,10 @@ Each **artist** has:
   that fails to load is treated the same as none — see §11),
 - a set of **tags** — descriptive labels (genres, musical qualities, regions, eras, notable
   aspects) used by the random picker's tag filter (§8) and to lay out the artist map (§9); an
-  artist may have none. How many an artist carries varies: a tag is present when it is accurate,
-  and there is no target number.
+  artist may have none. How many an artist carries varies: a tag is present when it is accurate
+  **and representative of the artist's body of work**, and there is no target number. A trait
+  resting on a single album, a one-off collaboration, or a phase the artist is not identified with
+  is not a tag.
 
 **Tags form a hierarchy: a specific tag always carries with it the more general tags containing
 it, and those are called its *derived tags*.** An artist described as *pop punk* also derives punk
