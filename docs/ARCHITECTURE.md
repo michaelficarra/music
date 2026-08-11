@@ -483,23 +483,46 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
 - **Rendering & interaction** (`cloud.ts`): one absolutely-positioned node per artist (the
   shared thumbnail from `src/thumb.ts` plus a name caption) on a `.cloud-plane` in **world px**,
   where the world's size maps the layout's spacing unit onto the node footprint
-  (`NODE_SPACING`) exactly — density is by construction, not tuning. The cluster markers are
-  circles appended **before** the nodes (so they paint behind), filled with a soft
-  radial gradient rather than an outline, in **two layers**: the `.cloud-ring` element is the
-  **core**, drawn at the cluster's exact geometric radius and carrying a `title` tooltip naming its
-  genre and members, and its `::before` is the **haze**, three times the diameter (`inset: -100%`), with
-  `pointer-events: none` and `z-index: -1` inside the plane's isolated stacking context
-  (`isolation: isolate`). The haze is the layer that makes the map read as a cloud — neighbouring
-  clusters' haloes mingle in it — so it is drawn *heavier* than the core (peak 15% against 12%),
-  which then thickens the light towards each heart. Only the cores take the pointer, and step 3's packing
-  makes them **disjoint**, so overlapping light can never mean an overlapping hit region: a hover
-  always answers with the cluster it is inside. Loners get a halo of the same two layers, its core
-  half a spacing unit to match the layout's `LONER_CLEARANCE` (tooltip: the artist's own, as on the
-  node above it). Both layers are drawn in the ring's own `--family` colour, which `cloud.ts` sets
-  from `FAMILY_TINTS` — the eight **Solarized** accent hues, indexed by `CloudCluster.family` and
-  ordered warm/cool alternately so adjacent ranks are never adjacent hues — and which the CSS
-  dilutes to `--glow` (60% hue, 40% white) before mixing each gradient stop down to its alpha with
-  `color-mix`. A loner's halo leaves `--family` at its white default, having no family to name. Pan and zoom never touch the nodes: both are a single
+  (`NODE_SPACING`) exactly — density is by construction, not tuning. The cluster markers are soft
+  radial gradients rather than outlines, in **two layers** appended **before** the nodes (so they
+  paint behind):
+
+  - the **haze** — every cluster's halo, three ring radii across and free to overlap its
+    neighbours', which is what makes a field of discs read as one cloud. It is **a single
+    `<canvas>` in screen space**: a viewport-sized sibling *before* the plane (so it lies behind
+    everything), redrawn by `drawHaze` against the current `world × scale + offset` whenever the
+    view moves, coalesced to one redraw per frame and culled to the haloes actually on screen.
+    Two earlier arrangements are why, and neither should be reinstated:
+    - **As ~50 overlapping gradient elements on the plane** it was the map's one expensive layer
+      (a zoom sweep's median frame 19.9 ms against 16.7 ms without it, p95 31.7 ms against 17.6 ms)
+      and **Chromium flashed while zooming**, re-tiling the world mid-gesture, where WebKit did not.
+      `will-change: transform` on the plane is not the fix and was tried: promoting a world this
+      large to one compositor layer makes Chromium fail to raster it at all, and the haze comes back
+      as torn bands of stale tile.
+    - **As one texture pinned to the world** the zoom cost vanished, but any texture big enough to
+      span the world is coarse enough to show its own texel grid once magnified — and at the 4×
+      cap none is big enough. Drawing per view sidesteps the trade: the picture is always made at
+      the resolution it is shown at, and the whole redraw measures ~0.7 ms.
+  - the **core** — the `.cloud-ring` element itself, at the cluster's exact geometric radius, over
+    the haze, carrying the `title` tooltip that names the genre and members. Drawn a little lighter
+    than the haze (peak 12% against 15%), it thickens the light towards each heart.
+
+  Only the cores take the pointer, and step 3's packing makes them **disjoint**, so overlapping
+  light can never mean an overlapping hit region: a hover always answers with the cluster it is
+  inside. The ring's `::before` (`z-index: -1` inside the plane's isolated stacking context,
+  `pointer-events: none`) is haze-shaped but transparent until the cluster is spotlit, when it
+  blooms in the accent — the canvas cannot fade one cluster at a time, and a handful of lit
+  gradients is exactly the cost that made fifty untenable. The canvas takes `spotlit` on itself,
+  not being on the plane. Loners get a halo of both layers, its core half a spacing unit to match
+  the layout's `LONER_CLEARANCE` (tooltip: the artist's own, as on the node above it).
+
+  Both layers are drawn in the same light: `glowColour` takes the family's hue from `FAMILY_TINTS` —
+  the eight **Solarized** accent hues, indexed by `CloudCluster.family` and ordered warm/cool
+  alternately so adjacent ranks are never adjacent hues — and dilutes it with white
+  (`TINT_STRENGTH`, 60%). `drawHaze` fills with that value directly and the ring gets it as
+  `--glow`, which the CSS mixes down to each stop's alpha with `color-mix`; deriving it once in
+  script is what stops the two layers describing the same family differently. A loner's halo leaves
+  `--glow` at its white default, having no family to name. Pan and zoom never touch the nodes: both are a single
   `translate(…) scale(…)` transform on the plane. Wheel events zoom **anchored on the cursor**
   (exponential in deltaY, normalised for line-mode deltas; trackpad pinches arrive as
   ctrl+wheel and work unchanged), clamped between half the fitted overview and a 4× close-up.
@@ -507,7 +530,10 @@ full-screen `<dialog id="cloud-dialog">` shell in `index.html`.
   pointers: each move re-anchors the view so the world point under the pointers' midpoint
   follows it, scaled by the ratio of their separation — with one pointer that reduces to a
   plain pan, with two it is a pinch zoom (same scale clamp as the wheel). Panning is clamped
-  so part of the world square always stays on screen.
+  so part of the world square always stays on screen. Every view change redraws the haze; the
+  `.gliding` reveal is a CSS transition the canvas cannot see, so `glide` runs a frame loop that
+  reads the plane's *animated* matrix back off the element and draws against that until the class
+  is dropped. A window resize redraws it too — the plane needs no such help, being in world px.
   The dialog opens via `showModal()` (Esc/close requests are native); being full-screen there
   is no visible backdrop, so no `closedby` light-dismiss — the ✕ button calls `dialog.close()`.
   While it is open, the page's own scroll bar is suppressed

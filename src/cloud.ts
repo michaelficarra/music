@@ -35,11 +35,12 @@ const PAN_MARGIN = 64;
 // down (`CloudCluster.family` is that rank). These are the eight accent colours
 // of Ethan Schoonover's Solarized palette — chosen rather than mixed by hand
 // because they were picked for equal weight against a dark ground, which is
-// exactly the job here; the CSS dilutes each with white, so what reaches the map
-// is a lean, not a colour cast. The order alternates warm and cool so that
-// families of adjacent rank, which are nothing to do with each other, never come
-// out in neighbouring hues. Eight covers the ~√k families the layout makes (7 on
-// the current roster) with one to spare; beyond that it cycles.
+// exactly the job here; `glowColour` below dilutes each with white, so what
+// reaches the map is a lean, not a colour cast. The order alternates warm and
+// cool so that families of adjacent rank, which are nothing to do with each
+// other, never come out in neighbouring hues. Eight covers the ~√k families the
+// layout makes (7 on the current roster) with one to spare; beyond that it
+// cycles.
 const FAMILY_TINTS = [
   "#268bd2", // blue
   "#cb4b16", // orange
@@ -49,6 +50,55 @@ const FAMILY_TINTS = [
   "#b58900", // yellow
   "#6c71c4", // violet
   "#dc322f", // red
+];
+
+// How much of the family's hue survives the dilution with white. Enough to tell
+// one neighbourhood from the next; not enough to turn the map into a chart of
+// coloured regions.
+const TINT_STRENGTH = 0.6;
+
+/**
+ * The light a family's glow is actually drawn with: its hue diluted with white.
+ * Both layers read this one value — the canvas haze paints with it directly, and
+ * the ring core gets it as the `--glow` custom property — so the two can never
+ * drift into describing the same family differently.
+ */
+function glowColour(tint: string): { r: number; g: number; b: number } {
+  const channel = (offset: number): number => {
+    const hue = parseInt(tint.slice(offset, offset + 2), 16);
+    return Math.round(hue * TINT_STRENGTH + 255 * (1 - TINT_STRENGTH));
+  };
+  return { r: channel(1), g: channel(3), b: channel(5) };
+}
+
+// The haze: each glow's wide, diffuse outer halo, three ring radii across and
+// free to overlap its neighbours' — the layer that makes a field of discs read
+// as one cloud (PRD §9).
+//
+// It is painted into **one canvas, in screen space**, redrawn for each view
+// rather than living on the plane. Two failed approaches are why:
+//
+//   - As one huge gradient element per cluster, fifty of them overlapping and
+//     alpha-blended over a world tens of thousands of px wide, it was the map's
+//     one expensive layer, and Chromium re-rastered it mid-zoom so the map
+//     visibly flashed (ARCHITECTURE §7). WebKit did not.
+//   - As a single texture pinned to the world it cost nothing to zoom, but any
+//     texture large enough to cover the world is coarse enough to show its own
+//     texel grid once magnified, and no texture is large enough at 4×.
+//
+// Drawing it against the current transform sidesteps both: the picture is always
+// made at exactly the resolution it is shown at, off-screen haloes are skipped,
+// and the whole redraw measures ~0.7 ms — a twentieth of a frame.
+const HAZE_RADIUS_SCALE = 3;
+// The same five-stop falloff the cores use, a little heavier at the peak: this
+// is the layer that carries the cloud, and the core then thickens the light
+// towards each heart.
+const HAZE_STOPS: readonly [number, number][] = [
+  [0, 0.15],
+  [0.25, 0.126],
+  [0.5, 0.07],
+  [0.75, 0.024],
+  [1, 0],
 ];
 
 // An unclustered artist's core: half a spacing unit, matching the layout's
@@ -86,6 +136,72 @@ function ringTooltip(cluster: CloudCluster): string {
   return [heading, ...[...groups].map(([via, names]) => `${via}: ${names.join(", ")}`)].join("\n");
 }
 
+/** Where the map currently sits on screen, and how large its world is. */
+interface HazeView {
+  world: number;
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Draw the haze for one view: every cluster's halo in its family's light, and a
+ * node-sized one for each loner in the neutral white of no family at all, placed
+ * by the same `world × scale + offset` transform the plane itself carries.
+ *
+ * Haloes falling outside the viewport are skipped. That is not a micro-
+ * optimisation: zoomed in, a single halo can be several screens across, and the
+ * cull is what keeps a redraw proportional to the screen rather than the world.
+ */
+function drawHaze(
+  context: CanvasRenderingContext2D,
+  layout: CloudLayout,
+  clustered: ReadonlySet<string>,
+  view: HazeView,
+): void {
+  context.clearRect(0, 0, view.width, view.height);
+  const halo = (
+    worldX: number,
+    worldY: number,
+    worldRadius: number,
+    glow: ReturnType<typeof glowColour>,
+  ): void => {
+    const x = view.offsetX + worldX * view.scale;
+    const y = view.offsetY + worldY * view.scale;
+    const radius = worldRadius * view.scale;
+    if (x + radius < 0 || y + radius < 0 || x - radius > view.width || y - radius > view.height) {
+      return;
+    }
+    const gradient = context.createRadialGradient(x, y, 0, x, y, radius);
+    for (const [stop, alpha] of HAZE_STOPS) {
+      gradient.addColorStop(stop, `rgba(${glow.r}, ${glow.g}, ${glow.b}, ${alpha})`);
+    }
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.arc(x, y, radius, 0, 2 * Math.PI);
+    context.fill();
+  };
+
+  for (const cluster of layout.clusters) {
+    halo(
+      cluster.x * view.world,
+      cluster.y * view.world,
+      HAZE_RADIUS_SCALE * cluster.radius * view.world,
+      glowColour(FAMILY_TINTS[cluster.family % FAMILY_TINTS.length]!),
+    );
+  }
+  for (const point of layout.points) {
+    if (clustered.has(point.name)) continue;
+    halo(point.x * view.world, point.y * view.world, HAZE_RADIUS_SCALE * LONER_CORE_RADIUS, {
+      r: 255,
+      g: 255,
+      b: 255,
+    });
+  }
+}
+
 export interface Cloud {
   /** Show the map, building it on first use, fitted to the viewport. */
   open(): void;
@@ -116,6 +232,15 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
   const haloByName = new Map<string, HTMLElement>();
   const ringByCluster: HTMLElement[] = [];
 
+  // The haze layer: a screen-space canvas *behind* the plane rather than on it,
+  // redrawn for whatever view is current (see drawHaze), plus the names it draws
+  // a solitary halo for.
+  let haze: HTMLCanvasElement | null = null;
+  let hazeContext: CanvasRenderingContext2D | null = null;
+  let clustered: ReadonlySet<string> = new Set();
+  // The pending redraw, so a burst of wheel or pointer events costs one.
+  let hazeFrame = 0;
+
   // The view transform: screen = world × scale + (offsetX, offsetY), applied to
   // the plane as a single translate+scale (so panning and zooming never touch
   // the per-node geometry).
@@ -124,8 +249,48 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
   let offsetY = 0;
   let fitScale = 1; // the whole-cloud overview scale, recomputed per open
 
+  /**
+   * Redraw the haze for a given transform, resizing the canvas to the viewport
+   * (in device pixels) if that has changed. Taking the transform as arguments
+   * rather than reading the closure's is what lets the glide below follow a
+   * transition it does not control.
+   */
+  function paintHaze(atScale: number, atOffsetX: number, atOffsetY: number): void {
+    if (haze === null || hazeContext === null || layout === null) return;
+    const width = viewport.clientWidth;
+    const height = viewport.clientHeight;
+    const pixelRatio = window.devicePixelRatio || 1;
+    const pixelWidth = Math.round(width * pixelRatio);
+    const pixelHeight = Math.round(height * pixelRatio);
+    if (haze.width !== pixelWidth || haze.height !== pixelHeight) {
+      haze.width = pixelWidth;
+      haze.height = pixelHeight;
+    }
+    // Draw in CSS px and let the context scale to the backing store, so the
+    // picture is made at exactly the resolution it is shown at.
+    hazeContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    drawHaze(hazeContext, layout, clustered, {
+      world,
+      scale: atScale,
+      offsetX: atOffsetX,
+      offsetY: atOffsetY,
+      width,
+      height,
+    });
+  }
+
+  // One redraw per frame at most, however many events moved the view.
+  function scheduleHaze(): void {
+    if (hazeFrame !== 0) return;
+    hazeFrame = window.requestAnimationFrame(() => {
+      hazeFrame = 0;
+      paintHaze(scale, offsetX, offsetY);
+    });
+  }
+
   function applyTransform(): void {
     plane!.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+    scheduleHaze();
   }
 
   // Don't let the cloud leave the screen entirely: at least PAN_MARGIN px of
@@ -151,12 +316,19 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
     layout = built;
     searchIndex = buildSearchIndex(artists, allSoundTags);
     world = NODE_SPACING / built.spacing;
-    // Rings go onto the plane first, so the artist nodes paint over them. Each
-    // is drawn at the cluster's exact geometric radius: the wider haze that
-    // makes the map look like a cloud is the ring's own backdrop, supplied in
-    // CSS and deaf to the pointer, so only these disjoint circles are hoverable
-    // (the layout guarantees they never overlap) and a cluster can never take a
-    // neighbour's tooltip.
+    // The haze canvas goes into the viewport, before the plane, so it lies
+    // behind everything. It is not on the plane: the plane is transformed, and
+    // the whole point is that the haze is drawn afresh for each view instead of
+    // being stretched with one.
+    clustered = new Set(built.clusters.flatMap((cluster) => cluster.members));
+    haze = document.createElement("canvas");
+    haze.className = "cloud-haze";
+    hazeContext = haze.getContext("2d");
+    viewport.appendChild(haze);
+    // Then the ring cores, before the nodes so those paint over them. Each is
+    // drawn at the cluster's exact geometric radius, and is the only hoverable
+    // part of the glow: the layout guarantees the cores never overlap, so a
+    // cluster can never take a neighbour's tooltip however far its haze spills.
     for (const cluster of built.clusters) {
       const ring = document.createElement("div");
       ring.className = "cloud-ring";
@@ -165,9 +337,11 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
       const diameter = 2 * cluster.radius * world;
       ring.style.width = `${diameter}px`;
       ring.style.height = `${diameter}px`;
-      // Both layers of light read this; a loner's halo leaves it unset and keeps
-      // the neutral white, since a loner is in no family.
-      ring.style.setProperty("--family", FAMILY_TINTS[cluster.family % FAMILY_TINTS.length]!);
+      // The family's diluted light, matching what the haze beneath was painted
+      // with. A loner's halo leaves it unset and keeps the neutral white, since a
+      // loner is in no family.
+      const { r, g, b } = glowColour(FAMILY_TINTS[cluster.family % FAMILY_TINTS.length]!);
+      ring.style.setProperty("--glow", `rgb(${r} ${g} ${b})`);
       // Hovering the space inside a ring explains the cluster — handy at the
       // fitted overview, where the member names are too small to read.
       ring.title = ringTooltip(cluster);
@@ -175,11 +349,10 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
       plane.appendChild(ring);
     }
     // Unclustered artists get a halo of their own — a node-sized pool of the
-    // same light (core and haze both), so a loner reads as deliberately alone,
-    // not forgotten. Its tooltip is the artist's own, mirroring the cluster
-    // glows' explanations; the node above it carries the same text, so nothing
-    // is lost where the two overlap.
-    const clustered = new Set(built.clusters.flatMap((cluster) => cluster.members));
+    // same light (core here, haze in the canvas), so a loner reads as
+    // deliberately alone, not forgotten. Its tooltip is the artist's own,
+    // mirroring the cluster glows' explanations; the node above it carries the
+    // same text, so nothing is lost where the two overlap.
     artists.forEach((artist, i) => {
       if (clustered.has(artist.name)) return;
       const halo = document.createElement("div");
@@ -234,6 +407,9 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
       element.classList.remove("spotlit", "in-spotlight");
     }
     plane.classList.toggle("spotlit", entry !== null);
+    // The haze recedes with everything else, but it is not on the plane, so it
+    // takes the class itself.
+    haze?.classList.toggle("spotlit", entry !== null);
     if (entry === null) return null;
     const spotlight = resolveSpotlight(layout, artists, entry);
     for (const index of spotlight.clusters) {
@@ -334,11 +510,31 @@ export function createCloud(dialog: HTMLDialogElement): Cloud {
     plane.classList.add("gliding");
     window.setTimeout(() => plane?.classList.remove("gliding"), REVEAL_MS + 50);
     update();
+    // The plane's move is a CSS transition, which the haze — drawn in screen
+    // space, from numbers this module holds — knows nothing about. So follow it:
+    // each frame, redraw against the transform the transition is *currently*
+    // showing, read back off the element. The loop ends with the class, whether
+    // that is the timer above or a pan cancelling the glide, and its last pass
+    // lands on the settled view.
+    const follow = (): void => {
+      if (plane === null) return;
+      const gliding = plane.classList.contains("gliding");
+      const matrix = new DOMMatrix(window.getComputedStyle(plane).transform);
+      paintHaze(matrix.a, matrix.e, matrix.f);
+      if (gliding) window.requestAnimationFrame(follow);
+    };
+    window.requestAnimationFrame(follow);
   }
 
   // Any hand-driven pan or zoom cancels an in-flight glide, so a drag is never
   // animated behind the pointer.
   const stopGliding = (): void => plane?.classList.remove("gliding");
+
+  // The plane's own layout survives a window resize untouched, but the haze is
+  // drawn to the viewport's size, so it has to be told.
+  window.addEventListener("resize", () => {
+    if (dialog.open) scheduleHaze();
+  });
 
   // Wheel (and trackpad pinch, which browsers deliver as ctrl+wheel) zooms,
   // anchored so the point under the cursor stays put while the scale changes.
