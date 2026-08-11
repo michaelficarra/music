@@ -278,11 +278,20 @@ const CATEGORY_PLURAL: Record<string, string> = {
  * The sub-heading spans the grid rather than taking a column of its own, so all
  * three categories' rows keep the same column widths and read as one aligned
  * table.
+ *
+ * **Each category is its own group of bars** and scales to its own largest tag.
+ * The categories are separate lists under separate headings — a reader compares
+ * genres with genres, not a genre with a vocal style — and one shared scale left
+ * every genre a stub beside the far more widespread quality tags, which is the
+ * squeeze the group-scaling convention exists to avoid. The printed percentage
+ * is the true share of the roster throughout, so the categories remain
+ * comparable by their numbers even though their bars are not.
  */
-function compositionRows(composition: CategoryComposition, largest: number): HTMLElement[] {
+function compositionRows(composition: CategoryComposition): HTMLElement[] {
   const heading = document.createElement("div");
   heading.className = "stat-subheading";
   heading.textContent = CATEGORY_PLURAL[composition.category] ?? composition.category;
+  const largest = Math.max(0, ...composition.stats.map((stat) => stat.prevalence));
   return [
     heading,
     ...composition.stats.map((stat) =>
@@ -290,8 +299,6 @@ function compositionRows(composition: CategoryComposition, largest: number): HTM
         valueCell(percent(stat.prevalence)),
         stat.tag,
         carrierCount(stat.count),
-        // Scaled across every category, not within each: three separate
-        // scales would make a 15% genre and a 62% quality draw the same bar.
         shareBar(stat.prevalence, { of: largest }),
       ),
     ),
@@ -668,10 +675,8 @@ function buildBody(body: HTMLElement): void {
   // magnify noise into a full track).
   const halfWidth = Math.max(0.25, ...stats.lifts.map((stat) => Math.abs(stat.ratio - 1)));
   // Each group of bars is drawn against its own largest member (see shareBar).
-  const largestPrevalence = Math.max(
-    0,
-    ...stats.composition.flatMap((c) => c.stats.map((stat) => stat.prevalence)),
-  );
+  // The composition list's groups are its individual categories, so it computes
+  // its scales per category inside compositionRows rather than taking one here.
   const largestWorld = Math.max(0, ...stats.worlds.worlds.map((world) => world.prevalence));
   const largestFavouriteRate = Math.max(
     0,
@@ -725,7 +730,7 @@ function buildBody(body: HTMLElement): void {
         section(
           "What your list is made of",
           "The most common tags in each part of the vocabulary — a plain count of what you have gathered, with no claim about your ranking attached. A tag's frequency reflects both your taste and how common the trait is in music at large, and nothing here can tell the two apart.",
-          stats.composition.flatMap((c) => compositionRows(c, largestPrevalence)),
+          stats.composition.flatMap((c) => compositionRows(c)),
         ),
         section(
           "The worlds it splits into",

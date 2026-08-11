@@ -189,7 +189,10 @@ full suite. Verify user-facing changes against the PRD.
 ## Conventions
 
 - British English spelling in docs and UI copy.
-- **A group of bars scales to the largest bar in that group**, never to a theoretical maximum. Every
+- **A group of bars scales to the largest bar in that group**, never to a theoretical maximum. A
+  group is the list the reader compares within, which can be narrower than a section: the
+  composition list scales each vocabulary category separately, since nobody compares a genre's share
+  with a vocal style's. Every
   bar list compares its rows only with each other, and against a notional 100% most of them are
   stubs — the biggest world is 41% of the roster, the biggest genre 15% — so the differences the
   reader is being asked to judge get squeezed into the first fraction of the track. The **printed

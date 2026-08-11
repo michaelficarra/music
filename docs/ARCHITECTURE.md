@@ -700,7 +700,12 @@ convention in `CLAUDE.md`. `shareBar` takes the true quantity plus an `of` (the 
 divides internally, so the label and tooltip are always drawn from the real value and a caller
 cannot print the scaled fraction by mistake; a `tick` is scaled by the same factor so it stays in
 place relative to the bars. `.stat-diverge` follows the same rule about its centre line via
-`halfWidth`, and the decade columns and tier histogram compute their own maxima. The one gauge that
+`halfWidth`, and the decade columns and tier histogram compute their own maxima. **A "group" is the
+list a reader compares within**, which is not always a whole section: the composition list
+("What your list is made of") scales each vocabulary category to its own largest tag, because its
+categories are separate lists under separate sub-headings and the widespread quality tags otherwise
+leave every genre a stub. The printed percentages stay the true share of the roster, so the
+categories remain comparable by their numbers. The one gauge that
 is *not* group-scaled is `.stat-range`, which is positioned by `positionFraction` over the tiers the
 roster occupies — a shared yardstick is the point there, since the bands are read against each
 other and against the board.
