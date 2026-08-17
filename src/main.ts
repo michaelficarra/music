@@ -9,7 +9,7 @@ import * as store from "./store";
 import { createBoard, type MoveRecord } from "./board";
 import { createCloud } from "./cloud";
 import { createStats } from "./stats-view";
-import { ALL, TIERS, UNRANKED, type Slot } from "./types";
+import { ALL, BASE_TIERS, UNRANKED, type Slot } from "./types";
 import {
   INTENSITY_LABEL,
   INTENSITIES,
@@ -65,7 +65,7 @@ const saveDialog = app.querySelector<HTMLDialogElement>("#save-dialog")!;
 const saveDiff = app.querySelector<HTMLElement>("#save-diff")!;
 
 // Populate the two scheme dropdowns: tier cutoff and weighting intensity.
-for (const cutoff of TIERS) {
+for (const cutoff of BASE_TIERS) {
   const option = document.createElement("option");
   option.value = cutoff;
   option.textContent = cutoffLabel(cutoff);
@@ -93,32 +93,34 @@ const initialScheme = (() => {
   const saved = store.loadSchemeId();
   return (saved !== null ? parseSchemeId(saved) : null) ?? DEFAULT_SCHEME;
 })();
-// The user's chosen weighting. The single-pool cutoffs ("S only", "unranked only")
-// pick uniformly, so they show the weighting dropdown disabled on "unweighted"; this
+// The user's chosen weighting. The one uniform cutoff ("unranked only") picks
+// uniformly, so it shows the weighting dropdown disabled on "unweighted"; this
 // remembers the real choice so it can be restored when a weighted cutoff is reselected.
 let lastWeighting: Intensity = initialScheme.intensity;
 cutoffSelect.value = initialScheme.cutoff;
 syncWeightingControl();
 
 function currentScheme(): Scheme {
-  // A single-pool cutoff displays a disabled "unweighted", but the scheme keeps the
-  // user's real weighting: a no-op for those cutoffs, and preserved for when a
+  // A uniform cutoff displays a disabled "unweighted", but the scheme keeps the
+  // user's real weighting: a no-op for that cutoff, and preserved for when a
   // weighted cutoff is reselected (and across reloads).
   return parseSchemeId(`${cutoffSelect.value}:${lastWeighting}`) ?? DEFAULT_SCHEME;
 }
 
-// The two single-pool cutoffs draw from one pool, so weighting is a no-op for them.
-function isSinglePool(cutoff: string): boolean {
-  return cutoff === UNRANKED || cutoff === TIERS[0];
+// "unranked only" is the sole cutoff whose artists carry no tier between them, so
+// it is the only one where weighting has nothing to act on. "S only" is *not* one:
+// its three rows (S+, S, S-) sit at different positions and so weigh differently.
+function isUniformPool(cutoff: string): boolean {
+  return cutoff === UNRANKED;
 }
 
-// Reflect the current cutoff onto the weighting dropdown: a single-pool cutoff shows
+// Reflect the current cutoff onto the weighting dropdown: a uniform cutoff shows
 // it disabled on "unweighted"; any other cutoff re-enables it and restores the last
 // chosen weighting.
 function syncWeightingControl(): void {
-  const singlePool = isSinglePool(cutoffSelect.value);
-  intensitySelect.disabled = singlePool;
-  intensitySelect.value = singlePool ? "unweighted" : lastWeighting;
+  const uniform = isUniformPool(cutoffSelect.value);
+  intensitySelect.disabled = uniform;
+  intensitySelect.value = uniform ? "unweighted" : lastWeighting;
 }
 
 // --- Tag filter: restricts 🎲 to artists carrying every selected tag, and dims

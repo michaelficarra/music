@@ -8,8 +8,9 @@ It runs entirely in the browser — there is no backend, no accounts, and no ser
 
 ## What it does
 
-- **Drag-and-drop tiers** — sort artists into seven fixed tiers (S, A, B, C, D, E, F) plus an
-  always-visible *unranked* area. Works with mouse and touch.
+- **Drag-and-drop tiers** — sort artists into seven fixed ranks (S, A, B, C, D, E, F), each of them
+  but F split into a `+`, a bare and a `-` row, plus an always-visible *unranked* area. Works with
+  mouse and touch.
 - **Remembers your changes** — your arrangement is saved to the browser's local storage and
   restored on your next visit.
 - **Reset / Save** — when your arrangement differs from the shipped default, a **Reset** button

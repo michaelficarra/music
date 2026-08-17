@@ -1,19 +1,22 @@
 // Weighted random artist picker.
 //
 // A scheme has two independent dimensions: a cutoff (which slots are eligible —
-// a ranked tier and everything above it, the whole roster via "unrestricted", or
-// the unranked pool alone via "unranked only") and a weighting intensity (how
+// a base rank's family and everything above it, the whole roster via
+// "unrestricted", or the unranked pool alone via "unranked only") and a weighting intensity (how
 // strongly higher tiers are favoured). Under a ranked cutoff the unranked pool is
 // excluded; under "unrestricted" it joins the draw weighted as the lowest tier;
 // under "unranked only" it is the sole eligible region. See PRD §8 / ARCHITECTURE §6.
 
 import {
   ALL,
+  BASE_TIERS,
   TIERS,
   TIER_WEIGHT,
   UNRANKED,
-  isTier,
+  isBaseTier,
+  lowestVariant,
   tierWeightScale,
+  type BaseTier,
   type Cutoff,
   type Slot,
   type Tier,
@@ -36,14 +39,18 @@ export interface Scheme {
   intensity: Intensity;
 }
 
-/** Eligible tiers for a cutoff: from S down to the cutoff, inclusive. */
-export function eligibleTiers(cutoff: Tier): Tier[] {
-  return TIERS.slice(0, TIERS.indexOf(cutoff) + 1);
+/**
+ * Eligible tiers for a cutoff: from the top of the board down to the *bottom*
+ * of the cutoff rank's family, inclusive. A cutoff names a whole rank, so "C+"
+ * reaches C- rather than stopping at the bare C row (PRD §8).
+ */
+export function eligibleTiers(cutoff: BaseTier): Tier[] {
+  return TIERS.slice(0, TIERS.indexOf(lowestVariant(cutoff)) + 1);
 }
 
 /**
- * The steeper of the two weighted curves (`position³`: F=1 … S=343), against
- * `TIER_WEIGHT`'s `position²` (F=1 … S=49).
+ * The steeper of the two weighted curves (`position³`: F=1 … S=343, S+=394),
+ * against `TIER_WEIGHT`'s `position²` (F=1 … S=49, S+=53.8).
  *
  * Intensities differ by *exponent*, never by a multiplier: selection normalises
  * by the pool's total weight, so multiplying every tier by a constant leaves the
@@ -72,7 +79,7 @@ export function parseSchemeId(id: string): Scheme | null {
   const [cutoff, intensity] = id.split(":");
   if (cutoff === undefined || intensity === undefined) return null;
   if (
-    (cutoff !== ALL && cutoff !== UNRANKED && !isTier(cutoff)) ||
+    (cutoff !== ALL && cutoff !== UNRANKED && !isBaseTier(cutoff)) ||
     !INTENSITIES.includes(intensity as Intensity)
   ) {
     return null;
@@ -82,14 +89,17 @@ export function parseSchemeId(id: string): Scheme | null {
 
 /**
  * Human label for a cutoff: "unrestricted" for the whole roster, "unranked only"
- * for the unranked pool, "S only" for the top tier, "F+ (all ranked)" for every
+ * for the unranked pool, "S only" for the top rank, "F+ (all ranked)" for every
  * ranked tier (the F cutoff), else "C+".
+ *
+ * A label names the *rank*, so "C+" covers C+, C and C- along with everything
+ * above, and "S only" is the three S rows rather than one.
  */
 export function cutoffLabel(cutoff: Cutoff): string {
   if (cutoff === ALL) return "unrestricted"; // the whole roster: every ranked tier plus the unranked pool
   if (cutoff === UNRANKED) return "unranked only"; // the unranked pool (the board's "?" row)
-  if (cutoff === TIERS[0]) return "S only"; // nothing ranks above the top tier
-  if (cutoff === TIERS[TIERS.length - 1]) return "F+ (all ranked)"; // the F cutoff = every ranked tier
+  if (cutoff === BASE_TIERS[0]) return "S only"; // nothing ranks above the top rank
+  if (cutoff === BASE_TIERS[BASE_TIERS.length - 1]) return "F+ (all ranked)"; // the F cutoff = every ranked tier
   return `${cutoff}+`; // "A+" … "E+"
 }
 

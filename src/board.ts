@@ -1,4 +1,5 @@
-// Renders the tier board (S…F + unranked) and wires drag-and-drop via SortableJS.
+// Renders the tier board — one block per rank (S…F), each holding its +/bare/-
+// lanes, plus the unranked pool — and wires drag-and-drop via SortableJS.
 
 import Sortable from "sortablejs";
 import { artists } from "./data";
@@ -6,7 +7,17 @@ import * as store from "./store";
 import { matchesTags, type FilterMode } from "./filter";
 import { compareArtistNames } from "./sort";
 import { artistTooltip, createThumb } from "./thumb";
-import { ALL, TIERS, UNRANKED, type Artist, type Cutoff, type Slot, type Tier } from "./types";
+import {
+  ALL,
+  BASE_TIERS,
+  TIERS,
+  UNRANKED,
+  baseTier,
+  type Artist,
+  type BaseTier,
+  type Cutoff,
+  type Slot,
+} from "./types";
 
 /** A single tier change, reported to `onChange` so the page can offer an undo. */
 export interface MoveRecord {
@@ -30,12 +41,13 @@ export interface Board {
    */
   present(name: string): void;
   /**
-   * Draw a divider line just below `cutoff`'s row to mark the picker's eligible
-   * range (e.g. "D+" → between D and E). "F+ (all ranked)" (the F cutoff) and
-   * UNRANKED ("unranked only") both draw the line at the F/unranked boundary — for
-   * "F+ (all ranked)" the eligible ranked tiers sit above it, for "unranked only"
-   * the eligible unranked pool sits below it. "unrestricted" (the whole roster)
-   * draws no line at all.
+   * Draw a divider line just below the last row `cutoff` reaches, to mark the
+   * picker's eligible range (e.g. "D+" → between D- and E+, since a cutoff takes
+   * a whole rank). "F+ (all ranked)" (the F cutoff) and UNRANKED ("unranked
+   * only") both draw the line at the F/unranked boundary — for "F+ (all ranked)"
+   * the eligible ranked tiers sit above it, for "unranked only" the eligible
+   * unranked pool sits below it. "unrestricted" (the whole roster) draws no line
+   * at all.
    */
   setCutoff(cutoff: Cutoff): void;
   /**
@@ -85,9 +97,14 @@ function createCard(artist: Artist): HTMLElement {
  */
 export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord) => void): Board {
   const cardsByName = new Map<string, HTMLElement>();
+  // One drop list per tier: a rank's three lanes are separate lists inside one
+  // block, so a card still knows exactly which row it is in.
   const lists = new Map<Slot, HTMLElement>();
-  const rowsBySlot = new Map<Slot, HTMLElement>();
-  const countsBySlot = new Map<Slot, HTMLElement>();
+  // The blocks the board is actually built from — one per rank, plus the
+  // unranked pool — each holding a single heading and the lanes beneath it.
+  const blocks = new Map<BaseTier | typeof UNRANKED, HTMLElement>();
+  const counts = new Map<BaseTier | typeof UNRANKED, HTMLElement>();
+  const lanesByBlock = new Map<BaseTier | typeof UNRANKED, Slot[]>();
 
   // In-flight pick presentation (the real card, its flying clone, and timers).
   let activeCard: HTMLElement | null = null;
@@ -121,11 +138,28 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
 
   cutoffEl.append(cutoffLine, cutoffEligible, cutoffIneligible);
 
-  function addRow(slot: Slot, label: string, title?: string): void {
+  /**
+   * Build one block: a single heading on the left, and `lanes` stacked to its
+   * right — one drop list per lane, in the order given (best first).
+   *
+   * A rank is one block rather than three rows because its `+`, bare and `-`
+   * lanes are one rank refined, not three separate ranks: the letter and the
+   * count belong to the rank, and the lanes below the letter say which third of
+   * it a card sits in by their position (PRD §3).
+   */
+  function addBlock(
+    key: BaseTier | typeof UNRANKED,
+    label: string,
+    lanes: readonly Slot[],
+    title?: string,
+  ): void {
     const row = document.createElement("div");
     row.className = "tier-row";
-    row.dataset.slot = slot;
-    rowsBySlot.set(slot, row);
+    // The rank behind the block, which is what the stylesheet paints. Absent on
+    // the unranked block, which wears no tier colour.
+    if (key !== UNRANKED) row.dataset.base = key;
+    blocks.set(key, row);
+    lanesByBlock.set(key, [...lanes]);
 
     const heading = document.createElement("div");
     heading.className = "tier-label";
@@ -135,19 +169,25 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
     letter.className = "tier-letter";
     letter.textContent = label;
 
-    // Live count of cards in this tier, kept small so three digits still fit.
+    // Live count of cards across the whole rank, kept small so three digits
+    // still fit the narrow label column.
     const count = document.createElement("span");
     count.className = "tier-count";
-    countsBySlot.set(slot, count);
+    counts.set(key, count);
 
     heading.append(letter, count);
 
-    const list = document.createElement("div");
-    list.className = "tier-list";
-    list.dataset.slot = slot;
-    lists.set(slot, list);
+    const laneColumn = document.createElement("div");
+    laneColumn.className = "tier-lanes";
+    for (const slot of lanes) {
+      const list = document.createElement("div");
+      list.className = "tier-list";
+      list.dataset.slot = slot;
+      lists.set(slot, list);
+      laneColumn.appendChild(list);
+    }
 
-    row.append(heading, list);
+    row.append(heading, laneColumn);
     container.appendChild(row);
   }
 
@@ -179,17 +219,29 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
     lastPickedCard?.classList.add("last-picked");
   }
 
-  // Refresh each tier's counter from the number of cards currently in its list.
+  // Refresh each block's counter: a rank's tally is its three lanes together,
+  // since the heading names the rank rather than any one of its rows.
   function updateCounts(): void {
-    for (const [slot, count] of countsBySlot) {
-      count.textContent = String(lists.get(slot)?.childElementCount ?? 0);
+    for (const [key, count] of counts) {
+      const held = (lanesByBlock.get(key) ?? []).reduce(
+        (sum, slot) => sum + (lists.get(slot)?.childElementCount ?? 0),
+        0,
+      );
+      count.textContent = String(held);
     }
   }
 
-  // Build rows: the seven ranked tiers, then the always-visible unranked pool.
+  // Build blocks: one per rank, each holding its +, bare and - lanes (F holds
+  // only its single row), then the always-visible unranked pool.
   container.innerHTML = "";
-  for (const tier of TIERS) addRow(tier, tier);
-  addRow(UNRANKED, "?", "Unranked — artists not sorted into a tier");
+  for (const rank of BASE_TIERS) {
+    addBlock(
+      rank,
+      rank,
+      TIERS.filter((tier) => baseTier(tier) === rank),
+    );
+  }
+  addBlock(UNRANKED, "?", [UNRANKED], "Unranked — artists not sorted into a tier");
 
   for (const artist of artists) cardsByName.set(artist.name, createCard(artist));
   placeCards();
@@ -495,13 +547,15 @@ export function createBoard(container: HTMLElement, onChange: (move?: MoveRecord
       // "unrestricted" makes the whole board eligible, so there is no eligible/
       // ineligible boundary to draw — leave the divider detached (no line, no arrows).
       if (cutoff === ALL) return;
-      // The line always sits just below its anchor row. For a ranked cutoff that
-      // is the cutoff tier itself (e.g. "D+" → between D and E). "F+ (all ranked)"
-      // (the F cutoff) and "unranked only" both anchor on F, drawing the line at the
-      // F/unranked boundary — for "F+ (all ranked)" every ranked tier above is
-      // eligible; for "unranked only" the unranked pool below is.
-      const anchor: Tier = cutoff === UNRANKED ? TIERS[TIERS.length - 1]! : cutoff;
-      rowsBySlot.get(anchor)?.after(cutoffEl);
+      // The line always sits just below its anchor block, which is the whole
+      // point of a cutoff naming a rank: it can only ever fall between two
+      // ranks, never between a rank's own lanes (e.g. "D+" → below the D block,
+      // between D- and E+). "F+ (all ranked)" (the F cutoff) and "unranked only"
+      // both anchor on the F block, drawing the line at the F/unranked boundary
+      // — for "F+ (all ranked)" every ranked tier above is eligible; for
+      // "unranked only" the unranked pool below is.
+      const anchor: BaseTier = cutoff === UNRANKED ? BASE_TIERS[BASE_TIERS.length - 1]! : cutoff;
+      blocks.get(anchor)?.after(cutoffEl);
       // "eligible"/"ineligible" stay put (left/right); the arrows point at each
       // region's side of the line. Normally the eligible pool is above and the
       // ineligible below, but "unranked only" inverts that — so the arrows flip.

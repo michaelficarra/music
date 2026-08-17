@@ -36,11 +36,28 @@
 //     which relates the two scales without making either redundant.
 //   * tierPosition (types.ts) — where an artist *sits*. Used only for statements
 //     about placement: the predictor range gauges and the predictive-power measure.
+//
+// Both resolve a rank's +/- rows, which sit a third of a rank either side of it,
+// so a promotion within a rank moves every figure here. The two exceptions are
+// the histogram and the favourite-tier boundary, which count whole ranks — see
+// RosterSummary.tierCounts and favouriteTiers for why.
 
 import { groupRoster, pairwiseSimilarities, sceneName } from "./cloud-layout";
 import { compareArtistNames } from "./sort";
 import { groupTags, isEraTag } from "./tag-groups";
-import { TIERS, TIER_WEIGHT, UNRANKED, tierPosition, type Artist, type Tier } from "./types";
+import {
+  BASE_TIERS,
+  BOTTOM_POSITION,
+  TIERS,
+  TIER_WEIGHT,
+  TOP_POSITION,
+  UNRANKED,
+  baseTier,
+  tierPosition,
+  type Artist,
+  type BaseTier,
+  type Tier,
+} from "./types";
 
 // --- Tuning (judgement calls, see ARCHITECTURE §8) ---
 
@@ -144,35 +161,30 @@ const countedTags = (artist: Artist): readonly string[] => artist.specificTags;
 
 // --- Placement: where an artist sits ---
 
-/** A mean position expressed as the nearest tier plus a leaning: "A−" reads as
-    "an A, leaning toward B". */
-export interface TierBand {
-  tier: Tier;
-  suffix: "+" | "" | "−";
-}
-
 /**
- * Band a position onto the tier scale. Each tier owns the unit of the scale
- * centred on its own position, split into equal thirds: the middle third is the
- * bare letter, the outer thirds lean "+" (toward the better neighbour) and
- * "−" (toward the worse). So 7 → "S", 6.5 → "S−", 6.17 → "A+", 5.66 → "A−".
- * Positions are clamped to [1, 7] first, which also makes "S+" and "F−"
- * impossible — there is nothing beyond the ends to lean toward.
+ * Band a position onto the tier scale: the tier whose own position is nearest,
+ * so 7 → "S", 6.5 → "S-", 6.17 → "A+", 5.66 → "A-".
+ *
+ * A mean placement is a real number and the tiers now sit on a 1/3 grid, so
+ * "nearest tier" is the whole rule — no separate notion of a leaning, and the
+ * result names a tier the board actually has. That also handles the two ends
+ * without clamping: nothing sits above S+ or below F, so an out-of-range
+ * position simply has one of them as its nearest neighbour, and a mean just
+ * above F bands to "F" rather than to an "F+" that does not exist.
  */
-export function tierBand(position: number): TierBand {
-  const clamped = Math.min(Math.max(position, 1), TIERS.length);
-  const nearest = Math.round(clamped);
-  const lean = clamped - nearest;
-  return {
-    tier: TIERS[TIERS.length - nearest]!,
-    suffix: lean > 1 / 6 ? "+" : lean < -1 / 6 ? "−" : "",
-  };
-}
-
-/** tierBand as display text, e.g. "A−". */
-export function tierLabel(position: number): string {
-  const { tier, suffix } = tierBand(position);
-  return tier + suffix;
+export function tierBand(position: number): Tier {
+  let nearest: Tier = TIERS[0];
+  let shortest = Infinity;
+  // Best → worst with a strict comparison, so a position falling exactly between
+  // two tiers (6.5) keeps the better of them.
+  for (const tier of TIERS) {
+    const distance = Math.abs(tierPosition(tier) - position);
+    if (distance < shortest) {
+      shortest = distance;
+      nearest = tier;
+    }
+  }
+  return nearest;
 }
 
 /** The span of tier positions the roster actually occupies. */
@@ -183,7 +195,7 @@ export interface PositionRange {
 
 /**
  * Where a position sits along the gauge track, 0 at the lowest occupied tier
- * and 1 at the highest. Deliberately *not* the theoretical 1..7 axis: with the
+ * and 1 at the highest. Deliberately *not* the theoretical 1..7⅓ axis: with the
  * bottom tiers empty (F has held nobody since the F-tier artists were removed)
  * an absolute axis pins every marker into the same narrow band, which is what
  * drove the old view-level rescale hack. Deriving the ends from the data keeps
@@ -216,8 +228,8 @@ interface Baseline {
   totalWeight: number;
   /** Mean weight of a ranked artist; the denominator of every ratio. */
   meanWeight: number;
-  /** The top tiers making up FAVOURITE_SHARE of the roster. */
-  favouriteTiers: Tier[];
+  /** The top ranks making up FAVOURITE_SHARE of the roster. */
+  favouriteTiers: BaseTier[];
   /** How many ranked artists sit in those tiers. */
   favouriteCount: number;
   /** favouriteCount / ranked.length — what an unremarkable tag would score. */
@@ -226,17 +238,23 @@ interface Baseline {
 }
 
 /**
- * The favourite tiers: take tiers from the top until they hold at least
- * FAVOURITE_SHARE of the ranked roster. Always at least one tier, so "your
+ * The favourite tiers: take whole ranks from the top until they hold at least
+ * FAVOURITE_SHARE of the ranked roster. Always at least one rank, so "your
  * favourites" is never an empty set on a non-empty roster.
+ *
+ * Whole ranks rather than the board's individual rows, because the boundary is
+ * something the reader is told in a sentence ("your favourites are S and A") and
+ * because the rule only skips rows empty *above* the first occupied one — at row
+ * granularity a single artist in S would drag the empty S- and A+ rows into the
+ * list behind it.
  */
-function favouriteTiers(ranked: readonly RankedArtist[]): Tier[] {
-  const chosen: Tier[] = [];
+function favouriteTiers(ranked: readonly RankedArtist[]): BaseTier[] {
+  const chosen: BaseTier[] = [];
   let covered = 0;
-  for (const tier of TIERS) {
-    const held = ranked.filter((artist) => artist.tier === tier).length;
-    if (held === 0 && chosen.length === 0) continue; // skip empty tiers above the first occupied one
-    chosen.push(tier);
+  for (const rank of BASE_TIERS) {
+    const held = ranked.filter((artist) => baseTier(artist.tier) === rank).length;
+    if (held === 0 && chosen.length === 0) continue; // skip empty ranks above the first occupied one
+    chosen.push(rank);
     covered += held;
     if (covered >= FAVOURITE_SHARE * ranked.length) break;
   }
@@ -257,8 +275,8 @@ function computeBaseline(artists: readonly Artist[]): Baseline {
   }
   const totalWeight = ranked.reduce((sum, artist) => sum + artist.weight, 0);
   const favourites = favouriteTiers(ranked);
-  const favouriteSet = new Set(favourites);
-  const favouriteCount = ranked.filter((artist) => favouriteSet.has(artist.tier)).length;
+  const favouriteSet = new Set<BaseTier>(favourites);
+  const favouriteCount = ranked.filter((artist) => favouriteSet.has(baseTier(artist.tier))).length;
   const positionValues = ranked.map((artist) => artist.position);
   return {
     ranked,
@@ -268,8 +286,8 @@ function computeBaseline(artists: readonly Artist[]): Baseline {
     favouriteCount,
     favouriteRate: ranked.length === 0 ? 0 : favouriteCount / ranked.length,
     positions: {
-      low: ranked.length === 0 ? 1 : Math.min(...positionValues),
-      high: ranked.length === 0 ? TIERS.length : Math.max(...positionValues),
+      low: ranked.length === 0 ? BOTTOM_POSITION : Math.min(...positionValues),
+      high: ranked.length === 0 ? TOP_POSITION : Math.max(...positionValues),
     },
   };
 }
@@ -383,7 +401,7 @@ function aggregateTags(baseline: Baseline): TagStat[] {
     const positions = carriers.map((artist) => artist.position);
     const mean = positions.reduce((sum, position) => sum + position, 0) / count;
     const variance = positions.reduce((sum, p) => sum + (p - mean) ** 2, 0) / count;
-    const favourites = carriers.filter((artist) => favouriteSet.has(artist.tier)).length;
+    const favourites = carriers.filter((artist) => favouriteSet.has(baseTier(artist.tier))).length;
     const ratio =
       baseline.meanWeight === 0
         ? 0
@@ -990,11 +1008,13 @@ export interface RosterSummary {
   /** Distinct tags across the whole roster, and how many clear MIN_SUPPORT. */
   vocabularySize: number;
   supportedTagCount: number;
-  /** Ranked artists per tier, top tier first; empty tiers included so the
-      histogram shows the shape of the whole board. */
-  tierCounts: { tier: Tier; count: number }[];
-  /** The tiers counted as favourites, and how many artists they hold. */
-  favouriteTiers: Tier[];
+  /** Ranked artists per *rank*, top rank first, with each rank's +/- rows folded
+      in; empty ranks included so the histogram shows the shape of the whole
+      board. Whole ranks because the histogram is read at a glance and the
+      variants would give it twelve empty bars to no purpose. */
+  tierCounts: { tier: BaseTier; count: number }[];
+  /** The ranks counted as favourites, and how many artists they hold. */
+  favouriteTiers: BaseTier[];
   favouriteCount: number;
 }
 
@@ -1045,9 +1065,9 @@ export function computeStats(artists: readonly Artist[]): TierStats {
       rankedCount: baseline.ranked.length,
       vocabularySize: new Set(artists.flatMap(countedTags)).size,
       supportedTagCount: stats.length,
-      tierCounts: TIERS.map((tier) => ({
-        tier,
-        count: baseline.ranked.filter((artist) => artist.tier === tier).length,
+      tierCounts: BASE_TIERS.map((rank) => ({
+        tier: rank,
+        count: baseline.ranked.filter((artist) => baseTier(artist.tier) === rank).length,
       })),
       favouriteTiers: baseline.favouriteTiers,
       favouriteCount: baseline.favouriteCount,

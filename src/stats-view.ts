@@ -21,7 +21,7 @@ import {
   type TagStat,
   type TasteWorlds,
 } from "./stats";
-import type { Tier } from "./types";
+import { baseTier, type Tier } from "./types";
 
 export interface StatsView {
   /** Show the dialog, building its content on first use. */
@@ -72,7 +72,10 @@ function statRow(
 function tierChip(tier: Tier): HTMLElement {
   const chip = document.createElement("span");
   chip.className = "stat-tier";
-  chip.dataset.tier = tier; // picks the chip's tier pastel
+  // Coloured by the rank, printed in full: an "A+" chip wears A's orange, as its
+  // row does on the board. (Every BaseTier is also a Tier, so the histogram's
+  // whole-rank chips pass through here unchanged.)
+  chip.dataset.tier = baseTier(tier);
   chip.textContent = tier;
   return chip;
 }
@@ -213,13 +216,13 @@ const favouriteRow = (stat: TagStat, baseRate: number, largest: number): HTMLEle
  * The span of tiers a tag's carriers occupy. These name real tiers, so they
  * wear the same pastels the board and the histogram use — one chip per end, or
  * a single chip when a tag's carriers share a tier. `low`/`high` are always
- * exact placements, so each end is a bare letter.
+ * exact placements, so each end names the row an artist actually sits in.
  */
 function tierRangeCell(low: number, high: number): HTMLElement {
   const cell = document.createElement("span");
   cell.className = "stat-tier-range";
-  const top = tierBand(high).tier;
-  const bottom = tierBand(low).tier;
+  const top = tierBand(high);
+  const bottom = tierBand(low);
   if (top === bottom) {
     cell.appendChild(tierChip(top));
     return cell;

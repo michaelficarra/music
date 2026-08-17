@@ -57,24 +57,42 @@ do not add, rename, or delete artists, and do not edit images or tags, from with
 
 ## 3. Tiers
 
-There are seven fixed ranked tiers, displayed as rows from highest to lowest:
+There are seven fixed **ranks**, S down to F. Every rank except F is refined into three tiers — a
+`+` above it and a `-` below — giving 19 tiers from highest to lowest: S+, S, S-, A+, A, A-, …, E-,
+F.
+
+A rank is displayed as **one block**: a single heading on the left carrying the rank's letter and
+the count of every card in the rank, and the rank's three tiers as **three rows to its right**,
+best at the top. F's block has a single row. The rows are unlabelled — their **order** is what says
+which is which — and are separated by a light rule so the three are legible even when empty.
 
 ```
-S   (highest)
-A
-B
-C
-D
-E
-F   (lowest)
+┌────┬─────────────────────────────┐
+│    │                             │  S+
+│ S  ├─────────────────────────────┤
+│ 5  │  [card] [card] [card]       │  S
+│    ├─────────────────────────────┤
+│    │  [card] [card]              │  S-
+└────┴─────────────────────────────┘
 ```
+
+**F has no variants.** The other ranks are refined in both directions because there is a
+neighbouring rank on each side to lean toward; nothing sits below F, so an `F-` would name a place
+off the end of the scale.
+
+A `+`/`-` tier is the **same rank, refined** — an A+ artist is an A, placed at the top of it. The
+distinction is real rather than cosmetic: it moves the artist on the scale, so both the 🎲
+weighting (§8) and the 📊 statistics (§10) treat a promotion within a rank as a promotion.
 
 Below (or alongside) the tiers there is an **always-visible "unranked" area** holding artists
 that have not been placed into a ranked tier. The unranked area remains visible even when empty,
 so an artist can always be dragged back out of a tier into it.
 
-Each tier (and the unranked area) shows a **count of the cards it currently contains**, displayed
-beneath the tier label and kept up to date as artists are moved between tiers.
+Each **rank** (and the unranked area) shows a **count of the cards it currently contains** — its
+three rows summed, since the heading names the rank — displayed beneath the rank's letter and kept
+up to date as artists are moved. Every row is shown even when empty (§11), so all 19 are always
+available as drop targets; an **empty row is drawn shorter** than a full one, tall enough to drop
+onto but not the height of a card, so unused rows cost little of the board's length.
 
 The set of tiers is fixed: users cannot add, rename, reorder, or remove tiers.
 
@@ -102,8 +120,8 @@ for an artist no longer shipped is simply ignored.
   or the unranked area. This works with both mouse and touch input. Dragging a card near the top or
   bottom edge of the viewport **auto-scrolls** the board, so a card can be moved between tiers that
   are far apart without scrolling first.
-- Alternatively, **clicking a card** opens a small **tier-selection dropdown** (S, A, B, C, D, E,
-  F, or **?** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
+- Alternatively, **clicking a card** opens a small **tier-selection dropdown** (every tier from S+
+  down to F, or **?** for unranked), which is focused immediately. **Save** and **Cancel** buttons sit below
   it; pressing **Enter** saves and **Escape** cancels. Saving moves the artist to the chosen tier.
   Clicking elsewhere, or starting to drag a card, dismisses the dropdown without changing the tier.
 - **Hovering a card** reveals the artist's **tags** (§2) alongside its name, in the card's
@@ -179,14 +197,15 @@ screen reader reads out the pick) on each press.
 **Two dropdowns and a tag filter** next to the button control how the pick is made — the **tier
 cutoff**, then the **filter**, then the **weighting intensity**:
 
-- **Tier cutoff** — which artists are eligible:
-  - `S only` → S only
-  - `A+` → S, A
-  - `B+` → S, A, B
-  - `C+` → S, A, B, C
-  - `D+` → S, A, B, C, D
-  - `E+` → S, A, B, C, D, E
-  - `F+ (all ranked)` → S, A, B, C, D, E, F (every ranked tier)
+- **Tier cutoff** — which artists are eligible. A cutoff names a **rank**, and takes that rank's
+  three rows together with everything above them; there is no cutoff that splits a rank apart:
+  - `S only` → the S rank (S+, S, S-)
+  - `A+` → S and A
+  - `B+` → S, A and B
+  - `C+` → S, A, B and C — that is, everything from S+ down to C-
+  - `D+` → S, A, B, C and D
+  - `E+` → S, A, B, C, D and E
+  - `F+ (all ranked)` → every ranked tier
   - `unranked only` → the unranked pool only (no ranked tiers)
   - `unrestricted` → the whole roster (every ranked tier **and** the unranked pool)
 - **Weighting intensity** — how probability is spread across the eligible artists:
@@ -200,10 +219,12 @@ cutoff**, then the **filter**, then the **weighting intensity**:
   they surface about as often as the artists at the bottom of the ranking. Empty tiers below that
   one are ignored, so clearing out a bottom tier does not quietly make the unranked rarer.
 
-  The `unranked only` and `S only` cutoffs each draw from a single pool — the unranked artists, or
-  the one top tier — with no tiers to weight against each other, so their artists are picked
-  uniformly. While either is selected the intensity dropdown is shown **disabled on `unweighted`**;
-  reselecting a weighted cutoff (a ranked tier or `unrestricted`) restores the last-used weighting.
+  The `unranked only` cutoff draws from a single pool of artists that carry no tier between them,
+  so there is nothing for the weighting to act on and its artists are picked uniformly. While it is
+  selected the intensity dropdown is shown **disabled on `unweighted`**; reselecting a weighted
+  cutoff (a rank or `unrestricted`) restores the last-used weighting. Every other cutoff, `S only`
+  included, spans tiers of differing weight — S+, S and S- are three distinct placements — so the
+  weighting applies to all of them.
 
 - **Tag filter** — restricts eligibility by the artists' tags (see §2). The control sits between
   the cutoff and intensity dropdowns and reads **`no filters`** when nothing is selected, else the
@@ -232,9 +253,10 @@ Consecutive presses of 🎲 **never pick the same artist twice in a row**: the p
 artist is excluded from the next draw. The sole exception is when that artist is the *only* eligible
 one under the current scheme — then there is no alternative and the repeat is allowed.
 
-A horizontal line is drawn on the board between the lowest eligible tier and the next row down,
-reflecting the selected cutoff (e.g. `D+` draws it between the D and E rows). It updates when the
-cutoff changes. Both `F+ (all ranked)` and `unranked only` draw the line between the F row and the
+A horizontal line is drawn on the board between the lowest eligible rank's block and the next block
+down, reflecting the selected cutoff (e.g. `D+` draws it below the whole D block, between D- and
+E+). Because a cutoff takes a whole rank, the line never falls inside a block. It updates when the
+cutoff changes. Both `F+ (all ranked)` and `unranked only` draw the line between the F block and the
 unranked area: for `F+ (all ranked)` every ranked tier sits above the line as eligible; for
 `unranked only` the unranked pool sits below it as the sole eligible region. The line carries small
 labels naming the eligible and ineligible regions, each pointing to its own side of the line; for
@@ -400,9 +422,12 @@ criticism**. Two rules follow, and everything below obeys them:
   so, since a section that silently vanishes reads as a fault rather than as the finding it is.
   Sections that merely *describe* the collection — the roster summary, the two typicality lists,
   and how much of the list each decade accounts for — make no such claim and are always shown.
-- **Tier letters appear only where a real tier is named** — an artist's placement, a tier in the
-  histogram, or the ends of a span of tiers. Wherever they appear they carry that tier's colour, as
-  on the board. A tag is never given a grade of its own.
+- **Tier letters appear only where a real tier is named** — an artist's placement, a rank in the
+  histogram, or the ends of a span of tiers. Wherever they appear they carry that **rank's** colour,
+  as on the board, where a rank's three rows share one colour. A tag is never given a grade of its
+  own. A figure that lands between two tiers (an average placement, the end of a span) is reported
+  as the nearest tier, which — the tiers being a third of a rank apart — is always a row the board
+  actually has.
 - Every bar's exact value is available on hover.
 
 ### 10.3 What the dialog presents
@@ -410,9 +435,11 @@ criticism**. Two rules follow, and everything below obeys them:
 Sections are gathered under headings that say what question the next few answer.
 
 **Your list in numbers** — the opening summary: how many artists are ranked, how many tags describe
-them, and a **histogram of the tiers** (including any tier nobody occupies, so the board's shape is
-honest). Bars scale to the fullest tier, which is what makes the shape legible. It also names the tiers counted as
-**favourites**, which several later statistics are measured against. The most-collected tag and the
+them, and a **histogram of the ranks** (including any rank nobody occupies, so the board's shape is
+honest). It counts **whole ranks**, folding each one's `+`/`-` rows into a single bar: the histogram
+is read at a glance, and a bar per row would give it a dozen empty ones. Bars scale to the fullest
+rank, which is what makes the shape legible. It also names the ranks counted as
+**favourites** — likewise whole ranks — which several later statistics are measured against. The most-collected tag and the
 dominant decade are deliberately *not* repeated here — each heads a section of its own below.
 
 **What you like**
@@ -497,7 +524,8 @@ it**, and viewing it changes nothing about tiers, the picker, or filters.
 - **Artist with no image:** the card shows a placeholder in place of the image; the name is still
   shown. An artist whose image **fails to load** (e.g. a broken or removed URL) falls back to the
   same placeholder, so a dead link never shows a broken-image glyph.
-- **Empty tier:** the tier row is still displayed (empty), as a valid drop target.
+- **Empty tier:** the row is still displayed and is a valid drop target, drawn shorter than a
+  populated one (§3). A rank whose rows are all empty still shows its heading and its three rows.
 - **Empty unranked area:** still displayed, as described in §3.
 - **No eligible artists for a pick:** handled as in §8.
 - **Map search matching nothing:** the suggestions say so plainly (§9.1). Below the three-character

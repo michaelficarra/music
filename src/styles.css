@@ -336,6 +336,11 @@ button:disabled {
   background: var(--panel);
   border-radius: 8px;
   overflow: hidden;
+  /* A block whose lanes are all empty is floored at roughly one card, so F —
+     which has a single lane and so collapses to a single empty band — still
+     reads as a tier beside the three-lane blocks above it, rather than as a
+     seam between E and the unranked pool. */
+  min-height: calc(var(--card) + 1.4rem);
 }
 
 .tier-label {
@@ -357,7 +362,8 @@ button:disabled {
   line-height: 1;
 }
 
-/* Card tally under the tier letter. Kept small so three digits still fit the
+/* Card tally under the tier letter — the whole rank's, its three lanes summed,
+   since the heading names the rank. Kept small so three digits still fit the
    narrow label column. */
 .tier-count {
   margin-top: 0.25rem;
@@ -367,42 +373,47 @@ button:disabled {
   opacity: 0.7;
 }
 
-/* Classic tier-list colours on the letter cell only (not the card area).
+/* Classic tier-list colours on the letter cell only (not the card area). Keyed
+   off the row's *rank* rather than its slot, so a rank's three rows (S+, S, S-)
+   share one colour from one rule; only the unranked row carries no data-base.
    Dark text keeps the letters legible on these light backgrounds. */
-.tier-row[data-slot="S"] .tier-label,
-.tier-row[data-slot="A"] .tier-label,
-.tier-row[data-slot="B"] .tier-label,
-.tier-row[data-slot="C"] .tier-label,
-.tier-row[data-slot="D"] .tier-label,
-.tier-row[data-slot="E"] .tier-label,
-.tier-row[data-slot="F"] .tier-label {
+.tier-row[data-base] .tier-label {
   color: #1e1f24; /* matches --bg; dark for contrast on light tiers */
 }
 
-.tier-row[data-slot="S"] .tier-label {
+.tier-row[data-base="S"] .tier-label {
   background: var(--tier-s);
 }
-.tier-row[data-slot="A"] .tier-label {
+.tier-row[data-base="A"] .tier-label {
   background: var(--tier-a);
 }
-.tier-row[data-slot="B"] .tier-label {
+.tier-row[data-base="B"] .tier-label {
   background: var(--tier-b);
 }
-.tier-row[data-slot="C"] .tier-label {
+.tier-row[data-base="C"] .tier-label {
   background: var(--tier-c);
 }
-.tier-row[data-slot="D"] .tier-label {
+.tier-row[data-base="D"] .tier-label {
   background: var(--tier-d);
 }
-.tier-row[data-slot="E"] .tier-label {
+.tier-row[data-base="E"] .tier-label {
   background: var(--tier-e);
 }
-.tier-row[data-slot="F"] .tier-label {
+.tier-row[data-base="F"] .tier-label {
   background: var(--tier-f);
 }
 
-.tier-list {
+/* A rank's lanes, stacked to the right of its single heading: +, bare, - from
+   top to bottom (the unranked block has just the one). They carry no labels of
+   their own, so the hairlines below are what make the three legible. */
+.tier-lanes {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* let a full lane wrap rather than widening the block */
+}
+
+.tier-list {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
@@ -410,6 +421,27 @@ button:disabled {
   gap: 0.3rem;
   min-height: calc(var(--card) + 1.4rem);
   padding: var(--gap);
+  /* Share out whatever height the block has beyond its lanes' own — which only
+     the block min-height above ever creates — so the floor becomes droppable
+     lane rather than dead space under it. `flex-grow` alone, not `flex`, to
+     leave the basis on `auto` so the min-heights still set the base size. */
+  flex-grow: 1;
+}
+
+/* The rule between one lane and the next. Only between, so a block keeps clean
+   edges; faint, because it separates thirds of one rank rather than two ranks. */
+.tier-list + .tier-list {
+  border-top: 1px solid #ffffff14;
+}
+
+/* An empty lane still has to be a drop target, but a rank whose +/- rows are
+   unused should not cost three full card heights of scrolling — so an empty one
+   collapses to a band just tall enough to aim at. It grows back the moment a
+   drag enters it, since SortableJS inserts the card and the lane stops being
+   empty. Sized to read as a real row rather than a seam between two, while
+   still costing well under a populated lane's height. */
+.tier-list:empty {
+  min-height: 1.5rem;
 }
 
 .card {

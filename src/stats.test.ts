@@ -17,11 +17,19 @@ import {
   measurePredictivePower,
   rankReliable,
   rankVariable,
-  tierLabel,
+  tierBand,
   type TagStat,
 } from "./stats";
 import { isEraTag } from "./tag-groups";
-import { TIERS, TIER_WEIGHT, tierPosition, type Artist, type Slot } from "./types";
+import {
+  BASE_TIERS,
+  TIERS,
+  TIER_WEIGHT,
+  TOP_POSITION,
+  tierPosition,
+  type Artist,
+  type Slot,
+} from "./types";
 
 /** `tags` is what the artist carries; the statistics read `specificTags`, which
     a synthetic roster sets to the same thing — breadth is measured over the real
@@ -73,8 +81,23 @@ const stat = (tag: string, over: Partial<TagStat> = {}): TagStat => ({
 });
 
 describe("the two tier valuations", () => {
-  it("positions the tiers linearly, S = 7 down to F = 1", () => {
-    expect(TIERS.map(tierPosition)).toEqual([7, 6, 5, 4, 3, 2, 1]);
+  it("positions the ranks linearly, S = 7 down to F = 1", () => {
+    expect(BASE_TIERS.map(tierPosition)).toEqual([7, 6, 5, 4, 3, 2, 1]);
+  });
+
+  it("sits a rank's variants a third of a rank either side of it", () => {
+    // The variants are a real move on the scale, not a label: everything derived
+    // from the position — the 🎲 odds and every 📊 placement figure — feels them.
+    expect(tierPosition("A+") - tierPosition("A")).toBeCloseTo(1 / 3);
+    expect(tierPosition("A") - tierPosition("A-")).toBeCloseTo(1 / 3);
+    // …which leaves a rank's own step between neighbouring ranks intact.
+    expect(tierPosition("A-") - tierPosition("B+")).toBeCloseTo(1 / 3);
+  });
+
+  it("leaves F alone at the bottom, with no variant below E-", () => {
+    // Nothing ranks below F, so an "F-" would name a place off the end of the
+    // scale; the gap from E- down to F is two steps rather than one.
+    expect(tierPosition("E-") - tierPosition("F")).toBeCloseTo(2 / 3);
   });
 
   it("weights every tier positively, never penalising a placement", () => {
@@ -89,7 +112,7 @@ describe("the two tier valuations", () => {
       expect(weights[i - 1]!).toBeGreaterThan(weights[i]!);
     }
     // The S→A step dwarfs the E→F one: a favourite counts for far more than a
-    // one-tier promotion at the bottom does.
+    // one-rank promotion at the bottom does.
     expect(TIER_WEIGHT.S - TIER_WEIGHT.A).toBeGreaterThan(TIER_WEIGHT.E - TIER_WEIGHT.F);
   });
 
@@ -99,35 +122,45 @@ describe("the two tier valuations", () => {
     const ratio = (better: number, worse: number) => better / worse;
     expect(ratio(TIER_WEIGHT.S, TIER_WEIGHT.A)).toBeLessThan(ratio(TIER_WEIGHT.E, TIER_WEIGHT.F));
   });
+
+  it("keeps every base rank's weight exactly where it was before the variants", () => {
+    // The whole roster still sits on base ranks, so nothing 📊 or 🎲 reports has
+    // moved; the pinned figures in CLAUDE.md stay valid until artists are sorted
+    // into the new rows.
+    expect(TIER_WEIGHT.S).toBe(49);
+    expect(TIER_WEIGHT.A).toBe(36);
+    expect(TIER_WEIGHT.F).toBe(1);
+  });
 });
 
-describe("tierLabel", () => {
-  it("gives whole positions the bare letter", () => {
-    expect(tierLabel(7)).toBe("S");
-    expect(tierLabel(6)).toBe("A");
-    expect(tierLabel(1)).toBe("F");
+describe("tierBand", () => {
+  it("gives whole positions their own tier", () => {
+    expect(tierBand(7)).toBe("S");
+    expect(tierBand(6)).toBe("A");
+    expect(tierBand(1)).toBe("F");
   });
 
-  it("leans + or − only outside the middle third of a tier's band", () => {
-    expect(tierLabel(5.9)).toBe("A"); // within ±1/6 of 6
-    expect(tierLabel(6.17)).toBe("A+");
-    expect(tierLabel(5.66)).toBe("A−");
-    expect(tierLabel(6.49)).toBe("A+");
-    expect(tierLabel(5.49)).toBe("B+");
-    expect(tierLabel(1.2)).toBe("F+");
+  it("bands a mean onto the nearest tier, variants included", () => {
+    expect(tierBand(5.9)).toBe("A"); // within ±1/6 of 6
+    expect(tierBand(6.17)).toBe("A+");
+    expect(tierBand(5.66)).toBe("A-");
+    expect(tierBand(6.49)).toBe("A+");
+    expect(tierBand(5.49)).toBe("B+");
   });
 
-  it("rounds half-positions up to the better tier's − side", () => {
-    expect(tierLabel(6.5)).toBe("S−");
+  it("rounds a position falling exactly between two tiers up to the better one", () => {
+    expect(tierBand(6.5)).toBe("S-");
   });
 
-  it("uses a proper minus sign, not a hyphen", () => {
-    expect(tierLabel(5.66)).toContain("−");
+  it("names only tiers the board has, so there is no F+", () => {
+    // A mean just above F has E- as its other neighbour, two thirds of a rank
+    // away — F is still the nearer.
+    expect(tierBand(1.2)).toBe("F");
   });
 
-  it("clamps to the scale, so S+ and F− cannot occur", () => {
-    expect(tierLabel(7.5)).toBe("S");
-    expect(tierLabel(0.2)).toBe("F");
+  it("bands positions past either end onto the tier at that end", () => {
+    expect(tierBand(7.5)).toBe("S+");
+    expect(tierBand(0.2)).toBe("F");
   });
 });
 
@@ -635,7 +668,7 @@ describe("computeStats", () => {
     expect(stats.summary.favouriteCount).toBe(0);
   });
 
-  it("summarises the roster's shape, including the tiers nobody occupies", () => {
+  it("summarises the roster's shape, including the ranks nobody occupies", () => {
     const stats = computeStats([
       ...cohort("s", "S", 2, ["emo"]),
       ...cohort("c", "C", 6, ["emo", "2000s"]),
@@ -644,13 +677,31 @@ describe("computeStats", () => {
     expect(stats.summary.artistCount).toBe(9);
     expect(stats.summary.rankedCount).toBe(8);
     expect(stats.summary.vocabularySize).toBe(2);
-    // Every tier appears, so the histogram shows the whole board's shape.
-    expect(stats.summary.tierCounts.map((t) => t.tier)).toEqual([...TIERS]);
+    // Every rank appears, so the histogram shows the whole board's shape.
+    expect(stats.summary.tierCounts.map((t) => t.tier)).toEqual([...BASE_TIERS]);
     expect(stats.summary.tierCounts.find((t) => t.tier === "S")!.count).toBe(2);
     expect(stats.summary.tierCounts.find((t) => t.tier === "F")!.count).toBe(0);
     expect(stats.summary.favouriteTiers).toEqual(["S"]); // 2 of 8 clears the quarter
     // The gauges span the occupied tiers only: C (4) up to S (7).
     expect(stats.positions).toEqual({ low: 4, high: 7 });
+  });
+
+  it("folds a rank's variants into its histogram bar and its favourite boundary", () => {
+    // The rows are separate on the board and separate to every continuous
+    // statistic, but the histogram and the favourite boundary count whole ranks.
+    const stats = computeStats([
+      ...cohort("splus", "S+", 1, ["emo"]),
+      ...cohort("s", "S", 1, ["emo"]),
+      ...cohort("c", "C-", 6, ["emo", "2000s"]),
+    ]);
+    expect(stats.summary.tierCounts.map((t) => t.tier)).toEqual([...BASE_TIERS]);
+    expect(stats.summary.tierCounts.find((t) => t.tier === "S")!.count).toBe(2);
+    expect(stats.summary.tierCounts.find((t) => t.tier === "C")!.count).toBe(6);
+    expect(stats.summary.favouriteTiers).toEqual(["S"]);
+    expect(stats.summary.favouriteCount).toBe(2); // the S+ artist counts as an S
+    // The positions, by contrast, do resolve the rows: S+ (7⅓) down to C- (3⅔).
+    expect(stats.positions.high).toBeCloseTo(22 / 3);
+    expect(stats.positions.low).toBeCloseTo(11 / 3);
   });
 
   it("gives era tags their own chronological section and keeps them out of the rest", () => {
@@ -755,7 +806,7 @@ describe("computeStats", () => {
         expect(tagStat.low).toBeGreaterThanOrEqual(1);
         expect(tagStat.low).toBeLessThanOrEqual(tagStat.mean);
         expect(tagStat.mean).toBeLessThanOrEqual(tagStat.high);
-        expect(tagStat.high).toBeLessThanOrEqual(TIERS.length);
+        expect(tagStat.high).toBeLessThanOrEqual(TOP_POSITION);
         expect(tagStat.count).toBeGreaterThanOrEqual(MIN_SUPPORT);
       }
       // The composition counts stated tags, so they carry no tier-derived

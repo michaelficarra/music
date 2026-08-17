@@ -31,11 +31,11 @@ static bundle plus a build-time-embedded copy of the artist data.
 │   └── thumbnail.ts         # toThumbnail(): prefer smaller image forms (see §9)
 ├── src/                     # Application source
 │   ├── main.ts              # Entry point: populate dropdowns, build board, wire events
-│   ├── types.ts             # Core domain types (Tier, Slot, Cutoff, Artist)
+│   ├── types.ts             # Core domain types (Tier, BaseTier, Slot, Cutoff, Artist)
 │   ├── csv.ts               # RFC-4180 CSV parse/serialise (see §3)
 │   ├── data.ts              # Embeds data/artists.csv at build time → the static baseline
 │   ├── store.ts             # Local-storage overlay + diff (Reset/Save) logic
-│   ├── board.ts             # Renders tiers + unranked area, wires SortableJS
+│   ├── board.ts             # Renders rank blocks + unranked area, wires SortableJS
 │   ├── thumb.ts             # createThumb(): artist thumbnail/placeholder, shared by board + map
 │   ├── random.ts            # Weighting schemes + weighted random pick (see §6)
 │   ├── filter.ts            # matchesTags(): the 🎲 tag filter's matching rule (see §6)
@@ -67,7 +67,7 @@ Columns, in order:
 | Column        | Meaning |
 | ------------- | --- |
 | `Artist`      | Artist name. **Unique**; used as the identity key throughout the app. |
-| `Tier`        | One of `S`, `A`, `B`, `C`, `D`, `E`, `F`, or **blank** for unranked. |
+| `Tier`        | One of the 19 ranked tiers — `S+`, `S`, `S-` … `E+`, `E`, `E-`, `F` (F has no variants) — or **blank** for unranked. ASCII `+`/`-`, never a typographic minus. Anything else reads as unranked (`isTier` in `data.ts`). |
 | `ImageURL`    | URL of a representative image, or blank (→ placeholder). |
 | `ImageSource` | Which provider supplied the image (`apple-music`, `musicbrainz`, `youtube-music`, `wikipedia`), or blank. |
 | `Tags`        | Semicolon-delimited descriptive tags, or blank (a newly added artist). See below. |
@@ -259,10 +259,12 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
 - **Local storage** (`store.ts`) holds five independent keys:
   - `artist-tier-list:v1` — the arrangement, as JSON:
     ```json
-    { "version": 1, "assignments": { "Radiohead": "S", "Nickelback": "E", ... } }
+    { "version": 1, "assignments": { "Radiohead": "S-", "Nickelback": "E", ... } }
     ```
     `assignments` is a sparse map of **name → tier** overrides. Only tier is stored (no within-tier
-    order, per PRD §5). Writes happen immediately on every drop.
+    order, per PRD §5). Writes happen immediately on every drop. Adding the `+`/`-` tiers only
+    widened the set of accepted values, so arrangements saved before they existed still load and
+    `version` stays `1`.
   - `artist-tier-list:scheme` — the last-used picker scheme as a `cutoff:intensity` id (§6), so the
     two picker dropdowns restore their selection across reloads (PRD §8).
   - `artist-tier-list:picked` — the name of the most recently picked artist, so its persistent glow
@@ -308,6 +310,15 @@ local storage (name → tier overrides) ──overlay──▶ current arrangeme
   `board.move(name, from)` to restore the previous tier. `Board.move` applies the same store/DOM
   update as a drag but deliberately reports **no** `MoveRecord`, so an undo can't itself be undone.
   No extra persisted state backs this — an undo is just another `store.setSlot`.
+- **Board DOM:** the board is built from **blocks**, not rows — one `.tier-row[data-base]` per base
+  rank plus one for the unranked pool. Each holds a single `.tier-label` (the rank's letter and a
+  `.tier-count` summing its lanes) and a `.tier-lanes` column of `.tier-list[data-slot]` elements,
+  one per tier of that rank, best first (`addBlock` in `board.ts`). Keying the block on the *rank*
+  is what lets one CSS rule paint a rank's three lanes in its pastel, and what makes the picker's
+  cutoff divider — reparented after a whole block — unable to land inside a rank. Lanes carry no
+  label of their own: their order says which is which, `.tier-list + .tier-list` rules them apart,
+  and `.tier-list:empty` collapses an unused one so twelve empty rows cost a band each rather than
+  a card height each (PRD §3, §11).
 - **Render order:** the board keeps every list (each tier and the unranked pool) in canonical name
   order via `insertCardSorted` (`board.ts`), which reuses `compareArtistNames` (`src/sort.ts`). It is
   applied on initial placement, on edit/undo/`Board.move`, and **live during a drag** via two
@@ -326,23 +337,27 @@ The 🎲 picker (PRD §8) is pure, side-effect-free logic, so it lives in its ow
 tested in `src/random.test.ts`. A **scheme** has two independent dimensions — both persisted as a
 single `cutoff:intensity` id (§5):
 
-- **Cutoff** — which slots are eligible (typed `Cutoff = Slot | typeof ALL`; the `ALL` sentinel is
-  a picker-only value, never a stored `Slot`). For a ranked cutoff the eligible tiers are S down to
-  the cutoff inclusive (`eligibleTiers`); the special `unranked` cutoff ("unranked only") instead
+- **Cutoff** — which slots are eligible (typed `Cutoff = BaseTier | typeof UNRANKED | typeof ALL`;
+  the `ALL` sentinel is a picker-only value, never a stored `Slot`). A cutoff is a **base rank**
+  rather than any tier, so it can never split a rank's three rows apart: the eligible tiers run from
+  the top of the board down to `lowestVariant(cutoff)` inclusive (`eligibleTiers`), which is why
+  "C+" reaches `C-`. The special `unranked` cutoff ("unranked only") instead
   draws from the unranked pool alone, ignoring intensity; the `ALL` cutoff ("unrestricted") draws
   from the **whole roster** — ranked artists keep their tier weight and unranked artists are weighted
   as the **lowest tier anyone currently occupies** (`lowestOccupiedTier`, not a hard-coded F, which
   is usually empty and weighs a quarter of an E), so intensity still applies.
 - **Intensity** — how a candidate's selection weight is derived from its tier:
   - Weights come from the **power law** `tierWeightScale(exponent)` (`types.ts`), which raises a
-    tier's *position* (S 7 … F 1) to a fixed exponent. Its proportional steps therefore narrow
-    towards the top — the S/A distinction is the finest the tier list draws, the E/F one the
-    coarsest — while its absolute steps still widen.
+    tier's *position* (S+ 7⅓, S 7, S- 6⅔ … F 1) to a fixed exponent. Its proportional steps
+    therefore narrow towards the top — the S/A distinction is the finest the tier list draws
+    between whole ranks, the E/F one the coarsest — while its absolute steps still widen.
   - `unweighted` → every eligible artist has weight 1 (uniform).
-  - `weighted` → `TIER_WEIGHT`, i.e. `position²`: `S 49, A 36, B 25, C 16, D 9, E 4, F 1`. The 📊
-    statistics (§8) share it, so the two features value a tier identically.
+  - `weighted` → `TIER_WEIGHT`, i.e. `position²`: `S 49, A 36, B 25, C 16, D 9, E 4, F 1`, with a
+    variant a third of a rank off its base (`S+ 53.8, S- 44.4`). The 📊
+    statistics (§8) share it, so the two features value a tier identically — variants included:
+    a promotion from S to S+ shifts the picker's odds exactly as it shifts the statistics.
   - `heavily` → `HEAVY_TIER_WEIGHT` (`random.ts`), i.e. `position³`: `S 343, A 216, B 125, C 64,
-    D 27, E 8, F 1`.
+    D 27, E 8, F 1` (`S+ 394.4`).
 
   The intensities differ by **exponent, never by a multiplier**: roulette normalises by the pool
   total, so scaling every tier by a constant leaves the odds untouched. An earlier `heavily` was
@@ -658,11 +673,14 @@ duplication to be tidied away:
   counts for far more than a promotion at the bottom; *proportionally* they narrow (A → S is 1.36×
   where F → E is 4×), because the S/A distinction is the finest the list draws. Drives `share` and
   `ratio`.
-- **`tierPosition` (`types.ts`) — where an artist sits.** The ordinal index, S 7 down to F 1. Used
+- **`tierPosition` (`types.ts`) — where an artist sits.** The rank index, S 7 down to F 1, with a
+  `+` a third of a rank above its base and a `-` a third below (`S+ 7⅓`, `S- 6⅔`), so the whole
+  scale lands on one 1/3 grid running from 1 to 7⅓ (`BOTTOM_POSITION`/`TOP_POSITION`). Used
   *only* for statements about placement: the predictor range gauges, the outlier prediction model,
-  and `tierBand`/`tierLabel`, which band a mean position onto a letter (each tier owns the unit of
-  the scale centred on its own position, split into thirds — middle third the bare letter, outer
-  thirds leaning `+`/`−`; 6.5 → `S−`, and clamping makes `S+`/`F−` impossible).
+  and `tierBand`, which bands a mean position onto the tier whose own position is nearest
+  (6.17 → `A+`, 6.5 → `S-`, ties going to the better tier). Because the tiers *are* the grid, the
+  band always names a row the board has, needs no clamp at either end, and cannot produce an `F+`:
+  a mean just above F has `E-` two thirds of a rank away as its other neighbour.
 
 `TIER_WEIGHT` is *derived* from `tierPosition` (it is the square), which is what keeps the picker
 and the statistics honest about being one ranking. The two remain separate questions all the same:
@@ -671,12 +689,18 @@ two tiers higher" are not interchangeable statements, and mixing them is the mis
 exists to prevent.
 
 `computeBaseline` derives the roster-wide denominators once: `totalWeight`, `meanWeight`, the
-occupied `positions` range, and the **favourite tiers** — the top tiers covering at least
+occupied `positions` range, and the **favourite tiers** — the top **ranks** covering at least
 `FAVOURITE_SHARE` (0.25) of the ranked roster, taken from the data rather than hard-coded so a
 reshuffle moves the boundary with it.
 
+The favourite boundary and `RosterSummary.tierCounts` (the histogram) are the two places that fold
+a rank's `+`/`-` rows back together; every other statistic reads the position or the weight and so
+resolves them. Both are read as a glance or a sentence — a bar per row would give the histogram a
+dozen empty ones, and the "skip empty ranks above the first occupied" rule would drag empty rows
+into the favourite list behind the first occupied one.
+
 `positionFraction(position, range)` maps a placement onto a gauge track across the **occupied**
-span, not the theoretical 1..7. The old absolute axis reserved a sixth of every track for `F`,
+span, not the theoretical 1..7⅓. The old absolute axis reserved a sixth of every track for `F`,
 which has held nobody since the F-tier artists were removed; with every tag's mean landing inside a
 tier and a half of every other, that forced a view-level rescale hack in `stats-view.ts` just to
 tell the rows apart. Deriving the ends from the data retires it.
@@ -975,7 +999,9 @@ Details worth knowing before changing it:
 
 ## 11. Testing & quality
 
-- **Vitest** unit tests for the pure logic: CSV parse/serialise round-trip (incl. quoting) in
+- **Vitest** unit tests for the pure logic: the tier scale itself in `src/types.test.ts` (that
+  `TIERS` is `BASE_TIERS` expanded with `F` left unvaried, the position ordering, and the
+  rank/variant helpers), CSV parse/serialise round-trip (incl. quoting) in
   `src/csv.test.ts`, the overlay/diff/export in `src/store.test.ts` (run under the `jsdom`
   environment for `localStorage`), the weighting/selection in `src/random.test.ts`, the
   canonical name ordering in `src/sort.test.ts`, the ☁️ map's similarity model and layout in

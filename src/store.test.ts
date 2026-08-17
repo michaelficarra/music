@@ -95,6 +95,19 @@ describe("store", () => {
     expect(rowB[1]).toBe(BBASE === UNRANKED ? "" : BBASE);
   });
 
+  it("round-trips a +/- tier through storage and back out to CSV", () => {
+    // The variants are ordinary slot values: ASCII "-", stored and exported as
+    // written, with no migration needed for the base tiers already saved.
+    store.setSlot(A, "S-");
+    expect(store.currentSlot(A)).toBe("S-");
+    expect(localStorage.getItem(STORAGE_KEY)).toContain('"S-"');
+
+    store.setSlot(B, "A+");
+    const rows = parseCsv(store.toCSV());
+    expect(rows.find((r) => r[COLUMN.artist] === A)![COLUMN.tier]).toBe("S-");
+    expect(rows.find((r) => r[COLUMN.artist] === B)![COLUMN.tier]).toBe("A+");
+  });
+
   it("exports the data rows sorted by artist name", () => {
     store.setSlot(A, otherSlot(ABASE));
     const names = parseCsv(store.toCSV())

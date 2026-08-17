@@ -8,14 +8,29 @@ import {
   parseSchemeId,
   cutoffLabel,
 } from "./random";
-import { TIERS, type Slot } from "./types";
+import { BASE_TIERS, TIERS, type Slot } from "./types";
 
 describe("random", () => {
-  it("eligibleTiers respects the cutoff", () => {
-    expect(eligibleTiers("S")).toEqual(["S"]);
-    expect(eligibleTiers("C")).toEqual(["S", "A", "B", "C"]);
-    expect(eligibleTiers("E")).toEqual(["S", "A", "B", "C", "D", "E"]);
-    expect(eligibleTiers("F")).toEqual(["S", "A", "B", "C", "D", "E", "F"]);
+  it("eligibleTiers takes the cutoff rank's whole family", () => {
+    // A cutoff names a rank, not a row: "C+" reaches C- rather than stopping at
+    // the bare C row.
+    expect(eligibleTiers("S")).toEqual(["S+", "S", "S-"]);
+    // "C+" reaches C- and stops there; every D row below it is out.
+    expect(eligibleTiers("C")).toEqual([
+      "S+",
+      "S",
+      "S-",
+      "A+",
+      "A",
+      "A-",
+      "B+",
+      "B",
+      "B-",
+      "C+",
+      "C",
+      "C-",
+    ]);
+    expect(eligibleTiers("F")).toEqual([...TIERS]);
   });
 
   it("tierWeight matches the intensity curves", () => {
@@ -33,13 +48,23 @@ describe("random", () => {
     expect(tierWeight("F", "heavily")).toBe(1);
   });
 
+  it("weighs a rank's variants apart, so a promotion within a rank shifts the odds", () => {
+    // 🎲 and 📊 share one valuation, so the picker resolves the +/- rows exactly
+    // as the statistics do.
+    for (const intensity of ["weighted", "heavily"] as const) {
+      expect(tierWeight("S+", intensity)).toBeGreaterThan(tierWeight("S", intensity));
+      expect(tierWeight("S", intensity)).toBeGreaterThan(tierWeight("S-", intensity));
+    }
+  });
+
   it("narrows the gap between tiers towards the top under both weightings", () => {
     // The shape the curve exists for: an artist's presence anywhere is already
     // the positive signal, so choosing between the top two tiers is the finest
-    // distinction the list draws and the one at the bottom the coarsest.
+    // distinction the list draws and the one at the bottom the coarsest. Stated
+    // over whole ranks, which is the comparison the curve was designed around.
     for (const intensity of ["weighted", "heavily"] as const) {
-      const steps = TIERS.slice(0, -1).map(
-        (tier, i) => tierWeight(tier, intensity) / tierWeight(TIERS[i + 1]!, intensity),
+      const steps = BASE_TIERS.slice(0, -1).map(
+        (tier, i) => tierWeight(tier, intensity) / tierWeight(BASE_TIERS[i + 1]!, intensity),
       );
       for (const step of steps) expect(step).toBeGreaterThan(1);
       // steps run S/A first down to E/F last, each wider than the one above it.

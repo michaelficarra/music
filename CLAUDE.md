@@ -112,7 +112,10 @@ earlier version ranked tags by a tier-derived "surplus" and required it to beat 
 a descriptive count inferential *and* smuggled tier position back in as the measure of preference.
 
 **Three findings are settled. Do not re-derive them, and do not build features that assume
-otherwise:**
+otherwise.** They were all measured while every artist sat on a bare rank. Sorting artists into the
+`+`/`-` rows moves `tierPosition` and `TIER_WEIGHT` for each one moved, so a session spent filling
+those rows counts as a re-ranking and the figures below need re-measuring afterwards, exactly as a
+retag would demand:
 
 1. **The tags barely predict the tiers** — r² ≈ 0.32% over 245 artists (`measurePredictivePower`).
    Any statistic ranking artists by distance from a tag-based prediction therefore collapses into
