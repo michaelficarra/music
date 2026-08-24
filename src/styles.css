@@ -429,9 +429,11 @@ button:disabled {
 }
 
 /* The rule between one lane and the next. Only between, so a block keeps clean
-   edges; faint, because it separates thirds of one rank rather than two ranks. */
+   edges; dashed, because it separates thirds of one rank rather than two ranks —
+   a break in the line does that job without reading as a hard boundary, so it
+   can be drawn bright enough to see against a full lane of cards. */
 .tier-list + .tier-list {
-  border-top: 1px solid #ffffff14;
+  border-top: 1px dashed #ffffff40;
 }
 
 /* An empty lane still has to be a drop target, but a rank whose +/- rows are
@@ -609,13 +611,16 @@ button:disabled {
 
 /* The picker cutoff: a glowing divider line (drawn between two tier rows) with
    two small labels resting on top of it, centred and spaced apart — "eligible"
-   then "ineligible" — naming each region. */
+   then "ineligible" — naming each region. The block margin doubles the board's
+   own row gap here, so the line reads as a break in the stack rather than as
+   one more seam between two rows. */
 .cutoff {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 2rem;
+  margin: var(--gap) 0;
 }
 
 .cutoff-line {
@@ -624,18 +629,19 @@ button:disabled {
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  border-top: 5px solid var(--text);
-  opacity: 0.5;
+  border-top: 7px solid var(--text);
+  opacity: 0.8;
 }
 
 /* Arrowed eligibility hints sitting over the line. The opaque page-coloured
-   background hides the line behind the text. Decorative, so quiet and
-   unselectable. */
+   background hides the line behind the text, so the type has to stay large
+   enough to clear the rule's full weight and not read as a label pinched by it.
+   Decorative, so unselectable. */
 .cutoff-label {
   position: relative;
   background: var(--bg);
   padding: 0 0.4rem;
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--text);
