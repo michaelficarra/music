@@ -66,7 +66,7 @@ export type SearchIndex = readonly { readonly entry: SearchEntry; readonly key: 
  * Everything searchable: one entry per artist, one per sound tag.
  *
  * Sound tags rather than all of them, because the map only groups by sound
- * (PRD §9): a region or decade names no cluster, so offering `Swedish` would
+ * (PRD §9): a region or decade names no cluster, so offering `Sweden` would
  * promise a neighbourhood that does not exist. `soundTags` also has the
  * too-broad tags already removed, which is the same argument from the other end
  * — a tag on four fifths of the roster would spotlight four fifths of the map.

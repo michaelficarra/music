@@ -7,9 +7,10 @@
 // **derived** from it.
 //
 // data/artists.csv carries only the tags an artist is actually *given* — the
-// most specific genre, the most specific place. The more general ones (a Swedish
-// artist is also Scandinavian, Nordic and European; a pop punk band also plays
-// punk rock and rock) are derived here rather than written out, so the hierarchy
+// most specific genre, the most specific place. The more general ones (an artist
+// from `Sweden` is also in `Scandinavia` and `Europe`; a pop punk band
+// also plays punk rock and rock) are derived here rather than written out, so the
+// hierarchy
 // is edited in one file instead of 253 rows.
 
 import registryText from "../data/tags.csv?raw";
@@ -145,8 +146,8 @@ export const SOUND_CATEGORIES: readonly string[] = ["genre", "quality"];
  * Is this a tag about the music itself?
  *
  * The ☁️ map groups artists by resemblance of *sound* (ARCHITECTURE §7), so its
- * similarity model reads only these: two Swedish bands are not kin for being
- * Swedish, and every act working in the 2010s is not one scene. Region, era and
+ * similarity model reads only these: two bands are not kin for both carrying
+ * `Sweden`, and every act working in the 2010s is not one scene. Region, era and
  * aspect tags are common enough to swamp a co-occurrence profile — between them
  * they are a third of every tag the roster carries — and what they push together
  * is a coincidence of biography rather than a neighbourhood anyone can hear.
@@ -239,7 +240,7 @@ export function validateRegistry(
       // are not allowed:
       //
       //  - anything non-region deriving a region, which would let a genre assert
-      //    where an artist is from — "J-pop" ⇒ "Japanese" is wrong for everyone
+      //    where an artist is from — "J-pop" ⇒ "Japan" is wrong for everyone
       //    else who plays it; and
       //  - anything involving an era, which are matched by shape rather than
       //    category and must stay roots for the 📊 statistics to hold them apart.

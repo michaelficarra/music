@@ -33,8 +33,8 @@ the PRD; if it's about how the code achieves it, it's ARCHITECTURE.
   §3a): every tag's category and the tags derived from it. Two rules follow, and they are the
   ones easiest to get wrong:
   - **Rows in `artists.csv` carry only the most specific tag in each direction.** Never write a
-    tag that another one on the same row derives — no `punk rock` beside `pop punk`, no `European`
-    beside `Swedish`. The rest are derived at load time.
+    tag that another one on the same row derives — no `punk rock` beside `pop punk`, no `Europe`
+    beside `Sweden`. The rest are derived at load time.
   - **There is no target number of tags.** Four is fine, thirty is fine; accuracy is the only
     criterion. (Do not restore the old 5–10 rule, or the old "every tag shared by ≥2 artists"
     rule — both were dropped deliberately.)
@@ -165,7 +165,7 @@ retag would demand:
   Do not move this into `data/tags.csv`: breadth is a fact about the roster, not the vocabulary,
   and `metal` is an umbrella here and a real distinction on a metal roster. ARCHITECTURE §3b
   records one known limitation and the one-line change that would fix it.
-- **Broad tags are for the 🎲 filter and nothing else.** Finding artists by `European` is the whole
+- **Broad tags are for the 🎲 filter and nothing else.** Finding artists by `Europe` is the whole
   point of the hierarchy; saying an artist is `rock` when four fifths of the roster is says nothing.
   Everything that reports or compares — 📊, the card tooltips — reads `specificTags`.
 - **Anything that groups artists by resemblance reads `soundTags`** — `specificTags` narrowed to
@@ -179,7 +179,7 @@ retag would demand:
   It is an inventory of the descriptions used, so a description nobody wrote is not in it, and no
   threshold is needed — nobody is described as `rock`. Do not "fix" it to count derived tags: that
   leads the categories with `rock` and `pop`, and derived-minus-broad merely substitutes `California`
-  and `Western European`. Its known cost is that a scene split across sub-genres reports split; the
+  and `Western Europe`. Its known cost is that a scene split across sub-genres reports split; the
   ☁️ worlds answer that level.
 - **Reuse the ☁️ map's grouping** (`groupRoster`) for anything about which artists resemble which.
   Two features describing one collection must not disagree about its shape — which extends to the

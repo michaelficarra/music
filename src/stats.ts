@@ -702,9 +702,9 @@ export interface CategoryComposition {
  *    supplied rather than the collection earned: `rock`, then `pop`.
  *  - Counting derived tags **minus the too-broad ones** removes those but
  *    promotes the next rank of the same thing — `California`, `Western
- *    European`, `New York State`, the registry's connective tissue between a
- *    city and its country, which no row states and which describes an artist no
- *    better than the `American` just removed.
+ *    Europe`, `New York`, the registry's connective tissue between a city and
+ *    its country, which no row states and which describes an artist no better
+ *    than the `United States` just removed.
  *
  * Reading the rows directly settles it without a threshold to tune: nobody is
  * described as `rock` or as `California`, so neither can appear, while

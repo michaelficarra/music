@@ -96,7 +96,7 @@ Columns, in order:
     and so cannot on its own justify a tag.
   - **Rows carry only the most specific tag in each direction — never one that another implies.**
     A row saying `pop punk` does not also say `punk rock`, `pop rock` or `rock`; a row saying
-    `Swedish` does not also say `Scandinavian` or `European`. The rest are derived at
+    `Sweden` does not also say `Scandinavia` or `Europe`. The rest are derived at
     load time from the registry, so writing them out too would be redundant and could contradict it.
 
   Conventions: no commas/semicolons/quotes inside a tag (keeps the field unquoted), no duplicates
@@ -119,7 +119,7 @@ here is a test failure, not a shrug.
 
 Where tags *do* relate, they form a **directed acyclic graph** rather than a flat list: a tag names
 the more general tags derived from it, and the app derives them transitively. That is what lets the
-🎲 panel's `European` find the Swedes and `punk rock` find the ska-punk and skate-punk bands,
+🎲 panel's `Europe` find the Swedes and `punk rock` find the ska-punk and skate-punk bands,
 without any of it being written on 284 artist rows by hand.
 
 | Column     | Meaning |
@@ -134,7 +134,7 @@ without any of it being written on 284 artist rows by hand.
 - **Crossing categories is allowed where the implication is real.** `Christian rock` is a genre
   whose carriers genuinely are `Christian` (an aspect), and each tag still files under its own
   heading, so the artist appears in both. Two crossings are rejected: a non-region may not imply a
-  **region** (`J-pop` → `Japanese` would assert an origin for everyone else who plays it), and
+  **region** (`J-pop` → `Japan` would assert an origin for everyone else who plays it), and
   nothing may involve an **era** on either side.
 - **Eras are flat.** They are recognised by shape (`/^\d{4}s$/`) rather than by category, because
   the 📊 statistics use that same test to confine them to their own section (§8.4); an umbrella
@@ -142,11 +142,40 @@ without any of it being written on 284 artist rows by hand.
 - Rows are sorted by category (in the §6 display order) then by tag, so one category's hierarchy
   reads together and diffs stay small.
 - **Region granularity: recognised scenes, then countries.** A city is tagged when the artist is
-  genuinely identified with that scene (`New York`, `Glasgow`, `Stockholm`, `Tokyo`), and the
+  genuinely identified with that scene (`New York City`, `Glasgow`, `Stockholm`, `Tokyo`), and the
   country otherwise. States and provinces exist in the registry as the connective tissue between
-  a city and its country (`New York` → `New York State` → `American`) but are not written on
+  a city and its country (`New York City` → `New York` → `United States`) but are not written on
   rows. The alternative — tagging every birthplace MusicBrainz records — produces around 150
   cities carried by one artist each, which inflates the 🎲 panel without grouping anything.
+- **Region tags name a place, never a people.** `Sweden` and `Europe`, not *Swedish* and
+  *European*, so a derivation chain reads in one register from the city up
+  (`Stockholm` → `Sweden` → `Scandinavia` → `Europe`) instead of switching from place to adjective
+  partway. The alternative — demonyms throughout — is not available: `Orange County`,
+  `Long Island` and `St. Louis` have no demonym at all, and *Angeleno* or *Bay Stater* would be
+  unreadable as tags, so a mixed vocabulary was the only other option. One consequence:
+  **a bare name goes to whichever place the reader expects it to mean.** `New York` is the state
+  and `New York City` the city, because the state is what the hierarchy needs and the city is the
+  one worth spelling out; `Washington State` is suffixed because bare *Washington* reads as the
+  capital. `Georgia` is the US state, and would need disambiguating only if the country ever
+  joined the roster.
+- **`Nordic` is an aspect, not a region, and is written by hand.** `Scandinavia` is a *geographic*
+  area — the peninsula Sweden and Norway share, plus Denmark, which belongs to it by history and
+  by Copenhagen sitting an island away from Sweden. `Nordic` names a *cultural* sphere instead:
+  the countries tied to those by history and politics, reaching as far as Greenland and the
+  Faroes, and loose enough that it is the right word for the Norse history of northern England
+  where *Scandinavian* would be wrong. Three things follow, and the first two are why it moved
+  out of `region`:
+  - **A cultural sphere is not contained in a continent.** Greenland is in North America, so
+    `Nordic` → `Europe` would have made the hierarchy assert something false as soon as the
+    vocabulary reached that far. `Scandinavia`, `Finland` and `Iceland` derive `Europe` only.
+  - **It does not follow from where an artist is from**, so nothing derives it. Being Swedish no
+    longer implies it; the rows say it or they do not. That also lets it reach an act with the
+    influence but not the origin — `Dethklok`, whose fictional line-up is Swedish and Norwegian
+    and whose sound is the Gothenburg one, carries `Nordic` beside `United States`.
+  - **It is adjectival, and that breaks no rule**, because the rule above bans people-words
+    standing in for places and this is neither. A cultural sphere has no place noun to be renamed
+    to — *Nordic countries* and *the Nordics* are phrases built from the adjective rather than
+    the thing's own name.
 - `src/tag-registry.ts` embeds this file at build time and exposes `withDerivedTags`; the invariants
   above are enforced by `validateRegistry` and asserted against the real data in
   `src/tag-registry.test.ts`. A tag used in `artists.csv` but absent here still reaches the 🎲
@@ -162,7 +191,7 @@ artist carries four tag sets, each a subset of the one above it:
 | Set | Contents | Read by |
 | --- | --- | --- |
 | `ownTags` | exactly what the CSV row says (§3) | the Save export; the 📊 composition list |
-| `tags` | `ownTags` + everything derived from them | the 🎲 **filter** — `European` must find the Swedes |
+| `tags` | `ownTags` + everything derived from them | the 🎲 **filter** — `Europe` must find the Swedes |
 | `specificTags` | `tags` minus the too-broad ones | 📊 statistics, card tooltips |
 | `soundTags` | `specificTags` restricted to genres and musical qualities | the ☁️ **map**, and the two 📊 sections that report its grouping |
 
@@ -195,7 +224,7 @@ does not matter whether a human wrote the tag or the hierarchy supplied it. `mal
 hand-written on every one of its carriers and still splits the roster 7:3, so it narrows nothing
 and goes; `rock` is written by nobody and goes for the same reason. On the shipped roster the rule
 drops 21 tags: `rock`, `pop`, `punk rock`, `alternative rock`, `pop rock`, `pop punk`, `electronic`,
-`experimental`, `American`, `North American`, `European`, `male vocals`, `female vocals`,
+`experimental`, `United States`, `North America`, `Europe`, `male vocals`, `female vocals`,
 `catchy hooks`, `anthemic choruses`, `distorted guitars`, `guitar-driven`, `angsty lyrics`,
 `melancholy mood`, `atmospheric textures`, `solo act`.
 
@@ -216,7 +245,7 @@ was deriving it from the hierarchy (anything another tag in use derives), which 
 including `emo` and `indie pop` — having a sub-genre does not make a tag broad.
 
 **Known limitation.** A pure prevalence cut removes the largest umbrellas but leaves the next rank
-of them — `California`, `Western European`, `New York State`, the connective tissue (§3a) that no
+of them — `California`, `Western Europe`, `New York`, the connective tissue (§3a) that no
 row states. This no longer shows in the composition list, which reads `ownTags` (§8.0), but those
 tags still reach the card tooltips and the ☁️ map's similarity. Adding a second, disjunctive test
 (also call a tag broad when hardly any of its carriers were given it) would remove them; it is a
@@ -385,7 +414,7 @@ filter *upstream*, building the picker's slot map from only the matching artists
 no candidates). The panel itself is a native **popover** (`popover` + `popovertarget` in
 `index.html` — the browser supplies top-layer stacking, Esc, and light-dismiss); `main.ts` fills
 it with one checkbox per tag from `data.ts`'s `allTags` (the sorted distinct tags in the roster,
-**including the ones derived from the registry** — that is what makes ticking `European`
+**including the ones derived from the registry** — that is what makes ticking `Europe`
 or `punk rock` useful), anchors it under the toolbar's `#filter` button on each open (popovers are
 fixed in the top layer, so the UA default would centre it), keeps the button's `no filters` /
 `N filters` label current, and persists the selection (§5). The checkboxes are **grouped by
@@ -627,7 +656,7 @@ tags included, minus the tags too broad to describe anything. Both halves of tha
 `ownTags` and applies no breadth rule, because it is an inventory of the descriptions used rather
 than a claim about the artists: a description nobody wrote is not part of it. Counting derived tags
 led its categories with `rock` and `pop`; counting derived-minus-broad led them with `California`
-and `Western European` instead — the same failure one level down. Reading the rows settles it with
+and `Western Europe` instead — the same failure one level down. Reading the rows settles it with
 no threshold at all. The cost is that a scene split across sub-genres is reported split, which
 `rankTasteWorlds` (§8.3) is what answers instead.
 
@@ -837,8 +866,8 @@ re-measured after a retag rather than remembered.
   Both figures halved when the section narrowed to `soundTags` (`kin` peaked at 87 before): an
   artist's shared decade and continent had been doing much of the work of making it look
   well-companioned. The captions moved further than the numbers: `The Beatles` was explained by
-  `Liverpool` and is now explained by `merseybeat`, `Apashe` by `Belgian` and now by `dubstep`, and
-  the artists whose sole unusual tag was an origin (`t.A.T.u.`, on `Eastern European`) left the
+  `Liverpool` and is now explained by `merseybeat`, `Apashe` by `Belgium` and now by `dubstep`, and
+  the artists whose sole unusual tag was an origin (`t.A.T.u.`, on `Eastern Europe`) left the
   list — which is the point, since "few Russians are on this list" is a fact about the list's
   coverage rather than about how t.A.T.u. sounds.
 

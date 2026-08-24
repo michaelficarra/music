@@ -203,8 +203,8 @@ describe("validateRegistry", () => {
   });
 
   it("reports a genre that derives a region", () => {
-    const problems = validateRegistry(registryOf("J-pop,genre,Japanese\nJapanese,region,\n"));
-    expect(problems[0]!.problem).toContain('derives the region "Japanese"');
+    const problems = validateRegistry(registryOf("J-pop,genre,Japan\nJapan,region,\n"));
+    expect(problems[0]!.problem).toContain('derives the region "Japan"');
   });
 
   it("reports an era that derives something", () => {

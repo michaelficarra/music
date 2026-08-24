@@ -275,86 +275,85 @@ ukulele,quality,acoustic textures
 virtuosic playing,quality,
 vocal harmonies,quality,
 witty wordplay,quality,
-American,region,North American
-Asian,region,
+Asia,region,
 Atlanta,region,Georgia
-Australian,region,Oceanian
-Belgian,region,Western European
+Australia,region,Oceania
+Belgium,region,Western Europe
 Boston,region,Massachusetts
-British,region,Western European
-California,region,American
-Canadian,region,North American
+California,region,United States
+Canada,region,North America
 Chicago,region,Illinois
-Danish,region,Scandinavian
+Denmark,region,Scandinavia
 Detroit,region,Michigan
-Dutch,region,Western European
-East Asian,region,Asian
-Eastern European,region,European
-English,region,British
-European,region,
-Finnish,region,Nordic
-Florida,region,American
-French,region,Western European
-Georgia,region,American
-German,region,Western European
-Glasgow,region,Scottish
-Icelandic,region,Nordic
-Illinois,region,American
-Irish,region,Western European
-Japanese,region,East Asian
+East Asia,region,Asia
+Eastern Europe,region,Europe
+England,region,United Kingdom
+Europe,region,
+Finland,region,Europe
+Florida,region,United States
+France,region,Western Europe
+Georgia,region,United States
+Germany,region,Western Europe
+Glasgow,region,Scotland
+Iceland,region,Europe
+Illinois,region,United States
+Ireland,region,Western Europe
+Japan,region,East Asia
 Las Vegas,region,Nevada
-Lebanese,region,Western Asian
-Liverpool,region,English
-London,region,English
+Lebanon,region,Western Asia
+Liverpool,region,England
+London,region,England
 Long Beach,region,California
-Long Island,region,New York State
+Long Island,region,New York
 Los Angeles,region,California
-Louisiana,region,American
-Manchester,region,English
-Massachusetts,region,American
-Michigan,region,American
+Louisiana,region,United States
+Manchester,region,England
+Massachusetts,region,United States
+Michigan,region,United States
 Minneapolis,region,Minnesota
-Minnesota,region,American
-Missouri,region,American
+Minnesota,region,United States
+Missouri,region,United States
 Montreal,region,Quebec
 Nashville,region,Tennessee
-Nebraska,region,American
-Nevada,region,American
-New Jersey,region,American
+Nebraska,region,United States
+Netherlands,region,Western Europe
+Nevada,region,United States
+New Jersey,region,United States
 New Orleans,region,Louisiana
-New York,region,New York State
-New York State,region,American
-New Zealand,region,Oceanian
-Nordic,region,European
-North American,region,
-Northern Irish,region,British
-Norwegian,region,Scandinavian
-Oceanian,region,
+New York,region,United States
+New York City,region,New York
+New Zealand,region,Oceania
+North America,region,
+Northern Ireland,region,United Kingdom
+Norway,region,Scandinavia
+Oceania,region,
 Omaha,region,Nebraska
-Ontario,region,Canadian
+Ontario,region,Canada
 Orange County,region,California
-Oregon,region,American
-Pennsylvania,region,American
+Oregon,region,United States
+Pennsylvania,region,United States
 Philadelphia,region,Pennsylvania
 Portland,region,Oregon
-Quebec,region,Canadian
-Russian,region,Eastern European
+Quebec,region,Canada
+Russia,region,Eastern Europe
 San Diego,region,California
 San Francisco,region,California
-Scandinavian,region,Nordic
-Scottish,region,British
+Scandinavia,region,Europe
+Scotland,region,United Kingdom
 Seattle,region,Washington State
 St. Louis,region,Missouri
-Stockholm,region,Swedish
-Swedish,region,Scandinavian
-Tennessee,region,American
-Texas,region,American
-Tokyo,region,Japanese
+Stockholm,region,Sweden
+Sweden,region,Scandinavia
+Tennessee,region,United States
+Texas,region,United States
+Tokyo,region,Japan
 Toronto,region,Ontario
-Washington State,region,American
-Welsh,region,British
-Western Asian,region,Asian
-Western European,region,European
+United Kingdom,region,Western Europe
+United States,region,North America
+Wales,region,United Kingdom
+Washington State,region,United States
+Western Asia,region,Asia
+Western Europe,region,Europe
 1950s,era,
 1960s,era,
 1970s,era,
@@ -370,6 +369,7 @@ composer,aspect,
 duo,aspect,
 girl group,aspect,
 masked or costumed,aspect,
+Nordic,aspect,
 sibling act,aspect,
 side project,aspect,
 solo act,aspect,

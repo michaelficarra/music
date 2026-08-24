@@ -167,7 +167,7 @@ export interface Artist {
   ownTags: readonly string[];
   /**
    * Every tag the artist carries: `ownTags` plus the tags derived from those
-   * (data/tags.csv). Read by the 🎲 **filter**, so selecting `European` finds
+   * (data/tags.csv). Read by the 🎲 **filter**, so selecting `Europe` finds
    * the Swedes and `punk rock` finds the ska-punk bands.
    */
   tags: readonly string[];

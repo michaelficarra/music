@@ -360,13 +360,13 @@ describe("categoryComposition", () => {
 
   it("groups tags by vocabulary category, in display order, most common first", () => {
     const composition = categoryComposition([
-      ...stating(5, ["emo", "catchy hooks", "British", "side project"]),
+      ...stating(5, ["emo", "catchy hooks", "United Kingdom", "side project"]),
       ...stating(3, ["pop punk"]),
     ]);
     expect(composition.map((c) => [c.category, c.stats.map((t) => t.tag)])).toEqual([
       ["Genres", ["emo", "pop punk"]],
       ["Musical qualities", ["catchy hooks"]],
-      ["Regions", ["British"]],
+      ["Regions", ["United Kingdom"]],
       ["Notable aspects", ["side project"]],
     ]);
   });

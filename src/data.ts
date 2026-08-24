@@ -48,7 +48,7 @@ const tagged = bodyRows.map((r) => {
 });
 
 /**
- * The tags too broad to describe this roster — `rock`, `pop`, `North American`.
+ * The tags too broad to describe this roster — `rock`, `pop`, `North America`.
  *
  * A second pass, because breadth is a property of the collection as a whole
  * rather than of any one row: it depends on how often a tag was *stated* across
@@ -92,7 +92,7 @@ export const allTags: readonly string[] = [...new Set(artists.flatMap((a) => a.t
  *
  * A strict subset of `allTags`, and deliberately so: the map is a picture of how
  * the collection sounds, so a region, decade or notable aspect groups nobody on
- * it and a too-broad genre groups everybody. Offering `Swedish` as something to
+ * it and a too-broad genre groups everybody. Offering `Sweden` as something to
  * search for would promise a neighbourhood the map does not draw (ARCHITECTURE
  * §7a). Sorted like its neighbour above.
  */

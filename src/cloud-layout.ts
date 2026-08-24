@@ -28,7 +28,7 @@
 //
 // Throughout, an artist is read through its `soundTags` — its genres and
 // musical qualities, with regions, eras and notable aspects left out. The map
-// answers "what does this sound like", and being Swedish or having worked in
+// answers "what does this sound like", and being from Sweden or having worked in
 // the 2010s is not an answer to it (ARCHITECTURE §3b, §7).
 //
 // Everything is deterministic — no randomness anywhere — so a given roster

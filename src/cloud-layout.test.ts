@@ -66,7 +66,7 @@ describe("pairwiseSimilarities", () => {
     // Two acts from one country and decade with nothing musical in common. Both
     // facts are real and both are on the artists — the 🎲 filter finds them by
     // either — but sharing a passport is not a resemblance the map may draw.
-    const origins = ["Swedish", "2010s"];
+    const origins = ["Sweden", "2010s"];
     const shared = [
       artist("a", ["punk", ...origins], ["punk"]),
       artist("b", ["rave", ...origins], ["rave"]),
@@ -188,7 +188,7 @@ describe("computeCloudLayout", () => {
     // them, to make the whole roster one undifferentiated blob. Not one
     // coordinate may shift.
     const travelled = genreRoster.map((member) =>
-      artist(member.name, [...member.tags, "Swedish", "2010s"], [...member.soundTags]),
+      artist(member.name, [...member.tags, "Sweden", "2010s"], [...member.soundTags]),
     );
     expect(computeCloudLayout(travelled)).toEqual(computeCloudLayout(genreRoster));
   });

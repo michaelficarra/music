@@ -33,9 +33,9 @@ Each **artist** has:
 
 **Tags form a hierarchy: a specific tag always carries with it the more general tags containing
 it, and those are called its *derived tags*.** An artist described as *pop punk* also derives punk
-rock, pop rock and rock; one from *Stockholm* derives Swedish, Scandinavian, Nordic and European.
-**The tag filter treats an artist as carrying all of them**, so someone looking for European
-artists finds one tagged only *Swedish*, and *punk rock* finds the ska-punk bands.
+rock, pop rock and rock; one from *Stockholm* derives Sweden, Scandinavia and Europe.
+**The tag filter treats an artist as carrying all of them**, so someone looking for artists from
+Europe finds one tagged only *Sweden*, and *punk rock* finds the ska-punk bands.
 
 Everywhere that *describes* an artist rather than finding one — the card tooltip, the ☁️ map and the
 📊 statistics — derived tags still count, but **tags too broad to distinguish anyone are left out**.
@@ -235,7 +235,7 @@ cutoff**, then the **filter**, then the **weighting intensity**:
   artist **matches** the selection by carrying **every** selected tag (`all`) or **at least one**
   of them (`any`, the default). Because a specific tag carries its derived tags (§2), ticking a
   general tag selects everything beneath it: `punk rock` matches the pop punk, ska punk and
-  skate punk artists, and `European` matches the Swedes and the Scots. While one or more tags are
+  skate punk artists, and `Europe` matches the Swedes and the Scots. While one or more tags are
   selected:
   - 🎲 draws only from **matching** artists (combined with the tier cutoff and weighting as
     usual), and
@@ -400,7 +400,7 @@ criticism**. Two rules follow, and everything below obeys them:
   pop punk scene whether or not those words appear on it, so counting only what was written down
   scatters one scene across its sub-genres and turns "how much of this list is pop punk?" into a
   question about tagging habits. Broad tags must not, because otherwise every list of common tags is
-  headed by the widest labels in the vocabulary — *rock*, *pop*, *North American* — which describes
+  headed by the widest labels in the vocabulary — *rock*, *pop*, *North America* — which describes
   how the tags are organised rather than what was collected. **One section departs from this and
   says so**: *What your list is made of* (§10.3) is an inventory of the descriptions actually used,
   so it counts only the tags written on each artist — and needs no breadth rule as a result, since
